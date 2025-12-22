@@ -5,9 +5,6 @@ import {Button} from '@/components/ui/button';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card';
 import {Input} from '@/components/ui/input';
 import {Label} from '@/components/ui/label';
-
-// import {useRouter} from 'next/navigation';
-
 import {authClient} from '@/lib/auth-client';
 import {Alert, AlertDescription} from '../ui/alert';
 import {Terminal} from 'lucide-react';
@@ -15,8 +12,6 @@ import {Terminal} from 'lucide-react';
 import {IconLoader} from '@tabler/icons-react';
 
 export function LoginForm({className, ...props}: React.ComponentProps<'div'>) {
-  // const router = useRouter();
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -26,7 +21,7 @@ export function LoginForm({className, ...props}: React.ComponentProps<'div'>) {
   const signIn = async () => {
     const {data: GoogleData, error: GoogleError} = await authClient.signIn.social({
       provider: 'google',
-      callbackURL: '/select-role',
+      callbackURL: '/auth/select-role',
     });
     console.log('Sign in with google', GoogleData);
     console.error('Sign in with google', GoogleError);

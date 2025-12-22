@@ -1,4 +1,4 @@
-import {AppSidebar} from '@/components/app-sidebar';
+import {FreelancerSidebar} from '@/components/app-sidebar';
 import {SiteHeader} from '@/components/site-header';
 import {SidebarInset, SidebarProvider} from '@/components/ui/sidebar';
 import {prisma as dbContext} from '@/lib/prisma';
@@ -39,7 +39,10 @@ export default async function layout({
         } as React.CSSProperties
       }
     >
-      <AppSidebar user={{...session.user, image: session.user.image ?? null}} variant="inset" />
+      <FreelancerSidebar
+        user={{...session.user, image: session.user.image ?? null}}
+        variant="inset"
+      />
       <SidebarInset>
         <SiteHeader />
         <div className="flex flex-1 flex-col">

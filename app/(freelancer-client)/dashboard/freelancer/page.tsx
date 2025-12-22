@@ -24,11 +24,8 @@ export default async function Page() {
         pendingClients={pendingBookings}
         currentClientStory={currentClientStory}
       />
-      <div className="px-4 lg:px-6">
-        <FreelancerCalendar />
-      </div>
-
-      <div className="px-4 lg:px-6">
+      <div className="flex flex-col gap-4 px-4 lg:px-6">
+        <FreelancerCalendar fId={fId} />
         <ServiceNav services={services} />
       </div>
     </>

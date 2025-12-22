@@ -2,16 +2,12 @@
 
 import * as React from 'react';
 import {
-  IconCamera,
-  IconCopy,
   IconDashboard,
-  IconFileAi,
-  IconFileDescription,
+  IconDatabase,
   IconHome,
-  IconInnerShadowTop,
+  IconListSearch,
   IconSend,
   IconServicemark,
-  IconSettings,
   IconTools,
   IconUserCircle,
 } from '@tabler/icons-react';
@@ -28,9 +24,10 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import type {User} from 'better-auth';
 import {defaultRoute} from '@/app/(freelancer-client)/dashboard/freelancer/config';
-// import {user} from '@src/generated/prisma/client';
+import {NavDocuments} from './nav-documents';
+import Link from 'next/link';
+import type {UserInfo} from '@/hooks/get-user-info';
 
 const data = {
   navMain: [
@@ -54,85 +51,13 @@ const data = {
       url: `${defaultRoute}/create-service`,
       icon: IconServicemark,
     },
-    // {
-    //   title: 'Setting',
-    //   url: '/dashboard/freelancer/setting',
-    //   icon: IconSettings,
-    // },
     {
-      title: 'Account',
-      url: `${defaultRoute}/account`,
+      title: 'Profile',
+      url: '/dashboard/profile',
       icon: IconUserCircle,
     },
-    // {
-    //   title: "Lifecycle",
-    //   url: "#",
-    //   icon: IconListDetails,
-    // },
-    // {
-    //   title: "Analytics",
-    //   url: "#",
-    //   icon: IconChartBar,
-    // },
-    // {
-    //   title: "Projects",
-    //   url: "#",
-    //   icon: IconFolder,
-    // },
-    // {
-    //   title: "Team",
-    //   url: "#",
-    //   icon: IconUsers,
-    // },
   ],
-  navClouds: [
-    {
-      title: 'Capture',
-      icon: IconCamera,
-      isActive: true,
-      url: '#',
-      items: [
-        {
-          title: 'Active Proposals',
-          url: '#',
-        },
-        {
-          title: 'Archived',
-          url: '#',
-        },
-      ],
-    },
-    {
-      title: 'Proposal',
-      icon: IconFileDescription,
-      url: '#',
-      items: [
-        {
-          title: 'Active Proposals',
-          url: '#',
-        },
-        {
-          title: 'Archived',
-          url: '#',
-        },
-      ],
-    },
-    {
-      title: 'Prompts',
-      icon: IconFileAi,
-      url: '#',
-      items: [
-        {
-          title: 'Active Proposals',
-          url: '#',
-        },
-        {
-          title: 'Archived',
-          url: '#',
-        },
-      ],
-    },
-  ],
+
   navSecondary: [
     {
       title: 'Home',
@@ -140,17 +65,17 @@ const data = {
       icon: IconHome,
     },
     {
-      title: 'Clone Repository',
-      url: 'https://github.com/Achour/nextjs-better-auth',
-      icon: IconCopy,
+      title: 'Explore',
+      url: '/explore',
+      icon: IconListSearch,
     },
   ],
   documents: [
-    // {
-    //   name: "Data Library",
-    //   url: "#",
-    //   icon: IconDatabase,
-    // },
+    {
+      name: 'Data Library',
+      url: '#',
+      icon: IconDatabase,
+    },
     // {
     //   name: "Reports",
     //   url: "#",
@@ -164,11 +89,11 @@ const data = {
   ],
 };
 
-interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
-  user: User;
+interface FreelancerSidebarProps extends React.ComponentProps<typeof Sidebar> {
+  user: UserInfo;
 }
 
-export function AppSidebar({user, ...props}: AppSidebarProps) {
+export function FreelancerSidebar({user, ...props}: FreelancerSidebarProps) {
   if (!user) {
     throw new Error('AppSidebar requires a user but received undefined.');
   }
@@ -178,17 +103,19 @@ export function AppSidebar({user, ...props}: AppSidebarProps) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
-              <a href="#">
-                <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">Dashboard</span>
-              </a>
+              <Link href="/" className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+                  FiveS
+                  <span className="text-primary">.</span>
+                </h1>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        {/* <NavDocuments items={data.documents} /> */}
+        <NavDocuments items={data.documents} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>

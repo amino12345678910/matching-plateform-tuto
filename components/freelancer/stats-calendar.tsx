@@ -16,12 +16,12 @@ type BusyRange = {
   to: Date;
 };
 
-export default function FreelancerCalendar() {
+export default function FreelancerCalendar({fId}: {fId: string}) {
   const [bookings, setBookings] = useState<Booking[]>([]);
 
   useEffect(() => {
     const init = async () => {
-      const {success, timing} = await getMySchedule();
+      const {success, timing} = await getMySchedule({fId});
       if (!success) return;
 
       setBookings(

@@ -34,7 +34,7 @@ export function SignupForm({className, ...props}: React.ComponentProps<'div'>) {
   const signUp = async () => {
     const {data: GoogleData, error: GoogleError} = await authClient.signIn.social({
       provider: 'google',
-      callbackURL: '/select-role',
+      callbackURL: '/auth/select-role',
     });
     console.log('Sign up with google data', GoogleData);
     console.error('Sign up with google error', GoogleError);

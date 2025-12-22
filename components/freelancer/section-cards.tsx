@@ -32,7 +32,10 @@ export function SectionCards({
     servicePackageTier: PackageTier;
   } | null;
 }) {
-  if (!currentClientStory) return;
+  if (!currentClientStory) {
+    console.log('currentClientStory nahi hai');
+    return;
+  }
   const {acceptedAt, client, delivery, service, servicePackageTier, totalPrice} =
     currentClientStory;
 
