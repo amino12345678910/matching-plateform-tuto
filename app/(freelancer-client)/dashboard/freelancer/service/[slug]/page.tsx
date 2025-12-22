@@ -21,8 +21,9 @@ async function EditServicePage({params}: {params: Promise<{slug: string}>}) {
         category: true,
         packages: true,
         seller: {
-          include: {user: {select: {id: true, name: true, image: true}}},
+          include: {user: {select: {id: true, name: true, image: true, email: true}}},
         },
+        faqs: true,
         tags: true,
       },
     });

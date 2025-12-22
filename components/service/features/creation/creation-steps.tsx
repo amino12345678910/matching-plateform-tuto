@@ -67,7 +67,7 @@ function CreationSteps() {
       premiumPackage: {price: 200, delivery: 7, revisions: 10, description: ''},
       faqs: [],
     },
-    mode: 'onChange',
+    mode: 'onSubmit',
   });
 
   const registerFiles = (files: File[]) => {

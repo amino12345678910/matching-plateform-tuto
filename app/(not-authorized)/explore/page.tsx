@@ -4,7 +4,6 @@ import NoServicesFound from '@/components/service/service-non-found';
 import {getUserInfo} from '@/hooks/get-user-info';
 import Navbar from '@/components/essentials/Navbar';
 import {Footer} from '@/components/footer/footer';
-import {GigCard} from '@/component2/components/GigCard';
 
 export default async function ExplorePage() {
   const {userId} = await getUserInfo();

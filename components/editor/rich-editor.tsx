@@ -27,7 +27,7 @@ export function RichEditor({
     extensions: [
       StarterKit.configure({
         heading: {
-          levels: [1, 2, 3],
+          levels: [2, 3, 4, 5],
         },
       }),
       Underline,
@@ -55,7 +55,7 @@ export function RichEditor({
       <div className="flex flex-wrap items-center gap-1">
         {/* Headings */}
         <div className="flex gap-1 border-r pr-2">
-          {([1, 2] as const).map(level => (
+          {([2, 3, 4, 5] as const).map(level => (
             <Button
               key={level}
               type="button"

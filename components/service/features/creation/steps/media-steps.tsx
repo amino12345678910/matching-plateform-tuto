@@ -53,7 +53,7 @@ export function MediaStep({
                 <span>
                   {files.length} image{files.length !== 1 ? 's' : ''} ready to upload
                 </span>
-                {files.length < 3 && (
+                {files.length < 1 && (
                   <span className="text-amber-600">• Recommended: Add at least 3 images</span>
                 )}
               </div>

@@ -19,10 +19,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar} from '@/components/ui/sidebar';
-import {user} from '@src/generated/prisma/client';
+import type {User} from 'better-auth';
 import LogoutButton from './auth/logout-button';
 
-export function NavUser({user}: {user: user}) {
+export function NavUser({user}: {user: User}) {
   const {isMobile} = useSidebar();
 
   return (

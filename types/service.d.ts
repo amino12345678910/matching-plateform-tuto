@@ -103,7 +103,7 @@ export type Service = {
   sellerId: string;
   seller: Seller;
 
-  bookings: {
+  bookings?: {
     hasSeen: Date | null;
     createdAt: Date;
   }[];
@@ -115,7 +115,7 @@ export type Service = {
   tags: Tag[];
   faqs: FAQ[];
 
-  reviews: Review[];
+  reviews?: Review[];
 };
 
 export type ServiceRating = {

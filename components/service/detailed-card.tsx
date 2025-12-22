@@ -23,12 +23,12 @@ export function ServiceDetailPage({service}: {service: Service}) {
   const [isBooking, setIsBooking] = useState(false);
   const [avatar, setAvatar] = useState<string>('');
 
-  const reviewCount = service.reviews.length;
+  const reviewCount = service.reviews!.length;
   const avgRating = useMemo(
     () =>
       reviewCount === 0
         ? 0
-        : (service.reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount).toFixed(1),
+        : (service.reviews!.reduce((sum, r) => sum + r.rating, 0) / reviewCount).toFixed(1),
     [service.reviews, reviewCount]
   );
 
@@ -49,7 +49,7 @@ export function ServiceDetailPage({service}: {service: Service}) {
   }, []);
 
   const avgResponseTime = useMemo(() => {
-    const {hasSeen, createdAt} = service.bookings[0] || {};
+    const {hasSeen, createdAt} = service.bookings![0] || {};
     if (!hasSeen || !createdAt) return 'No responses yet';
     const now = moment();
     const created = moment(createdAt);
