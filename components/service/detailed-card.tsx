@@ -17,6 +17,8 @@ import {bookService} from '@/hooks/book/book-service';
 import {profilePhoto} from '../profile-url';
 import Link from 'next/link';
 import moment from 'moment';
+import '@/components/editor/styles/tiptap.scss';
+import '@/components/editor/styles/utils.css';
 
 export function ServiceDetailPage({service}: {service: Service}) {
   const [selectedPackage, setSelectedPackage] = useState<ServicePackage['name']>('BASIC');
@@ -178,8 +180,9 @@ export function ServiceDetailPage({service}: {service: Service}) {
               {/* ///description */}
               <section>
                 <h2 className="text-xl font-semibold mb-6">About This Service</h2>
+
                 <div
-                  className="prose max-w-none prose-a:text-primary hover:prose-a:underline prose-img:rounded-lg"
+                  className="prose tiptap prose-sm dark:tiptap dark:prose-invert -0! max-w-none border-0! bg-background! shadow-none!"
                   dangerouslySetInnerHTML={{__html: service.description}}
                 />
               </section>

@@ -2,8 +2,6 @@ import type {Metadata} from 'next';
 
 import {Geist, Geist_Mono} from 'next/font/google';
 import './globals.css';
-import '@/components/editor/styles/tiptap.scss';
-import '@/components/editor/styles/utils.css';
 import NextTopLoader from 'nextjs-toploader';
 import {Toaster} from 'sonner';
 
