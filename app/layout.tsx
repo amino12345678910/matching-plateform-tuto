@@ -38,7 +38,9 @@ export default function RootLayout({
           data-website-id="352eab6a-a921-4d6b-b73c-3282f2a38d2f"
         /> */}
       {/* </head> */}
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased h-full`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased h-full tracking-tighter `}
+      >
         <NextTopLoader showSpinner={false} color="#0bf59e" />
         {children}
         <Toaster

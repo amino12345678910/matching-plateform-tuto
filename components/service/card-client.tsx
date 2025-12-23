@@ -3,10 +3,9 @@
 import type {ServiceCard} from '@/types/service';
 import {ServiceCardComponent} from './card';
 
-interface Props {
-  services: ServiceCard[];
+interface EnhancedServiceCardType extends ServiceCard {
+  averageRating: number;
 }
-
-export default function ServiceCards({services}: Props) {
+export default function ServiceCards({services}: {services: EnhancedServiceCardType[]}) {
   return services.map(s => <ServiceCardComponent key={s.id} service={s} />);
 }
