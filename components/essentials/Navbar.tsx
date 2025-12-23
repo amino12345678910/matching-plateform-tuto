@@ -1,4 +1,3 @@
-// components/navbar/Navbar.tsx
 'use client';
 
 import {useEffect, useState} from 'react';
@@ -18,6 +17,7 @@ import AuthModal from '../auth/auth-dialog';
 import {getUserInfo} from '@/hooks/get-user-info';
 import {authClient} from '../../lib/auth-client';
 import {profilePhoto} from '../profile-url';
+import {cn} from '@/lib/utils';
 
 export const Navbar = () => {
   const router = useRouter();
@@ -49,11 +49,11 @@ export const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Navigation items
   const navItems = [
-    {label: 'Explore', href: '/explore', icon: Compass},
-    {label: 'Messages', href: '/dashboard/messages', icon: MessageSquare},
-    {label: 'Orders', href: '/dashboard/orders', icon: Briefcase},
+    {label: 'Explore', href: '/explore', icon: Compass, isPublic: true},
+    {label: 'About', href: '/about', icon: Compass, isPublic: true},
+    {label: 'Messages', href: '/dashboard/messages', icon: MessageSquare, isPublic: false},
+    {label: 'Orders', href: '/dashboard/orders', icon: Briefcase, isPublic: false},
   ];
 
   return (
@@ -75,9 +75,8 @@ export const Navbar = () => {
                 </h1>
               </Link>
 
-              {/* Desktop Navigation */}
               <div className="hidden lg:flex items-center gap-6 ml-8">
-                {navItems.map(item => (
+                {(isAuth ? navItems : navItems.filter(item => item.isPublic == true)).map(item => (
                   <Link
                     key={item.label}
                     href={item.href}

@@ -29,7 +29,7 @@ export const profilePhoto = async ({
     case 'GOOGLE':
       return imageUrl;
     case 'CLOUDINARY':
-      return cloudinaryUrl(imageUrl, 'q_40,f_auto');
+      return cloudinaryUrl(imageUrl, 'q_40,f_auto,w_300,h_300,c_fill,g_face');
     default:
       return generateAvatar(email);
   }

@@ -1,39 +1,51 @@
-import React from 'react';
+import {Skeleton} from '../ui/skeleton';
 
-function ServiceCardComponentSkeleton() {
+export function ServiceCardSkeleton() {
   return (
-    <div
-      className="
-    group w-full overflow-hidden rounded-xl border border-gray-200
-    bg-card shadow-sm transition-all duration-300
-    hover:shadow-md hover:border-gray-300
-  "
-    >
-      {/* IMAGE SKELETON */}
-      <div className="relative h-48 sm:h-40 w-full overflow-hidden bg-gray-100 animate-pulse" />
+    <div className="group relative overflow-hidden transition-all duration-300 h-full border rounded-lg">
+      <div className="relative aspect-video overflow-hidden bg-muted">
+        <Skeleton className="absolute inset-0" />
 
-      {/* CONTENT */}
-      <div className="flex flex-col justify-around h-auto p-3 space-y-3">
-        {/* SELLER */}
-        <header className="flex items-center gap-2">
-          <div className="h-5 w-5 rounded-full bg-gray-200 animate-pulse" />
-          <div className="h-3 w-24 rounded bg-gray-200 animate-pulse" />
-        </header>
+        <div className="absolute top-3 left-3 right-3 flex items-start justify-end">
+          <Skeleton className="h-8 w-8 rounded-full" />
+        </div>
+      </div>
 
-        {/* TITLE */}
-        <div className="space-y-1">
-          <div className="h-4 w-full rounded bg-gray-200 animate-pulse" />
-          <div className="h-4 w-2/3 rounded bg-gray-200 animate-pulse" />
+      <div className="p-4 pt-3 space-y-3">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-6 w-6 rounded-full" />
+          <Skeleton className="h-4 w-24" />
         </div>
 
-        {/* BOTTOM BAR */}
-        <div className="flex items-center justify-between text-xs">
-          <div className="h-3 w-16 rounded bg-gray-200 animate-pulse" />
-          <div className="h-3 w-12 rounded bg-gray-200 animate-pulse" />
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-full" />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1">
+              <Skeleton className="h-4 w-4 rounded-full" />
+              <Skeleton className="h-4 w-12" />
+            </div>
+            <div className="flex items-center gap-1">
+              <Skeleton className="h-4 w-4 rounded-full" />
+              <Skeleton className="h-4 w-12" />
+            </div>
+          </div>
+          <Skeleton className="h-4 w-16" />
+        </div>
+
+        <div className="flex items-center justify-between pt-2">
+          <div className="space-y-1">
+            <div className="flex items-baseline gap-1">
+              <Skeleton className="h-7 w-16" />
+              <Skeleton className="h-4 w-12" />
+            </div>
+            <Skeleton className="h-3 w-20" />
+          </div>
+          <Skeleton className="h-9 w-20" />
         </div>
       </div>
     </div>
   );
 }
-
-export default ServiceCardComponentSkeleton;

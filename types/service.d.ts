@@ -7,7 +7,7 @@ export type Seller = {
   bio?: string;
   userId: string;
   user: Pick<User, 'id' | 'name' | 'image' | 'email'>;
-
+  isVerified: boolean;
   profilePhoto?: string;
   createdAt: Date;
   updatedAt: Date;

@@ -52,11 +52,7 @@ export function ServiceCardComponent({service}: {service: EnhancedServiceCardTyp
     >
       <div className="relative aspect-video overflow-hidden">
         <Image
-          src={
-            service.images[0]?.length > 1
-              ? cloudinaryUrl(service.images[0], 'q_40,f_auto,w_600')
-              : '/placeholder.jpg'
-          }
+          src={cloudinaryUrl(service.images[0], 'q_40,f_auto,w_600')}
           alt={service.title}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -100,11 +96,10 @@ export function ServiceCardComponent({service}: {service: EnhancedServiceCardTyp
             ))}
           </div>
 
-          {/* Like Button */}
           <Button
             variant="secondary"
             size="icon"
-            className="h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background"
+            className="h-8 w-8 z-50 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background"
             onClick={e => {
               e.preventDefault();
               e.stopPropagation();
@@ -122,7 +117,7 @@ export function ServiceCardComponent({service}: {service: EnhancedServiceCardTyp
       </div>
 
       {/* Content Section */}
-      <CardContent className="p-4 space-y-3">
+      <CardContent className="p-4 pt-0 space-y-3">
         {/* Seller Info */}
         <div className="flex items-center gap-2">
           <div className="relative h-6 w-6 overflow-hidden rounded-full">
@@ -134,7 +129,7 @@ export function ServiceCardComponent({service}: {service: EnhancedServiceCardTyp
             />
           </div>
           <Link
-            href={`/seller/${service.seller.user.id}`}
+            href={`/freelancer/${service.seller.user.id}`}
             className="text-sm font-medium hover:underline truncate"
             onClick={e => e.stopPropagation()}
           >

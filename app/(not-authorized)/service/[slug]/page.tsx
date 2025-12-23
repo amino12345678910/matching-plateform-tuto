@@ -52,61 +52,61 @@ async function detailedPage({params}: {params: Promise<{slug: string}>}) {
   const resolvedParams = (await params).slug;
 
   if (resolvedParams.length < 0) {
-    console.log('string nahi h yee', resolvedParams);
-  } else {
-    const fetchedService = await prisma.service.findFirst({
-      where: {slug: resolvedParams},
-      include: {
-        bookings: {
-          select: {hasSeen: true, createdAt: true},
-          take: 1,
-        },
-        reviews: {include: {user: {select: {id: true, name: true, image: true}}}},
-        category: true,
-        packages: true,
-        seller: {
-          include: {user: {select: {id: true, name: true, email: true, image: true}}},
-        },
-        faqs: true,
-        tags: true,
-      },
-    });
-
-    if (fetchedService) {
-      const formattedService = {
-        ...fetchedService,
-
-        bookings: fetchedService.bookings.map(booking => ({
-          ...booking,
-          hasSeen: booking.hasSeen || null,
-        })),
-        seller: {
-          ...fetchedService.seller,
-          bio: fetchedService.seller.bio ?? undefined,
-          profilePhoto: fetchedService.seller.profilePhoto ?? undefined,
-        },
-      };
-
-      // console.log('Reached detailed page', formattedService);
-      return (
-        <>
-          <div className="container md:max-w-7xl mx-auto py-12 pt-8 px-6">
-            <Navbar />
-            <ServiceDetailPage service={formattedService} />
-            <Footer />
-          </div>
-        </>
-      );
-    } else
-      return (
-        <div className="grid grid-cols 1 justify-center items-center min-h-[84vh] mx-auto">
-          <Alert className="h-fit" variant="destructive">
-            <AlertTitle>Service not found</AlertTitle>
-            <AlertDescription>This link does not correlate with our service.</AlertDescription>
-          </Alert>
-        </div>
-      );
+    throw new Error('Could not resolve this service pleaes try again');
   }
+
+  const fetchedService = await prisma.service.findFirst({
+    where: {slug: resolvedParams},
+    include: {
+      bookings: {
+        select: {hasSeen: true, createdAt: true},
+        take: 1,
+      },
+      reviews: {include: {user: {select: {id: true, name: true, image: true}}}},
+      category: true,
+      packages: true,
+      seller: {
+        include: {user: {select: {id: true, name: true, email: true, image: true}}},
+      },
+      faqs: true,
+      tags: true,
+    },
+  });
+
+  if (fetchedService) {
+    const formattedService = {
+      ...fetchedService,
+
+      bookings: fetchedService.bookings.map(booking => ({
+        ...booking,
+        hasSeen: booking.hasSeen || null,
+      })),
+      seller: {
+        ...fetchedService.seller,
+        bio: fetchedService.seller.bio ?? undefined,
+        profilePhoto: fetchedService.seller.profilePhoto ?? undefined,
+      },
+    };
+
+    // console.log('Reached detailed page', formattedService);
+    return (
+      <>
+        <div className="container md:max-w-7xl mx-auto py-12 pt-8 px-6">
+          <Navbar />
+          <ServiceDetailPage service={formattedService} />
+          <Footer />
+        </div>
+      </>
+    );
+  } else
+    return (
+      <div className="grid grid-cols 1 justify-center items-center min-h-[84vh] mx-auto">
+        <Alert className="h-fit" variant="destructive">
+          <AlertTitle>Service not found</AlertTitle>
+          <AlertDescription>This link does not correlate with our service.</AlertDescription>
+        </Alert>
+      </div>
+    );
 }
 
 export default detailedPage;
