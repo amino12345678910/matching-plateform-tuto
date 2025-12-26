@@ -45,6 +45,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {cloudinaryUrl} from '@/lib/cloudinary';
+import type {imageSources} from '@/generated/prisma';
 
 interface Service {
   id: string;
@@ -70,10 +71,16 @@ interface Service {
   reviews: Array<{
     id: string;
     rating: number;
-    comment: string;
+    comment: string ;
+    createdAt: Date;
+    updatedAt: Date;
+    userId: string;
+    serviceId: string;
     user: {
       name: string;
+      id: string;
       image: string | null;
+      imageSource: imageSources | string;
     };
   }>;
   _count: {
@@ -101,22 +108,22 @@ interface ProfileData {
     id: string;
     name: string;
     email: string;
-    image: string;
-    createdAt: string;
+    image: string | null;
+    createdAt: Date;
   };
   seller: {
     id: string;
     bio: string | null;
     profilePhoto: string;
     isVerified: boolean;
-    joinedDate: string;
+    joinedDate: Date;
     servicesCount: number;
     totalReviews: number;
     averageRating: number;
     totalOrders: number;
   } | null;
   services: Service[];
-  reviews: Review[];
+  reviews?: Review[];
 }
 
 interface FreelancerProfileViewProps {
@@ -142,9 +149,8 @@ export default function FreelancerProfileView({profileData}: FreelancerProfileVi
 
   const {user, seller, services, reviews} = profileData;
 
-  // Calculate statistics
-  const totalRatings = reviews.length;
-  const positiveReviews = reviews.filter(r => r.rating >= 4).length;
+  const totalRatings = reviews?.length || 0;
+  const positiveReviews = reviews?.filter(r => r.rating >= 4).length || 0;
   const positiveRate = totalRatings > 0 ? (positiveReviews / totalRatings) * 100 : 0;
 
   // Get top services
@@ -265,7 +271,7 @@ export default function FreelancerProfileView({profileData}: FreelancerProfileVi
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="services">Services ({services.length})</TabsTrigger>
             <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
-            <TabsTrigger value="reviews">Reviews ({reviews.length})</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews ({reviews?.length || 0})</TabsTrigger>
             <TabsTrigger value="about">About</TabsTrigger>
           </TabsList>
 
@@ -331,8 +337,9 @@ export default function FreelancerProfileView({profileData}: FreelancerProfileVi
                 ))}
               </div>
             </section>
+
             {/* Recent Reviews */}
-            {reviews.length > 0 && (
+            {reviews && reviews.length > 0 && (
               <section>
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Reviews</h2>
 
@@ -536,7 +543,7 @@ export default function FreelancerProfileView({profileData}: FreelancerProfileVi
 
                       <div className="space-y-2">
                         {[5, 4, 3, 2, 1].map(rating => {
-                          const count = reviews.filter(r => r.rating === rating).length;
+                          const count = reviews?.filter(r => r.rating === rating).length || 0;
                           const percentage = totalRatings > 0 ? (count / totalRatings) * 100 : 0;
 
                           return (
@@ -592,63 +599,65 @@ export default function FreelancerProfileView({profileData}: FreelancerProfileVi
 
             {/* All Reviews */}
             <div className="space-y-6">
-              {reviews.map(review => (
-                <Card key={review.id}>
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-4">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={review.user.image || ''} />
-                        <AvatarFallback>{review.user.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
+              {reviews &&
+                reviews.length > 0 &&
+                reviews.map(review => (
+                  <Card key={review.id}>
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-4">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={review.user.image || ''} />
+                          <AvatarFallback>{review.user.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
 
-                      <div className="flex-1">
-                        <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-3">
-                          <div>
-                            <h4 className="font-semibold text-lg">{review.user.name}</h4>
-                            <Link
-                              href={`/service/${review.service.slug}`}
-                              className="text-sm text-primary hover:underline"
-                            >
-                              {review.service.title}
-                            </Link>
+                        <div className="flex-1">
+                          <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-3">
+                            <div>
+                              <h4 className="font-semibold text-lg">{review.user.name}</h4>
+                              <Link
+                                href={`/service/${review.service.slug}`}
+                                className="text-sm text-primary hover:underline"
+                              >
+                                {review.service.title}
+                              </Link>
+                            </div>
+
+                            <div className="flex items-center gap-4 mt-2 lg:mt-0">
+                              <div className="flex items-center gap-1">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`h-5 w-5 ${
+                                      i < review.rating
+                                        ? 'text-yellow-500 fill-yellow-500'
+                                        : 'text-gray-300'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {new Date(review.createdAt).toLocaleDateString()}
+                              </div>
+                            </div>
                           </div>
 
-                          <div className="flex items-center gap-4 mt-2 lg:mt-0">
-                            <div className="flex items-center gap-1">
-                              {[...Array(5)].map((_, i) => (
-                                <Star
-                                  key={i}
-                                  className={`h-5 w-5 ${
-                                    i < review.rating
-                                      ? 'text-yellow-500 fill-yellow-500'
-                                      : 'text-gray-300'
-                                  }`}
-                                />
-                              ))}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {new Date(review.createdAt).toLocaleDateString()}
-                            </div>
+                          <p className="text-gray-700 mb-4">{review.comment}</p>
+
+                          <div className="flex gap-3">
+                            <Button variant="ghost" size="sm">
+                              <ThumbsUp className="h-4 w-4 mr-1" />
+                              Helpful
+                            </Button>
+                            <Button variant="ghost" size="sm">
+                              <MessageSquare className="h-4 w-4 mr-1" />
+                              Reply
+                            </Button>
                           </div>
-                        </div>
-
-                        <p className="text-gray-700 mb-4">{review.comment}</p>
-
-                        <div className="flex gap-3">
-                          <Button variant="ghost" size="sm">
-                            <ThumbsUp className="h-4 w-4 mr-1" />
-                            Helpful
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <MessageSquare className="h-4 w-4 mr-1" />
-                            Reply
-                          </Button>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))}
             </div>
           </TabsContent>
 

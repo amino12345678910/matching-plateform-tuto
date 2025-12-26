@@ -26,7 +26,7 @@ import Link from 'next/link';
 import {Button} from '../ui/button';
 import type {User} from 'better-auth';
 import {NavUser} from '../nav-user';
-import type {UserInfo} from '@/hooks/get-user-info';
+import type {UserInfo} from '@/hooks/shared/get-user-info';
 
 // Menu items.
 const items = [

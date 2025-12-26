@@ -1,5 +1,5 @@
 import {NextRequest, NextResponse} from 'next/server';
-import {getUserInfo} from './hooks/get-user-info';
+import {getUserInfo} from './hooks/shared/get-user-info';
 import {prisma as dbContext} from './lib/prisma';
 
 export async function proxy(request: NextRequest) {
@@ -10,6 +10,12 @@ export async function proxy(request: NextRequest) {
   if (role && email && ['/auth/login', '/auth/signup'].includes(pathname)) {
     // Redirect authenticated users away from login/signup pages
 
+    return NextResponse.redirect(
+      new URL(`/dashboard/${role === 'SELLER' ? 'freelancer' : 'client'}`, request.url)
+    );
+  }
+
+  if (pathname == '/dashboard') {
     return NextResponse.redirect(
       new URL(`/dashboard/${role === 'SELLER' ? 'freelancer' : 'client'}`, request.url)
     );
@@ -43,5 +49,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path((?!message).*)', '/auth/login', '/auth/signup'],
+  matcher: ['/dashboard/:path((?!message).*)', '/auth/login', '/auth/signup', '/dashboard'],
 };

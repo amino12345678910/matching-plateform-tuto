@@ -1,5 +1,5 @@
 import SelectRoleComponent from '@/components/auth/select-role';
-import {getUserInfo} from '@/hooks/get-user-info';
+import {getUserInfo} from '@/hooks/shared/get-user-info';
 import {redirect} from 'next/navigation';
 
 export default async function SelectRolePage() {

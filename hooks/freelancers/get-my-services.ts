@@ -1,7 +1,7 @@
 'use server';
 
 import {prisma as dbContext} from '@/lib/prisma';
-import {getUserInfo} from '../get-user-info';
+import {getUserInfo} from '../shared/get-user-info';
 import type {ServiceCardLite} from '@/types/service-lite';
 
 async function getMyServices(): Promise<ServiceCardLite[]> {

@@ -7,7 +7,7 @@ import {MediaStep} from './steps/media-steps';
 import {useRouter} from 'next/navigation';
 import {useForm, type FieldErrors, type UseFormRegisterReturn} from 'react-hook-form';
 import {generateSlug} from '@/hooks/use-slug';
-import {getUserInfo} from '@/hooks/get-user-info';
+import {getUserInfo} from '@/hooks/shared/get-user-info';
 import {storeImageToCloudinary} from '@/hooks/service/store-image';
 import {storeService} from '@/hooks/service/store-service';
 import {toast} from 'sonner';

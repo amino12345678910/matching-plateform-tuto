@@ -28,6 +28,7 @@ import {toast} from 'sonner';
 import {cn} from '@/lib/utils';
 import {Skeleton} from '../../../ui/skeleton';
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from '@/components/ui/tooltip';
+import {defaultRoute} from '@/app/(freelancer-client)/dashboard/freelancer/config';
 
 interface ManageServiceCardProps {
   service: ServiceCardLite;
@@ -52,95 +53,92 @@ export function ManageServiceCardComponent({service}: ManageServiceCardProps) {
 
   const status = statusConfig[service.status] || statusConfig.PAUSED;
 
-  const updatedDate = new Date(service.updatedAt).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
+  // const updatedDate = new Date(service.updatedAt).toLocaleDateString('en-US', {
+  //   month: 'short',
+  //   day: 'numeric',
+  // });
 
   return (
     <div className="group relative w-full overflow-hidden rounded-lg border border-border bg-card hover:border-primary/30 transition-colors duration-200">
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted/20">
-        {!imageLoaded && <Skeleton className="absolute inset-0" />}
+      <div className="group rounded-xl border bg-card hover:shadow-md transition overflow-hidden">
+        {/* Image */}
+        <div className="relative aspect-[16/9] bg-muted">
+          {!imageLoaded && <Skeleton className="absolute inset-0" />}
+          <Image
+            src={primaryImage}
+            alt={service.title}
+            fill
+            className={cn(
+              'object-cover transition-transform duration-300',
+              imageLoaded ? 'opacity-100' : 'opacity-0',
+              'group-hover:scale-[1.03]'
+            )}
+            onLoad={() => setImageLoaded(true)}
+          />
 
-        <Image
-          src={primaryImage}
-          alt={service.title}
-          fill
-          className={cn(
-            'object-cover transition-transform duration-300',
-            imageLoaded ? 'opacity-100' : 'opacity-0',
-            'group-hover:scale-105'
-          )}
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-          onLoad={() => setImageLoaded(true)}
-        />
-
-        <div className="absolute top-3 left-3">
-          <Badge className={cn('px-2 py-1 text-xs font-medium border-none', status.color)}>
+          <Badge className={cn('absolute top-3 left-3 text-xs px-2 py-0.5', status.color)}>
             {status.label}
           </Badge>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/40 to-transparent">
-          <div className="flex items-center justify-between text-white text-sm">
-            <span className="font-semibold">From ${minPrice}</span>
-            {service._count?.bookings > 0 && (
-              <span className="text-xs bg-white/20 px-2 py-1 rounded">
-                {service._count.bookings} orders
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="p-4 space-y-3">
-        <div>
-          <Link href={`/service/${service.slug}`} target="_blank" className="block">
-            <h3 className="font-semibold text-sm line-clamp-2 hover:text-primary transition-colors mb-2">
+        <div className="p-4 space-y-3">
+          <Link href={`/service/${service.slug}`} target="_blank">
+            <h3 className="text-sm font-semibold line-clamp-2 hover:text-primary">
               {service.title}
             </h3>
           </Link>
 
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1">
+              <span className="flex items-center gap-1">
                 <IconPackage className="h-3 w-3" />
-                <span>{service.packages.length}</span>
-              </div>
-
-              <div className="flex items-center gap-1">
+                {service.packages.length} packages
+              </span>
+              <span className="flex items-center gap-1">
                 <IconCalendar className="h-3 w-3" />
-                <span>{service.packages[0]?.delivery || 0}d</span>
-              </div>
+                {service.packages[0]?.delivery}d
+              </span>
             </div>
 
-            <div className="text-xs text-muted-foreground">Updated {updatedDate}</div>
+            <span>From ${minPrice}</span>
           </div>
-        </div>
 
-        <div className="h-px bg-border" />
+          <div className="h-px bg-border" />
 
-        <div className="flex items-center justify-between">
-          <StatusSelector status={service.status} slug={service.slug} />
-          <div className="flex items-center gap-1">
-            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" asChild>
-              <Link href={`/dashboard/service/${service.slug}/edit`}>
-                <IconEdit className="h-3.5 w-3.5" />
-              </Link>
-            </Button>
+          <div className="flex items-center justify-between">
+            <StatusSelector
+              status={service.status}
+              slug={service.slug}
+              bookingCount={service._count.bookings}
+            />
 
-            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" asChild>
-              <Link href={`/service/${service.slug}`} target="_blank">
-                <IconExternalLink className="h-3.5 w-3.5" />
-              </Link>
-            </Button>
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" asChild>
+                <Link href={`${defaultRoute}/service/${service.slug}`}>
+                  <IconEdit className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button variant="ghost" size="icon" asChild>
+                <Link href={`/service/${service.slug}`} target="_blank">
+                  <IconExternalLink className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
 }
-function StatusSelector({status, slug}: {status: string; slug: string}) {
+function StatusSelector({
+  status,
+  slug,
+  bookingCount,
+}: {
+  status: string;
+  slug: string;
+  bookingCount: number;
+}) {
   const [currentStatus, setCurrentStatus] = useState(status);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -164,7 +162,6 @@ function StatusSelector({status, slug}: {status: string; slug: string}) {
         toast.success(message || 'Status updated successfully');
       } else if (error) {
         toast.error(error || 'Failed to update status');
-        // Revert on error
         setCurrentStatus(status);
       }
     } catch (error) {
@@ -176,6 +173,7 @@ function StatusSelector({status, slug}: {status: string; slug: string}) {
   };
 
   const currentOption = statusOptions.find(opt => opt.value === currentStatus) || statusOptions[0];
+  const isChangable = bookingCount > 0;
 
   return (
     <DropdownMenu>
@@ -191,7 +189,7 @@ function StatusSelector({status, slug}: {status: string; slug: string}) {
                   'hover:shadow-sm',
                   isUpdating && 'opacity-70 cursor-not-allowed'
                 )}
-                disabled={isUpdating}
+                disabled={isUpdating || isChangable}
               >
                 <span className={currentOption.color}>{currentOption.icon}</span>
                 <span>{currentOption.label}</span>

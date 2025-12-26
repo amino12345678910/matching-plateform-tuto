@@ -2,7 +2,7 @@ import type {Metadata} from 'next';
 import {ClientSidebar} from '@/components/client/client-sidebar';
 import {SidebarInset, SidebarProvider} from '@/components/ui/sidebar';
 import {SiteHeader} from '@/components/site-header';
-import {getUserInfo} from '@/hooks/get-user-info';
+import {getUserInfo} from '@/hooks/shared/get-user-info';
 
 export const metadata: Metadata = {
   title: 'Dashboard - Five Services',

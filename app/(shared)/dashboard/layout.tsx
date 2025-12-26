@@ -4,7 +4,7 @@ import {SidebarInset, SidebarProvider} from '@/components/ui/sidebar';
 import {redirect} from 'next/navigation';
 import {FreelancerSidebar} from '@/components/app-sidebar';
 import {SiteHeader} from '@/components/site-header';
-import {getUserInfo} from '@/hooks/get-user-info';
+import {getUserInfo} from '@/hooks/shared/get-user-info';
 
 export const metadata: Metadata = {
   title: 'Dashboard - Five Services',

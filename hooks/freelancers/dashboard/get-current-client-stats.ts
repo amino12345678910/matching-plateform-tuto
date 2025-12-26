@@ -8,6 +8,7 @@ export const getCurrentClientStats = async (freelancerId: string) => {
       freelancerId,
       status: 'CONFIRMED',
     },
+
     select: {
       client: {
         select: {

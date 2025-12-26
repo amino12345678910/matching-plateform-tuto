@@ -4,7 +4,7 @@ import {useEffect, useState} from 'react';
 import io from 'socket.io-client';
 import {cn} from '@/lib/utils';
 import {Inbox} from '@/components/messages/inbox';
-import {getUserInfo} from '@/hooks/get-user-info';
+import {getUserInfo} from '@/hooks/shared/get-user-info';
 import MessagesLoading from '@/components/messages/loader';
 import {createAvatar} from '@dicebear/core';
 import {adventurerNeutral} from '@dicebear/collection';

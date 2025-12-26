@@ -7,13 +7,12 @@ import {
 } from '@/components/ui/accordion';
 import type {ServiceCardLite as ServiceType} from '@/types/service-lite';
 
-import Link from 'next/link';
 import {AccordionLogger} from './accordion-logger';
 import Image from 'next/image';
 import {profilePhoto} from '@/components/profile-url';
 import {useEffect, useState} from 'react';
 import {updateBookingStatus} from '@/hooks/freelancers/update-book-status';
-import {defaultRoute} from '@/app/(freelancer-client)/dashboard/freelancer/config';
+import {Button} from '@/components/ui/button';
 
 export default function PackagesCard({
   booking,
@@ -50,95 +49,92 @@ export default function PackagesCard({
     >
       <AccordionLogger id={`booking-${booking.id}`} />
       <AccordionItem value={`booking-${booking.id}`} className="w-full">
-        <AccordionTrigger className="w-full flex justify-between p-0 hover:no-underline">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-md bg-accent flex items-center justify-center font-bold">
-              {booking.servicePackageTier[0]}
+        <AccordionTrigger className="p-0 hover:no-underline">
+          <div className="flex w-full items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-md bg-primary/10 flex items-center justify-center font-semibold">
+                {booking.servicePackageTier[0]}
+              </div>
+
+              <div className="text-left">
+                <p className="text-sm font-medium">{booking.servicePackageTier} Package</p>
+                <p className="text-xs text-muted-foreground line-clamp-1">{service.title}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-foreground hover:underline">
-                {booking.servicePackageTier} Package
+
+            <div className="text-right">
+              <p className="text-sm font-semibold">${pkg?.price}</p>
+              <p className="text-xs text-muted-foreground">
+                {new Date(booking.createdAt).toLocaleDateString()}
               </p>
-              <Link href={`${defaultRoute}/service/${service.slug}`} className="h-fit w-fit">
-                <p className="text-xs text-muted-foreground hover:underline">{service.title}</p>
-              </Link>
             </div>
-          </div>
-          <div className="text-right self-baseline">
-            {statusChanged ||
-              (booking.status === 'PENDING' && (
-                <div className="flex gap-2 pt-3">
-                  <span
-                    onClick={async () => {
-                      const {success, error} = await updateBookingStatus({
-                        bookingId: booking.id,
-                        freelancerId: booking.freelancerId,
-                        status: 'CONFIRMED',
-                      });
-                      if (error) return console.log(error);
-                      if (success) {
-                        setStatusChanged(true);
-                      }
-                    }}
-                    className="px-4 py-2 text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700"
-                  >
-                    Accept Booking
-                  </span>
-
-                  <span
-                    // type=""
-                    onClick={async () => {
-                      const {success, error} = await updateBookingStatus({
-                        bookingId: booking.id,
-                        freelancerId: booking.freelancerId,
-                        status: 'CANCELLED',
-                      });
-                      if (error) return console.log(error);
-                      if (success) {
-                        setStatusChanged(true);
-                      }
-                    }}
-                    className="px-4 py-2 text-sm font-medium rounded-md bg-red-600 text-white hover:bg-red-700"
-                  >
-                    Cancel Booking
-                  </span>
-                </div>
-              ))}
-
-            <p className="text-xs text-muted-foreground mt-1">
-              {new Date(booking.createdAt).toLocaleDateString()}
-            </p>
           </div>
         </AccordionTrigger>
-        <AccordionContent className="mt-3 space-y-3">
-          <div className="flex items-center gap-3 relative">
-            <Image
-              src={photo}
-              alt={client.name}
-              height={10}
-              width={10}
-              className="h-8 w-8 rounded-full object-cover"
-            />
+
+        <AccordionContent className="pt-4 space-y-4">
+          {/* Client */}
+          <div className="flex items-center gap-3">
+            <Image src={photo} alt={client.name} width={32} height={32} className="rounded-full" />
             <div>
-              <p className="text-sm font-medium text-foreground">{client.name}</p>
+              <p className="text-sm font-medium">{client.name}</p>
               <p className="text-xs text-muted-foreground">{client.email}</p>
             </div>
           </div>
 
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-foreground">Package Details</p>
-            <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-              <li>
-                Delivery time: <span className="font-medium">{pkg?.delivery}</span>
-              </li>
-              <li>
-                Revisions included: <span className="font-medium">{pkg?.revisions}</span>
-              </li>
-              <li>
-                Price: <span className="font-medium">${pkg?.price}</span>
-              </li>
-            </ul>
+          {/* Package Info */}
+          <div className="grid grid-cols-3 gap-4 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground">Delivery</p>
+              <p className="font-medium">{pkg?.delivery} days</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Revisions</p>
+              <p className="font-medium">{pkg?.revisions}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Price</p>
+              <p className="font-medium">${pkg?.price}</p>
+            </div>
           </div>
+
+          {booking.status === 'PENDING' && !statusChanged && (
+            <div className="flex gap-3 pt-2">
+              <Button
+                size="sm"
+                className="bg-green-600 hover:bg-green-700"
+                onClick={async () => {
+                  const {success, error} = await updateBookingStatus({
+                    bookingId: booking.id,
+                    freelancerId: booking.freelancerId,
+                    status: 'CONFIRMED',
+                  });
+                  if (error) return console.log(error);
+                  if (success) {
+                    setStatusChanged(true);
+                  }
+                }}
+              >
+                Accept
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={async () => {
+                  const {success, error} = await updateBookingStatus({
+                    bookingId: booking.id,
+                    freelancerId: booking.freelancerId,
+                    status: 'CANCELLED',
+                  });
+                  if (error) return console.log(error);
+                  if (success) {
+                    setStatusChanged(true);
+                  }
+                }}
+              >
+                Reject
+              </Button>
+            </div>
+          )}
         </AccordionContent>
       </AccordionItem>
     </Accordion>

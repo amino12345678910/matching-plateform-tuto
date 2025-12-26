@@ -131,7 +131,7 @@ async function FreelancerProfilePage({params}: {params: Promise<{slug: string}>}
           }
         : null,
       services: freelancerData.seller?.services || [],
-      reviews: freelancerData.reviews,
+      reviews: freelancerData.reviews || [],
     };
 
     return (

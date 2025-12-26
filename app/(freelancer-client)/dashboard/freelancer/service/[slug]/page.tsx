@@ -2,11 +2,9 @@
 ///
 //
 
-import Create from '@/components/service/create';
 import EditService from '@/components/service/edit';
-import Edit from '@/components/service/edit';
 import {Alert, AlertDescription, AlertTitle} from '@/components/ui/alert';
-import {prisma} from '@/lib/prisma';
+import {prisma as dbContext} from '@/lib/prisma';
 
 async function EditServicePage({params}: {params: Promise<{slug: string}>}) {
   const resolvedParams = (await params).slug;
@@ -14,7 +12,7 @@ async function EditServicePage({params}: {params: Promise<{slug: string}>}) {
   if (resolvedParams.length < 0) {
     console.log('string nahi h yee', resolvedParams);
   } else {
-    const fetchedService = await prisma.service.findFirst({
+    const fetchedService = await dbContext.service.findFirst({
       where: {slug: resolvedParams},
       include: {
         reviews: {include: {user: {select: {id: true, name: true, image: true}}}},

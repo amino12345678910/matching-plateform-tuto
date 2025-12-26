@@ -5,7 +5,7 @@ import {useRouter} from 'next/navigation';
 import {toast} from 'sonner';
 import {getPendingRole, clearPendingRole} from '@/lib/sessions';
 import {updateUserRole} from '@/hooks/update-role';
-import {getUserInfo} from '@/hooks/get-user-info';
+import {getUserInfo} from '@/hooks/shared/get-user-info';
 
 export default function RegistrationPage() {
   const router = useRouter();

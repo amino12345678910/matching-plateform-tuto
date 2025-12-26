@@ -1,6 +1,6 @@
 'use server';
 
-import {getUserInfo} from '@/hooks/get-user-info';
+import {getUserInfo} from '@/hooks/shared/get-user-info';
 import {prisma as dbContext} from '@/lib/prisma';
 
 export type ServiceNavLite = {

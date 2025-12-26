@@ -1,4 +1,3 @@
-// components/auth/AuthModal.tsx
 'use client';
 
 import {useState} from 'react';
@@ -16,7 +15,6 @@ import {
   IconEyeOff,
 } from '@tabler/icons-react';
 
-// Import shadcn components
 import {
   Dialog,
   DialogContent,
@@ -80,7 +78,6 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
   const isLogDisabled = !loginForm.email || !loginForm.password;
   const isRegDisabled = !regForm.email || !regForm.password;
 
-  // Password validation
   const validations = {
     length: regForm.password.length >= 8,
     uppercase: /[A-Z]/.test(regForm.password),
@@ -114,7 +111,6 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
         setPendingAuthType(null);
       }
     } else if (pendingAuthType === 'email') {
-      // For email signup, store role and proceed to next step
       setRegForm(prev => ({...prev, role}));
       setShowRoleDialog(false);
       setPendingAuthType(null);

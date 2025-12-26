@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import AuthModal from '../auth/auth-dialog';
-import {getUserInfo} from '@/hooks/get-user-info';
+import {getUserInfo} from '@/hooks/shared/get-user-info';
 import {authClient} from '../../lib/auth-client';
 import {profilePhoto} from '../profile-url';
 import {cn} from '@/lib/utils';

@@ -21,7 +21,7 @@ import {useForm, UseFormRegisterReturn, FieldErrors} from 'react-hook-form';
 import {generateSlug} from '@/hooks/use-slug';
 import AddServiceLoadingState from '../states/add-service-state';
 import {storeImageToCloudinary} from '../../hooks/service/store-image';
-import {getUserInfo} from '@/hooks/get-user-info';
+import {getUserInfo} from '@/hooks/shared/get-user-info';
 import {toast} from 'sonner';
 import type {Service} from '@/types/service';
 import {editService} from '@/hooks/service/edit-service';
@@ -29,6 +29,7 @@ import Image from 'next/image';
 import {cloudinaryUrl} from '@/lib/cloudinary';
 import {useRouter} from 'next/navigation';
 import {defaultRoute} from '@/app/(freelancer-client)/dashboard/freelancer/config';
+import Link from 'next/link';
 
 type PackageForm = {
   price: number;
@@ -281,11 +282,12 @@ export default function EditService({service}: {service: Service}) {
     <>
       {loading && <AddServiceLoadingState />}
       <form onSubmit={handleSubmit(onSubmit)} className="container mx-auto p-6">
-        {/* HEADER AND ACTIONS */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 border-b pb-4">
           <div className="flex items-center space-x-3 mb-4 sm:mb-0">
-            <Button variant="ghost" size="icon" className="h-8 w-8" type="button">
-              <ArrowLeft className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="h-8 w-8" type="button" asChild>
+              <Link href={`${defaultRoute}/manage`}>
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
             </Button>
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Edit Service</h1>

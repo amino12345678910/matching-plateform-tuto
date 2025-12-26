@@ -1,6 +1,6 @@
 import type {ClientActiveOrder} from '@/app/(freelancer-client)/dashboard/client/page';
 import {prisma as dbContext} from '@/lib/prisma';
-import {getUserInfo} from '../get-user-info';
+import {getUserInfo} from '../shared/get-user-info';
 
 export const getActiveOrders = async (): Promise<ClientActiveOrder> => {
   const {userId} = await getUserInfo();

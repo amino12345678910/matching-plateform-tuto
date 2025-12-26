@@ -40,7 +40,7 @@ export type BookedServiceType = {
     delivery: number;
     price: number;
   }[];
-  freelancer: {
+  counterparty: {
     imageSource: 'GOOGLE' | 'CLOUDINARY' | 'NULL';
     image?: string;
     email: string;

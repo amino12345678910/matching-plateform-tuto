@@ -1,5 +1,5 @@
 import BecomeSeller from '@/components/freelancer/become-seller';
-import {getUserInfo} from '@/hooks/get-user-info';
+import {getUserInfo} from '@/hooks/shared/get-user-info';
 import {prisma} from '@/lib/prisma';
 import {redirect} from 'next/navigation';
 

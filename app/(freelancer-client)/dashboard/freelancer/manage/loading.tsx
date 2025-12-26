@@ -1,4 +1,4 @@
-import ServiceCardsSkeleton from '@/components/service/card-client-skeleton';
+import {ServiceCardSkeleton} from '@/components/service/card-skeleton';
 
 export default function LoadingManagePage() {
   return (
@@ -62,7 +62,9 @@ export default function LoadingManagePage() {
 
       {/* SERVICES GRID SKELETON */}
       <div className="grid sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6 w-full">
-        <ServiceCardsSkeleton count={8} />
+        {Array.from({length: 8}).map((_, i) => (
+          <ServiceCardSkeleton key={i} />
+        ))}
       </div>
     </div>
   );

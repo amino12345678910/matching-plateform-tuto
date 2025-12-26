@@ -16,7 +16,7 @@ import {SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar} from '@/com
 import LogoutButton from './auth/logout-button';
 import {useEffect, useState} from 'react';
 import {profilePhoto} from './profile-url';
-import type {UserInfo} from '@/hooks/get-user-info';
+import type {UserInfo} from '@/hooks/shared/get-user-info';
 
 export function NavUser({user}: {user: UserInfo}) {
   const {isMobile} = useSidebar();

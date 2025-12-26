@@ -1,7 +1,7 @@
 'use server';
 
-import {getUserInfo} from '@/hooks/get-user-info';
-import {getMyBookings} from '@/hooks/client/get-my-bookings';
+import {getUserInfo} from '@/hooks/shared/get-user-info';
+import {getMyBookings} from '@/hooks/shared/get-my-bookings';
 import type {BookedServiceType} from '@/types/bookings';
 import {BookedServiceCardComponent} from '@/components/client/booked-service-card';
 

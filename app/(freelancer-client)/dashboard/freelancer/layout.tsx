@@ -3,7 +3,7 @@ import {SiteHeader} from '@/components/site-header';
 import {SidebarInset, SidebarProvider} from '@/components/ui/sidebar';
 import {prisma as dbContext} from '@/lib/prisma';
 import {redirect} from 'next/navigation';
-import {getUserInfo} from '@/hooks/get-user-info';
+import {getUserInfo} from '@/hooks/shared/get-user-info';
 import type {Metadata} from 'next';
 
 export const metadata: Metadata = {

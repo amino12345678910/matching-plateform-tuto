@@ -1,4 +1,4 @@
-import {getUserInfo} from '@/hooks/get-user-info';
+import {getUserInfo} from '@/hooks/shared/get-user-info';
 import {redirect} from 'next/navigation';
 import {getActiveOrders} from '@/hooks/client/get-active-orders';
 import {ClientSectionCards} from '@/components/client/features/section-cards';

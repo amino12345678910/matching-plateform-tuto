@@ -27,7 +27,7 @@ import {
 import {defaultRoute} from '@/app/(freelancer-client)/dashboard/freelancer/config';
 import {NavDocuments} from './nav-documents';
 import Link from 'next/link';
-import type {UserInfo} from '@/hooks/get-user-info';
+import type {UserInfo} from '@/hooks/shared/get-user-info';
 
 const data = {
   navMain: [

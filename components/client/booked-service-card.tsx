@@ -12,9 +12,9 @@ export function BookedServiceCardComponent({service}: {service: BookedServiceTyp
   const minPrice = Math.min(...service.packages.map(p => p.price)) || 0;
   const [avatar, setAvatar] = useState<string>('');
 
-  const freelancerImageUrl = service.freelancer.image;
-  const freelancerMail = service.freelancer.email;
-  const imageSource = service.freelancer.imageSource;
+  const freelancerImageUrl = service.counterparty.image;
+  const freelancerMail = service.counterparty.email;
+  const imageSource = service.counterparty.imageSource;
   const hasSeen = Boolean(service.hasSeen);
 
   useEffect(() => {
@@ -84,12 +84,12 @@ export function BookedServiceCardComponent({service}: {service: BookedServiceTyp
           </Link>
 
           <Link
-            href={`/seller/${service.freelancer.id}`}
+            href={`/seller/${service.counterparty.id}`}
             target="_blank"
             className="flex items-center gap-2 mt-1  text-xs text-muted-foreground hover:text-foreground"
           >
-            <img src={avatar} alt={service.freelancer.name} className="h-5 w-5 object-cover" />
-            <span className="font-medium truncate">{service.freelancer.name}</span>
+            <img src={avatar} alt={service.counterparty.name} className="h-5 w-5 object-cover" />
+            <span className="font-medium truncate">{service.counterparty.name}</span>
           </Link>
         </div>
 

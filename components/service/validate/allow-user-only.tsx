@@ -1,6 +1,6 @@
 'use server';
 
-import {getUserInfo} from '@/hooks/get-user-info';
+import {getUserInfo} from '@/hooks/shared/get-user-info';
 async function allowClientOnly(): Promise<{
   disable: boolean;
   role?: string;

@@ -77,7 +77,6 @@ export function SectionCards({
             </Badge>
           </div>
 
-          {/* Client Name */}
           <CardTitle className="text-2xl font-semibold">
             {client.name ?? 'No active client'}
           </CardTitle>
@@ -101,7 +100,7 @@ export function SectionCards({
               </Badge>
 
               <Badge asChild variant="outline" className="cursor-pointer">
-                <Link href={`/freelancer/bookings`}>View Booking</Link>
+                <Link href={`/dashboard/freelancer/bookings`}>View Booking</Link>
               </Badge>
             </div>
           </div>

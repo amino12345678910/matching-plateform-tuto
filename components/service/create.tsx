@@ -23,7 +23,7 @@ import {generateSlug} from '@/hooks/use-slug';
 import AddServiceLoadingState from '../states/add-service-state';
 import {storeImageToCloudinary} from '../../hooks/service/store-image';
 import {storeService} from '../../hooks/service/store-service';
-import {getUserInfo} from '@/hooks/get-user-info';
+import {getUserInfo} from '@/hooks/shared/get-user-info';
 import {toast} from 'sonner';
 import {cn} from '@/lib/utils';
 import {useRouter} from 'next/navigation';
