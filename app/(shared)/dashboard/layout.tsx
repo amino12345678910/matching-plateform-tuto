@@ -36,7 +36,7 @@ export default async function SharedLayout({
           <SiteHeader />
           <div className="flex flex-1 flex-col">
             <div className="@container/main flex flex-1 flex-col gap-2">
-              <main className="flex flex-col gap-4 py-4 p-2 px-3 md:gap-6 md:p-6">{children}</main>
+              <main className="flex flex-col gap-4 p-0 h-full">{children}</main>
             </div>
           </div>
         </SidebarInset>

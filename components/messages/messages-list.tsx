@@ -10,6 +10,7 @@ export default function MessagesList({
   activeConv: Conversation | null;
   onView: (conv: Conversation, isActiveConv: boolean) => void;
 }) {
+  console.log('active conversation', activeConv);
   return (
     <div className="space-y-1 border-t">
       {enriched

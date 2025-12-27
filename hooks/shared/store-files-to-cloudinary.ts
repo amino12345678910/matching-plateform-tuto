@@ -14,6 +14,9 @@ const allowed_formats = [
   'jpeg',
   'gif',
   'webp',
+  'mp4',
+  'mp3',
+  'mkv',
 ];
 
 export const storeFilesToCloudinary = async (
@@ -36,7 +39,7 @@ export const storeFilesToCloudinary = async (
           {
             upload_preset: preset,
             folder: pathOverride,
-            resource_type: 'raw',
+            resource_type: 'auto',
             allowed_formats,
           },
           (error, result) => {

@@ -12,6 +12,7 @@ import io from 'socket.io-client';
 import {cn} from '@/lib/utils';
 import {useRef} from 'react';
 import MessagesEmptyState from '@/components/messages/empty-state';
+import type {BookingStatus} from '@/types/bookings';
 
 export type User = {
   id: string;
@@ -21,21 +22,24 @@ export type User = {
   imageSource: string | imageSources;
 };
 
+export type Booking = {id: string; status: BookingStatus};
+
+export type CurrentUser = {
+  id: string;
+  role: 'SELLER' | 'USER';
+};
+
 export type Conversation = {
-  avatar(arg0: string, avatar: any): unknown;
   id: string;
   otherUser: User;
-  bookingId: string;
+  booking: Booking;
   lastMessage?: Message;
   createdAt: Date;
 };
 
 export default function MessagesPage() {
   const [socket, setSocket] = useState<SocketIOClient.Socket | null>(null);
-  const [currentUser, setCurrentUser] = useState<{
-    id: string;
-    role: 'SELLER' | 'USER';
-  } | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConv, setActiveConv] = useState<Conversation | null>(null);
@@ -107,7 +111,7 @@ export default function MessagesPage() {
     socket.emit('get-messages', {
       roomId,
       userId: currentUser?.id,
-      bookingId: activeConv.bookingId,
+      bookingId: activeConv.booking.id,
     });
 
     socket.on('messages', setMessages);
@@ -142,7 +146,7 @@ export default function MessagesPage() {
         <title>Messages | Five Services</title>
         <meta name="description" content="Start Conversation with your client" />
 
-        <div className="flex h-[80vh] border rounded-xl overflow-hidden">
+        <div className="flex min-h-[80vh] h-full max-h-[92svh] md:h-[89svh] lg:h-[100svh] xl:h-screen md:ps-2 overflow-hidden">
           <aside
             className={cn(
               'border-r bg-background transition-all',
@@ -164,10 +168,9 @@ export default function MessagesPage() {
           {activeConv ? (
             <Inbox
               messages={messages}
-              currentUserId={currentUser.id}
+              booking={activeConv.booking}
+              currentUser={currentUser}
               onSend={async (text, cloudinaryFileUrls) => {
-                console.log('page cloudinaryFileUrls', cloudinaryFileUrls);
-
                 sendMessage(text, cloudinaryFileUrls);
               }}
               user={activeConv.otherUser}
