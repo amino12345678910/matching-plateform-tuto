@@ -1,9 +1,9 @@
 export type BookingStatus =
   | 'PENDING'
   | 'CONFIRMED'
-  | 'CANCELLED'
+  | 'DELIVERED'
   | 'COMPLETED'
-  | 'IN_REVIEW'
+  | 'CANCELLED'
   | 'DISPUTED';
 export type ServicePackageTier = 'BASIC' | 'STANDARD' | 'PREMIUM';
 export type Booking = {

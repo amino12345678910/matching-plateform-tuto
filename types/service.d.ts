@@ -1,6 +1,7 @@
 // import type {User} from 'better-auth';
 
 import type {User} from '@/generated/prisma';
+import type {BookingStatus} from './bookings';
 
 export type Seller = {
   id: string;
@@ -55,13 +56,6 @@ export type FAQ = {
   answer: string;
 };
 
-export type BookingStatus =
-  | 'PENDING'
-  | 'CONFIRMED'
-  | 'CANCELLED'
-  | 'COMPLETED'
-  | 'IN_REVIEW'
-  | 'DISPUTED';
 export type ServicePackageTier = 'BASIC' | 'STANDARD' | 'PREMIUM';
 export type Booking = {
   id: string;

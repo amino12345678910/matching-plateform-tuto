@@ -116,6 +116,7 @@ model ServicePackage {
   id          String      @id @default(uuid())
   name        PackageTier
   price       Float
+  discount    Int         @default(0) // value in percentage
   delivery    Int
   revisions   Int
   description String
@@ -230,11 +231,11 @@ enum ServiceStatus {
 
 // Booking system
 enum BookingStatus {
-  PENDING
-  CONFIRMED
-  CANCELLED
-  COMPLETED
-  IN_REVIEW
+  PENDING // client placed order
+  CONFIRMED // freelancer accepted
+  DELIVERED // freelancer submitted work
+  COMPLETED // client approved
+  CANCELLED // cancelled before delivery
   DISPUTED
 }
 
