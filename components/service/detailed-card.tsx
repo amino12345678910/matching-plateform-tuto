@@ -19,6 +19,8 @@ import Link from 'next/link';
 import moment from 'moment';
 import '@/components/editor/styles/tiptap.scss';
 import '@/components/editor/styles/utils.css';
+import {ReviewDisplay} from './review-display';
+import {ReviewForm} from './review-form';
 
 export function ServiceDetailPage({service}: {service: Service}) {
   const [selectedPackage, setSelectedPackage] = useState<ServicePackage['name']>('BASIC');
@@ -143,12 +145,10 @@ export function ServiceDetailPage({service}: {service: Service}) {
                 {service.title}
               </h1>
             </div>
-
             {/* Media Gallery */}
             <div className="mb-10">
               <ServiceCarousel service={service} />
             </div>
-
             {/* Detailed Content Sections */}
             <div className="space-y-10">
               <section>
@@ -176,7 +176,6 @@ export function ServiceDetailPage({service}: {service: Service}) {
                   ))}
                 </div>
               </section>
-
               {/* ///description */}
               <section>
                 <h2 className="text-xl font-semibold mb-6">About This Service</h2>
@@ -186,7 +185,6 @@ export function ServiceDetailPage({service}: {service: Service}) {
                   dangerouslySetInnerHTML={{__html: service.description}}
                 />
               </section>
-
               {/* Seller Profile */}
               <section className="py-6 pe-6 rounded-xl ">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -240,7 +238,6 @@ export function ServiceDetailPage({service}: {service: Service}) {
                   </div>
                 )}
               </section>
-
               {/* FAQ*/}
               <section>
                 <h2 className="text-xl font-semibold mb-6">FAQ</h2>
@@ -260,6 +257,12 @@ export function ServiceDetailPage({service}: {service: Service}) {
                     No FAQs available
                   </div>
                 )}
+              </section>
+              <section>
+                <ReviewForm serviceId={service.id} existingReview={undefined} />
+              </section>
+              <section>
+                <ReviewDisplay reviews={service.reviews || []} />
               </section>
             </div>
           </div>

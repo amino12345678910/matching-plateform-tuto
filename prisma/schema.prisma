@@ -150,9 +150,9 @@ model Category {
 }
 
 model Review {
-  id      String  @id @default(uuid())
+  id      String @id @default(uuid())
   rating  Int
-  comment String?
+  comment String
 
   userId    String @unique
   serviceId String @unique

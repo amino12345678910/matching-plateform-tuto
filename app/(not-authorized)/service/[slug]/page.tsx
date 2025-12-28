@@ -9,6 +9,8 @@ import {cloudinaryUrl} from '@/lib/cloudinary';
 import {prisma} from '@/lib/prisma';
 import type {Metadata} from 'next';
 import {Footer} from '@/components/footer/footer-2';
+import type {Service} from '@/types/service';
+import {profilePhoto} from '@/components/profile-url';
 
 export async function generateMetadata({
   params,
@@ -62,11 +64,13 @@ async function detailedPage({params}: {params: Promise<{slug: string}>}) {
         select: {hasSeen: true, createdAt: true},
         take: 1,
       },
-      reviews: {include: {user: {select: {id: true, name: true, image: true}}}},
+      reviews: {include: {user: {select: {id: true, name: true, image: true, imageSource: true}}}},
       category: true,
       packages: true,
       seller: {
-        include: {user: {select: {id: true, name: true, email: true, image: true}}},
+        include: {
+          user: {select: {id: true, name: true, email: true, image: true, imageSource: true}},
+        },
       },
       faqs: true,
       tags: true,
@@ -74,9 +78,14 @@ async function detailedPage({params}: {params: Promise<{slug: string}>}) {
   });
 
   if (fetchedService) {
-    const formattedService = {
+    const formattedService: Service = {
       ...fetchedService,
 
+      reviews: fetchedService.reviews.map(review => ({
+        ...review,
+        clientId: review.userId,
+        client: {...review.user, avatar: review.user.image ?? undefined},
+      })),
       bookings: fetchedService.bookings.map(booking => ({
         ...booking,
         hasSeen: booking.hasSeen || null,
@@ -91,11 +100,9 @@ async function detailedPage({params}: {params: Promise<{slug: string}>}) {
     // console.log('Reached detailed page', formattedService);
     return (
       <>
-        <div className="container md:max-w-7xl mx-auto py-12 pt-8 px-6">
-          <Navbar />
-          <ServiceDetailPage service={formattedService} />
-          <Footer />
-        </div>
+        <Navbar />
+        <ServiceDetailPage service={formattedService} />
+        <Footer />
       </>
     );
   } else

@@ -17,8 +17,6 @@ import AuthModal from '../auth/auth-dialog';
 import {getUserInfo} from '@/hooks/shared/get-user-info';
 import {authClient} from '../../lib/auth-client';
 import {profilePhoto} from '../profile-url';
-import {cn} from '@/lib/utils';
-
 export const Navbar = () => {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -61,8 +59,10 @@ export const Navbar = () => {
       <AuthModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
 
       <nav
-        className={`sticky top-0 z-40 w-full transition-all duration-300 ${
-          isScrolled ? 'bg-white/95 backdrop-blur-sm border-b shadow-sm' : 'bg-white border-b'
+        className={`sticky top-0 z-[99] w-full transition-all duration-300 ${
+          isScrolled
+            ? 'bg-background/90 backdrop-blur-sm border-b shadow-sm'
+            : 'bg-background border-b'
         }`}
       >
         <div className="container mx-auto px-4">

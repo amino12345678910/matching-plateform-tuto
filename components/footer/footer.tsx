@@ -97,7 +97,7 @@ const links = [
 export function Footer() {
   return (
     <footer className="relative mt-25 overflow-hidden py-12 pt-37 md:py-25 md:pt-37 border-t">
-      <div className="mx-auto grid w-full  grid-cols-2 gap-6 px-6 lg:px-2  lg:gap-48 justify-around tracking-tight md:grid-cols-4">
+      <div className="mx-auto grid w-full grid-cols-2 gap-6 px-6 lg:px-2 lg:gap-48 justify-around tracking-tight md:grid-cols-4">
         {links.map(link => (
           <div key={link.title} className="mb-10 text-center">
             <h3 className="text-muted-foreground mb-8">{link.title}</h3>

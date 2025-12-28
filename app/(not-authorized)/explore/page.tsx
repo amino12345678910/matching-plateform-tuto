@@ -4,7 +4,7 @@ import {prisma} from '@/lib/prisma';
 import NoServicesFound from '@/components/service/service-non-found';
 import {getUserInfo} from '@/hooks/shared/get-user-info';
 import Navbar from '@/components/essentials/Navbar';
-import {Footer} from '@/components/footer/footer';
+import {Footer} from '@/components/footer/footer-2';
 import {Search, TrendingUp, ArrowRight} from 'lucide-react';
 import {Input} from '@/components/ui/input';
 import {Button} from '@/components/ui/button';

@@ -32,12 +32,12 @@ export type Category = {
 
 export type Review = {
   id: string;
-  rating: number; // 1–5
-  comment?: string | null;
+  rating: number;
+  comment: string;
 
-  userId: string;
+  clientId: string;
   serviceId: string;
-  user: Pick<User, 'id' | 'name' | 'image'>;
+  client: {id: string; name: string; avatar?: string; imageSource: User['imageSource']};
 
   updatedAt: Date;
   createdAt: Date;
