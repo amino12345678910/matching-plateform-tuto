@@ -1,27 +1,20 @@
 'use server';
 import {prisma as dbContext} from '@/lib/prisma';
 
-export const AddReview = async ({
-  rating = 0,
-  comment,
-  clientId,
-  serviceId,
-}: {
+type AddReviewProps = {
   clientId: string;
   serviceId: string;
-  comment?: string;
+  comment: string;
   rating: number;
-}) => {
+};
+export const AddReview = async ({rating = 0, comment, clientId, serviceId}: AddReviewProps) => {
   try {
-    await dbContext.review.create({
-      data: {
-        rating: rating || 0,
-        comment,
-        serviceId,
-        userId: clientId,
-      },
+    const review = await dbContext.review.upsert({
+      where: {clientId_serviceId: {clientId, serviceId}},
+      update: {rating, comment},
+      create: {rating, comment, serviceId, clientId},
     });
-    return {success: true};
+    return {success: true, review: review ?? {}};
   } catch (error) {
     console.error(error);
     return {success: false};

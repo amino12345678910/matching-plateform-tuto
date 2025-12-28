@@ -10,7 +10,6 @@ import {prisma} from '@/lib/prisma';
 import type {Metadata} from 'next';
 import {Footer} from '@/components/footer/footer-2';
 import type {Service} from '@/types/service';
-import {profilePhoto} from '@/components/profile-url';
 
 export async function generateMetadata({
   params,
@@ -64,7 +63,9 @@ async function detailedPage({params}: {params: Promise<{slug: string}>}) {
         select: {hasSeen: true, createdAt: true},
         take: 1,
       },
-      reviews: {include: {user: {select: {id: true, name: true, image: true, imageSource: true}}}},
+      reviews: {
+        include: {client: {select: {id: true, name: true, image: true, imageSource: true}}},
+      },
       category: true,
       packages: true,
       seller: {
@@ -78,13 +79,14 @@ async function detailedPage({params}: {params: Promise<{slug: string}>}) {
   });
 
   if (fetchedService) {
+    console.log('reviews', fetchedService.reviews);
+
     const formattedService: Service = {
       ...fetchedService,
 
       reviews: fetchedService.reviews.map(review => ({
         ...review,
-        clientId: review.userId,
-        client: {...review.user, avatar: review.user.image ?? undefined},
+        client: {...review.client, avatar: review.client.image ?? undefined},
       })),
       bookings: fetchedService.bookings.map(booking => ({
         ...booking,
@@ -96,8 +98,6 @@ async function detailedPage({params}: {params: Promise<{slug: string}>}) {
         profilePhoto: fetchedService.seller.profilePhoto ?? undefined,
       },
     };
-
-    // console.log('Reached detailed page', formattedService);
     return (
       <>
         <Navbar />

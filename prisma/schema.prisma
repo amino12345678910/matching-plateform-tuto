@@ -154,17 +154,17 @@ model Review {
   rating  Int
   comment String
 
-  userId    String @unique
-  serviceId String @unique
+  clientId  String
+  serviceId String
 
-  user    User    @relation(fields: [userId], references: [id])
+  client  User    @relation(fields: [clientId], references: [id])
   service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([serviceId])
-  @@index([userId])
+  @@unique([clientId, serviceId])
+  @@index([clientId, serviceId])
   @@map("review")
 }
 

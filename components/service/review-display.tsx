@@ -4,31 +4,16 @@ import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/compo
 import {Star} from 'lucide-react';
 import {cn} from '@/lib/utils';
 import {profilePhoto} from '../profile-url';
-import type {User} from '@/generated/prisma';
 import Image from 'next/image';
+import type {Review} from '@/types/review';
 
 interface ReviewDisplayProps {
-  reviews:
-    | {
-        id: string;
-        rating: number;
-        comment: string;
-        client: {
-          id: string;
-          name: string;
-          avatar?: string;
-          imageSource: User['imageSource'];
-        };
-        service?: {
-          id: string;
-          title?: string;
-        };
-        createdAt: Date;
-      }[]
-    | [];
+  dbReviews: Review[];
+  currentReview?: Review;
 }
 
-export function ReviewDisplay({reviews = []}: ReviewDisplayProps) {
+export function ReviewDisplay({dbReviews = [], currentReview}: ReviewDisplayProps) {
+  const reviews: Review[] = currentReview ? [...dbReviews, currentReview] : dbReviews;
   const averageRating =
     reviews.length > 0
       ? reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length
@@ -53,8 +38,8 @@ export function ReviewDisplay({reviews = []}: ReviewDisplayProps) {
   };
 
   return (
-    <Card className="w-full mx-0 px-0">
-      <CardHeader>
+    <Card className="w-full mx-0 px-0 py-2 shadow-none border-none">
+      <CardHeader className="px-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <CardTitle className="text-2xl font-semibold">Reviews ({reviews.length})</CardTitle>
@@ -75,52 +60,55 @@ export function ReviewDisplay({reviews = []}: ReviewDisplayProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 px-0">
         {reviews.length === 0 ? (
           <div className="text-center py-8 text-[var(--muted-foreground)]">
             No reviews yet. Be the first to leave a review!
           </div>
         ) : (
-          reviews.map(async review => (
-            <div
-              key={review.id}
-              className="border-b border-[var(--border)] pb-6 last:border-0 last:pb-0 first:pt-0 pt-6"
-            >
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex items-center gap-3">
-                  <Image
-                    loading="eager"
-                    alt={review.client.name}
-                    src={await profilePhoto({
-                      imageUrl: review.client.avatar,
-                      imageSource: review.client.imageSource,
-                    })}
-                    height={50}
-                    width={50}
-                    className="rounded-full object-cover h-12 w-12"
-                  />
-                  <div>
-                    <div className="font-semibold">{review.client.name}</div>
-                    <div className="text-sm text-[var(--muted-foreground)]">
-                      {review.createdAt.toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
+          reviews.map(async review => {
+            const client = review.client!;
+            return (
+              <div
+                key={review.id}
+                className="border-b border-[var(--border)] pb-6 last:border-0 last:pb-0 first:pt-0 pt-6"
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-center gap-3">
+                    <Image
+                      loading="eager"
+                      alt={client.name}
+                      src={await profilePhoto({
+                        imageUrl: client.avatar,
+                        imageSource: client.imageSource,
                       })}
+                      height={50}
+                      width={50}
+                      className="rounded-full object-cover h-12 w-12"
+                    />
+                    <div>
+                      <div className="font-semibold">{client.name}</div>
+                      <div className="text-sm text-[var(--muted-foreground)]">
+                        {review.createdAt.toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </div>
                     </div>
                   </div>
+
+                  <ReviewStars rating={review.rating} />
                 </div>
 
-                <ReviewStars rating={review.rating} />
+                {review.comment && (
+                  <div className="mt-4 text-sm leading-relaxed text-[var(--foreground)]">
+                    {review.comment}
+                  </div>
+                )}
               </div>
-
-              {review.comment && (
-                <div className="mt-4 text-sm leading-relaxed text-[var(--foreground)]">
-                  {review.comment}
-                </div>
-              )}
-            </div>
-          ))
+            );
+          })
         )}
       </CardContent>
     </Card>

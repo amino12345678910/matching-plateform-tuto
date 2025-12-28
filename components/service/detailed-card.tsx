@@ -21,11 +21,13 @@ import '@/components/editor/styles/tiptap.scss';
 import '@/components/editor/styles/utils.css';
 import {ReviewDisplay} from './review-display';
 import {ReviewForm} from './review-form';
+import type {Review} from '@/types/review';
 
 export function ServiceDetailPage({service}: {service: Service}) {
   const [selectedPackage, setSelectedPackage] = useState<ServicePackage['name']>('BASIC');
   const [isBooking, setIsBooking] = useState(false);
   const [avatar, setAvatar] = useState<string>('');
+  const [currentReview, setCurrentReview] = useState<Review>();
 
   const reviewCount = service.reviews!.length;
   const avgRating = useMemo(
@@ -217,11 +219,6 @@ export function ServiceDetailPage({service}: {service: Service}) {
                     </div>
                   </div>
 
-                  {/* user bio */}
-
-                  <div>
-                    <p>{}</p>
-                  </div>
                   <Button variant="outline" size="sm" className="sm:self-start shrink-0" asChild>
                     <Link href={`/freelancer/${service.freelancerId}`}>
                       View Profile
@@ -240,7 +237,7 @@ export function ServiceDetailPage({service}: {service: Service}) {
               </section>
               {/* FAQ*/}
               <section>
-                <h2 className="text-xl font-semibold mb-6">FAQ</h2>
+                <h2 className="text-xl font-semibold mb-3">FAQ</h2>
                 {service.faqs && service.faqs.length > 0 ? (
                   <Accordion type="single" collapsible className="w-full" defaultValue="item-1">
                     {service.faqs.map((faq, index) => (
@@ -259,16 +256,22 @@ export function ServiceDetailPage({service}: {service: Service}) {
                 )}
               </section>
               <section>
-                <ReviewForm serviceId={service.id} existingReview={undefined} />
+                <ReviewForm
+                  sendCurrentReview={(review: Review) => {
+                    console.log('review aa gaya', review);
+                    setCurrentReview(review);
+                  }}
+                  serviceId={service.id}
+                />
               </section>
-              <section>
-                <ReviewDisplay reviews={service.reviews || []} />
+              <section className="lg:block hidden">
+                <ReviewDisplay currentReview={currentReview} dbReviews={service.reviews || []} />
               </section>
             </div>
           </div>
 
           {/* Booking Sidebar */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 order-1">
             <div className="sticky top-8 space-y-6">
               {/* Package Selector Card */}
               <Card className="border shadow-lg shadow-primary/5 rounded-2xl overflow-hidden">
@@ -401,6 +404,10 @@ export function ServiceDetailPage({service}: {service: Service}) {
                   </div>
                 </div>
               </div>
+
+              <section className="lg:hidden block">
+                <ReviewDisplay currentReview={currentReview} dbReviews={service.reviews || []} />
+              </section>
             </div>
           </div>
         </div>

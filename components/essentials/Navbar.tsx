@@ -59,7 +59,7 @@ export const Navbar = () => {
       <AuthModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
 
       <nav
-        className={`sticky top-0 z-[99] w-full transition-all duration-300 ${
+        className={`sticky top-0 w-full transition-all duration-300 ${
           isScrolled
             ? 'bg-background/90 backdrop-blur-sm border-b shadow-sm'
             : 'bg-background border-b'
@@ -80,7 +80,7 @@ export const Navbar = () => {
                   <Link
                     key={item.label}
                     href={item.href}
-                    className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                    className="text-sm font-medium  hover:text-foreground/90 transition-colors"
                   >
                     {item.label}
                   </Link>
@@ -93,7 +93,6 @@ export const Navbar = () => {
               {/* Auth Buttons */}
               {isAuth ? (
                 <>
-                  {/* Notifications */}
                   <Button variant="ghost" size="icon" className="relative">
                     <Bell className="h-5 w-5" />
                     <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center">
@@ -103,7 +102,10 @@ export const Navbar = () => {
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="gap-2">
+                      <Badge
+                        variant="secondary"
+                        className="border-none py-1 bg-background gap-2 hover:opacity-95"
+                      >
                         <Avatar className="h-8 w-8">
                           <AvatarImage
                             src={profileImage}
@@ -114,11 +116,11 @@ export const Navbar = () => {
                             <User className="h-4 w-4" />
                           </AvatarFallback>
                         </Avatar>
-                        <span className="hidden md:inline">Profile</span>
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
+                        <span className="hidden md:inline hover:opacity-90 ">Profile</span>
+                        <ChevronDown className="h-4 w-4 hover:opacity-90 " />
+                      </Badge>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuContent align="end" className="w-56 py-2 px-1.5 ">
                       <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
                         <User className="h-4 w-4 mr-2" />
                         Profile
@@ -144,7 +146,6 @@ export const Navbar = () => {
                 </>
               ) : (
                 <>
-                  {/* Become a Seller (Desktop) */}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -154,7 +155,6 @@ export const Navbar = () => {
                     Become a Seller
                   </Button>
 
-                  {/* Join Button */}
                   <Button
                     onClick={() => setIsOpen(true)}
                     size="sm"
@@ -162,8 +162,6 @@ export const Navbar = () => {
                   >
                     Join
                   </Button>
-
-                  {/* Mobile Auth Menu */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="lg:hidden">
@@ -184,9 +182,8 @@ export const Navbar = () => {
           </div>
         </div>
 
-        {/* Mobile Bottom Navigation (for authenticated users) */}
         {isAuth && (
-          <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-30">
+          <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t shadow-lg z-50">
             <div className="flex items-center justify-around h-16">
               {navItems.slice(0, 3).map(item => {
                 const Icon = item.icon;
@@ -219,7 +216,6 @@ export const Navbar = () => {
         )}
       </nav>
 
-      {/* Add padding for bottom navigation */}
       {isAuth && <div className="lg:hidden h-16"></div>}
     </>
   );
