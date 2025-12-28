@@ -91,25 +91,7 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
     setPendingRole(role);
 
     if (pendingAuthType === 'google') {
-      try {
-        const {data: _, error} = await authClient.signIn.social({
-          provider: 'google',
-          callbackURL: '/auth/complete-registration',
-        });
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        // OAuth will redirect to our custom callback
-        setShowRoleDialog(false);
-        setPendingAuthType(null);
-      } catch (error: any) {
-        toast.error(error.message || 'Failed to sign in with Google');
-        clearPendingRole();
-        setShowRoleDialog(false);
-        setPendingAuthType(null);
-      }
+      handleGoogleSignIn(false);
     } else if (pendingAuthType === 'email') {
       setRegForm(prev => ({...prev, role}));
       setShowRoleDialog(false);
@@ -118,7 +100,6 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
     }
   };
 
-  // Handle Google auth with role selection first
   const handleGoogleAuth = () => {
     setPendingAuthType('google');
     setShowRoleDialog(true);
@@ -238,6 +219,28 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
     onClose();
   };
 
+  //functions
+  const handleGoogleSignIn = async (isSignIn: boolean) => {
+    try {
+      const {data: _, error} = await authClient.signIn.social({
+        provider: 'google',
+        callbackURL: isSignIn ? '/explore' : '/auth/complete-registration',
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setShowRoleDialog(false);
+      setPendingAuthType(null);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to sign in with Google');
+      clearPendingRole();
+      setShowRoleDialog(false);
+      setPendingAuthType(null);
+    }
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -249,7 +252,8 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                 src={girlImage}
                 alt="Success starts here"
                 className="object-cover"
-                fill
+                height={400}
+                width={500}
                 priority
               />
               <div
@@ -267,9 +271,7 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
               </div>
             </div>
 
-            {/* Right Auth Section */}
             <div className="overflow-y-auto">
-              {/* Back button for nested steps */}
               {regStep !== 'null' && (
                 <Button
                   variant="ghost"
@@ -281,10 +283,8 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                   Back
                 </Button>
               )}
-
-              {/* Initial Auth Selection */}
               {regStep === 'null' && (
-                <div className="p-8 md:p-10 h-full flex flex-col justify-center">
+                <div className="p-8 md:p-10 h-full flex flex-col justify-center ">
                   <DialogHeader className="mb-6">
                     <DialogTitle className="text-2xl">
                       {step === 'signup' ? 'Create a new account' : 'Sign in to your account'}
@@ -319,7 +319,17 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                   <Card className="border-none shadow-none">
                     <CardContent className="p-0 space-y-4">
                       {/* Google Button */}
-                      <Button variant="outline" className="w-full h-12" onClick={handleGoogleAuth}>
+                      <Button
+                        variant="outline"
+                        className="w-full h-12"
+                        onClick={() => {
+                          if (step === 'login') {
+                            handleGoogleSignIn(true);
+                          } else {
+                            handleGoogleAuth();
+                          }
+                        }}
+                      >
                         <IconBrandGoogle className="h-5 w-5 mr-2" />
                         Continue with Google
                       </Button>
@@ -330,10 +340,8 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                         className="w-full h-12"
                         onClick={() => {
                           if (step === 'signup') {
-                            // For signup, show role dialog first
                             handleEmailSignupStart();
                           } else {
-                            // For login, go directly to email form
                             setRegStep('email');
                           }
                         }}
@@ -351,7 +359,6 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                   </p>
                 </div>
               )}
-
               {/* Login Form */}
               {regStep === 'email' && (
                 <div className="p-8 md:p-10">
@@ -417,7 +424,6 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                   </form>
                 </div>
               )}
-
               {/* Registration Step 1: Email & Password */}
               {regStep === 'create' && (
                 <div className="p-8 md:p-10">
@@ -519,7 +525,6 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                   </form>
                 </div>
               )}
-
               {/* Registration Step 2: Username */}
               {regStep === 'createName' && (
                 <div className="p-8 md:p-10">
@@ -554,7 +559,6 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                   </div>
                 </div>
               )}
-
               {/* Registration Step 3: Role Selection (for email signup) */}
               {regStep === 'createFinal' && (
                 <div className="p-8 md:p-10">
@@ -635,7 +639,6 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Role Selection Dialog */}
       <RoleDialog
         isOpen={showRoleDialog}
         onClose={() => {

@@ -15,18 +15,19 @@ enum imageSources {
 }
 
 model User {
-  id            String       @id
+  id            String         @id
   name          String
   email         String
-  emailVerified Boolean      @default(false)
+  emailVerified Boolean        @default(false)
   image         String?
-  imageSource   imageSources @default(NULL)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  imageSource   imageSources   @default(NULL)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   role          String?
-  hasPassword   Boolean      @default(true)
+  hasPassword   Boolean        @default(true)
   sessions      Session[]
   accounts      Account[]
+  notifications Notification[]
   seller        Seller?
   reviews       Review[]
 
@@ -312,4 +313,24 @@ model Conversation {
   @@index([clientId])
   @@index([freelancerId])
   @@map("conversation")
+}
+
+// Notifications
+enum NotificationType {
+  ORDER
+  MESSAGE
+  REVIEW
+  AUTOMATED
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  link      String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id])
 }

@@ -1,17 +1,19 @@
 'use client';
 
-import {useState} from 'react';
-import {Input} from '../ui/input';
-import {Button} from '../ui/button';
-import {cn} from '@/lib/utils';
 import {IconArrowLeft, IconFile, IconLoader2, IconSend} from '@tabler/icons-react';
-import type {Message} from '@/types/messages';
-import {Badge} from '../ui/badge';
-import {Label} from '../ui/label';
 import {storeFilesToCloudinary} from '@/hooks/shared/store-files-to-cloudinary';
 import type {Booking, CurrentUser, User} from '@/app/(shared)/dashboard/messages/page';
-import Image from 'next/image';
+import {BookingActionCard} from './inbox/booking-actions';
+import {AutomatedMessage} from './inbox/automated-message';
 import {ListedFiles} from './inbox/listed-files';
+import type {Message} from '@/types/messages';
+import {Button} from '../ui/button';
+import {Badge} from '../ui/badge';
+import {Label} from '../ui/label';
+import {Input} from '../ui/input';
+import {useState} from 'react';
+import {cn} from '@/lib/utils';
+import Image from 'next/image';
 import {toast} from 'sonner';
 
 const STATUS_LABEL: Record<Booking['status'], string> = {
@@ -113,7 +115,7 @@ export function Inbox({
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.map(m => {
           if (m.contentType === 'AUTOMATED') {
-            return <SystemMessage key={m.id} text={m.text} />;
+            return <AutomatedMessage key={m.id} text={m.text} />;
           }
 
           return (
@@ -245,6 +247,7 @@ export function Inbox({
         )}
 
         <Input
+          autoFocus
           disabled={chatMode !== 'full' || loading}
           value={text}
           onChange={e => setText(e.target.value)}
@@ -262,93 +265,5 @@ export function Inbox({
         </Button>
       </form>
     </section>
-  );
-}
-
-function SystemMessage({text}: {text: string}) {
-  return <div className="text-center text-xs text-muted-foreground my-3">{text}</div>;
-}
-
-function BookingActionCard({
-  status,
-  role,
-  onAction,
-}: {
-  status: Booking['status'];
-  role: 'SELLER' | 'USER';
-  onAction: (action: string) => void;
-}) {
-  if (role === 'SELLER' && status === 'PENDING') {
-    return (
-      <ActionCard
-        title="New order request"
-        actions={[
-          {label: 'Accept Order', action: 'CONFIRM'},
-          {label: 'Decline', action: 'CANCEL', destructive: true},
-        ]}
-        onAction={onAction}
-      />
-    );
-  }
-
-  if (role === 'SELLER' && status === 'CONFIRMED') {
-    return (
-      <ActionCard
-        title="Work in progress"
-        actions={[{label: 'Submit Delivery', action: 'DELIVER'}]}
-        onAction={onAction}
-      />
-    );
-  }
-
-  if (role === 'USER' && status === 'DELIVERED') {
-    return (
-      <ActionCard
-        title="Delivery received"
-        actions={[
-          {label: 'Accept & Complete', action: 'ACCEPT'},
-          {
-            label: 'Request Revision',
-            action: 'DISPUTE',
-            destructive: true,
-          },
-        ]}
-        onAction={onAction}
-      />
-    );
-  }
-
-  return null;
-}
-
-function ActionCard({
-  title,
-  actions,
-  onAction,
-}: {
-  title: string;
-  actions: {
-    label: string;
-    action: string;
-    destructive?: boolean;
-  }[];
-  onAction: (action: string) => void;
-}) {
-  return (
-    <div className="border rounded-lg p-4 bg-muted/30 space-y-3">
-      <p className="font-medium text-sm">{title}</p>
-      <div className="flex gap-2">
-        {actions.map(a => (
-          <Button
-            key={a.action}
-            variant={a.destructive ? 'destructive' : 'default'}
-            onClick={() => onAction(a.action)}
-            className="cursor-pointer"
-          >
-            {a.label}
-          </Button>
-        ))}
-      </div>
-    </div>
   );
 }
