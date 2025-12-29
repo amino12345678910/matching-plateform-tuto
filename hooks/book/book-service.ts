@@ -4,6 +4,28 @@ import {prisma as dbContext} from '@/lib/prisma';
 import type {ServicePackage} from '@/types/service';
 import {cookies} from 'next/headers';
 import {buildBookingMessage} from './build-booking-message';
+import {createNotifications} from '../notification';
+
+export type BookServiceProps = {
+  serviceName: string;
+  packageName: ServicePackage['name'];
+  packagePrice: ServicePackage['price'];
+  revisions: ServicePackage['revisions'];
+  delivery: ServicePackage['delivery'];
+  role: User['role'];
+  sellerId: string;
+  serviceId: string;
+  serviceSlug: string;
+  clientId: string;
+  clientName: string;
+  freelancerId: string;
+};
+
+type BookServiceReturnType = {
+  error?: string;
+  message?: string;
+  success: boolean;
+};
 
 export const bookService = async ({
   serviceName,
@@ -14,26 +36,11 @@ export const bookService = async ({
   role,
   serviceId,
   sellerId,
+  serviceSlug,
   clientId,
   clientName,
   freelancerId,
-}: {
-  serviceName: string;
-  packageName: ServicePackage['name'];
-  packagePrice: ServicePackage['price'];
-  revisions: ServicePackage['revisions'];
-  delivery: ServicePackage['delivery'];
-  role: User['role'];
-  sellerId: string;
-  serviceId: string;
-  clientId: string;
-  clientName: string;
-  freelancerId: string;
-}): Promise<{
-  error?: string;
-  message?: string;
-  success: boolean;
-}> => {
+}: BookServiceProps): Promise<BookServiceReturnType> => {
   if (role !== 'USER')
     return {success: false, message: undefined, error: 'You must be a user to start booking'};
   const cookiesdata = {
@@ -87,15 +94,30 @@ export const bookService = async ({
     },
   });
 
-  console.log('create convo: payload: ', convo);
+  // console.log('create convo: payload: ', convo);
 
-  if (convo.id.length < 0) {
+  if (!convo.id) {
     return {
       error: 'Conversation invalid',
       success: false,
       message: undefined,
     };
   }
+
+  await createNotifications([
+    {
+      userId: clientId,
+      title: `Booking placed for "${serviceName}".`,
+      type: 'ORDER',
+      link: `/service/${serviceSlug}`,
+    },
+    {
+      userId: freelancerId,
+      title: `New booking from ${clientName}.`,
+      type: 'ORDER',
+      link: `/dashboard/freelancer/bookings`,
+    },
+  ]);
 
   return {
     success: true,

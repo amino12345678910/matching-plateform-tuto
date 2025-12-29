@@ -17,6 +17,8 @@ import AuthModal from '../auth/auth-dialog';
 import {getUserInfo} from '@/hooks/shared/get-user-info';
 import {authClient} from '../../lib/auth-client';
 import {profilePhoto} from '../profile-url';
+import {getNotifications} from '@/hooks/notification/get-notifications';
+import {Skeleton} from '../loading-primitives';
 export const Navbar = () => {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -24,19 +26,28 @@ export const Navbar = () => {
   const [role, setRole] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
   const [profileImage, setProfileImage] = useState('');
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  // Check auth status
   useEffect(() => {
-    const getAuth = async () => {
+    const getAuthAndNotifications = async () => {
       const {userId, role, image, imageSource, email} = await getUserInfo();
       if (userId && role && imageSource) {
         setIsAuth(true);
+        setInitialLoading(false);
         setRole(role);
         const pfp = await profilePhoto({imageUrl: image, imageSource, email});
         setProfileImage(pfp);
+
+        const {success, notifications: localNotification} = await getNotifications({userId});
+        if (success && localNotification) {
+          setNotifications(prev => [...prev, ...localNotification]);
+        }
       }
+      setInitialLoading(false);
     };
-    getAuth();
+
+    getAuthAndNotifications();
   }, []);
 
   useEffect(() => {
@@ -59,7 +70,7 @@ export const Navbar = () => {
       <AuthModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
 
       <nav
-        className={`sticky top-0 w-full transition-all duration-300 ${
+        className={`sticky top-0 z-[99] w-full transition-all duration-300 ${
           isScrolled
             ? 'bg-background/90 backdrop-blur-sm border-b shadow-sm'
             : 'bg-background border-b'
@@ -88,15 +99,18 @@ export const Navbar = () => {
               </div>
             </div>
 
-            {/* Right Section - Actions */}
             <div className="flex items-center gap-3">
-              {/* Auth Buttons */}
-              {isAuth ? (
+              {initialLoading ? (
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <Skeleton className="h-8 w-20 rounded-md hidden md:block" />
+                </div>
+              ) : isAuth ? (
                 <>
                   <Button variant="ghost" size="icon" className="relative">
                     <Bell className="h-5 w-5" />
                     <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center">
-                      3
+                      {notifications.length + 1 || 0}
                     </Badge>
                   </Button>
 

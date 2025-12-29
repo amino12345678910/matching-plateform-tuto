@@ -10,6 +10,7 @@ import {prisma} from '@/lib/prisma';
 import type {Metadata} from 'next';
 import {Footer} from '@/components/footer/footer-2';
 import type {Service} from '@/types/service';
+import {profilePhoto} from '@/components/profile-url';
 
 export async function generateMetadata({
   params,
@@ -81,13 +82,24 @@ async function detailedPage({params}: {params: Promise<{slug: string}>}) {
   if (fetchedService) {
     console.log('reviews', fetchedService.reviews);
 
+    const reviews = await Promise.all(
+      fetchedService.reviews.map(async review => ({
+        ...review,
+
+        client: {
+          ...review.client,
+          avatar: await profilePhoto({
+            imageUrl: review.client.image,
+            imageSource: review.client.imageSource,
+            email: review.client.name,
+          }),
+        },
+      }))
+    );
     const formattedService: Service = {
       ...fetchedService,
 
-      reviews: fetchedService.reviews.map(review => ({
-        ...review,
-        client: {...review.client, avatar: review.client.image ?? undefined},
-      })),
+      reviews: reviews,
       bookings: fetchedService.bookings.map(booking => ({
         ...booking,
         hasSeen: booking.hasSeen || null,

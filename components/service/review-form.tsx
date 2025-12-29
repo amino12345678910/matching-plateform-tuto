@@ -1,3 +1,4 @@
+'use client';
 import {Star} from 'lucide-react';
 import {Button} from '../ui/button';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '../ui/card';
@@ -9,6 +10,8 @@ import {AddReview} from '@/hooks/service/review/add-review';
 import {allowClientOnly} from './validate/allow-user-only';
 import {VerifyReview} from '@/hooks/service/review/verify-review';
 import type {Review} from '@/types/review';
+import {getUserInfo} from '@/hooks/shared/get-user-info';
+import {profilePhoto} from '../profile-url';
 
 export interface ReviewData {
   rating: number;
@@ -63,7 +66,6 @@ export function ReviewForm({serviceId, sendCurrentReview}: ReviewsProps) {
       const {disable, clientId} = await allowClientOnly();
       if (disable || !clientId) return;
       const {hasReview} = await VerifyReview({clientId, serviceId});
-
       if (!hasReview) setCanClientSubmit(true);
     };
     init();
@@ -98,14 +100,22 @@ export function ReviewForm({serviceId, sendCurrentReview}: ReviewsProps) {
         console.error(`Only clients can give review`);
         return;
       }
+      const reviewPayload = {clientId, serviceId, rating: finalRating, comment};
+
       const {success, review} = await AddReview({
-        clientId,
-        serviceId,
-        rating: finalRating,
-        comment,
+        ...reviewPayload,
       });
 
       if (success && review) {
+        const {userId, name, image, imageSource} = await getUserInfo();
+        const avatar = await profilePhoto({imageUrl: image, imageSource, email: name});
+
+        sendCurrentReview({
+          ...reviewPayload,
+          ...review,
+          client: {id: userId!, name: name!, avatar, imageSource},
+        });
+
         setCategoryRatings({
           quality: 0,
           communication: 0,
@@ -114,8 +124,7 @@ export function ReviewForm({serviceId, sendCurrentReview}: ReviewsProps) {
         });
         setComment('');
         setCanClientSubmit(false);
-        sendCurrentReview(review);
-        console.log('baly baly!!', review);
+        // console.log('baly baly!!', review);
       }
     } finally {
       setIsSubmitting(false);

@@ -13,6 +13,7 @@ export const AddReview = async ({rating = 0, comment, clientId, serviceId}: AddR
       where: {clientId_serviceId: {clientId, serviceId}},
       update: {rating, comment},
       create: {rating, comment, serviceId, clientId},
+      select: {id: true, updatedAt: true, createdAt: true},
     });
     return {success: true, review: review ?? {}};
   } catch (error) {

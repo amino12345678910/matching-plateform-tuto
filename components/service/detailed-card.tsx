@@ -103,6 +103,7 @@ export function ServiceDetailPage({service}: {service: Service}) {
           role,
           sellerId: service.sellerId,
           serviceId: service.id,
+          serviceSlug: service.slug,
           clientId,
           clientName,
           freelancerId: service.freelancerId,
@@ -191,7 +192,12 @@ export function ServiceDetailPage({service}: {service: Service}) {
               <section className="py-6 pe-6 rounded-xl ">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <Avatar className="h-16 w-16 border-2 border-background">
-                    <AvatarImage src={avatar} alt={sellerName} className="object-cover" />
+                    <AvatarImage
+                      loading="eager"
+                      src={avatar}
+                      alt={sellerName}
+                      className="object-cover"
+                    />
                     <AvatarFallback className="text-base font-medium">
                       {sellerName.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
@@ -256,13 +262,7 @@ export function ServiceDetailPage({service}: {service: Service}) {
                 )}
               </section>
               <section>
-                <ReviewForm
-                  sendCurrentReview={(review: Review) => {
-                    console.log('review aa gaya', review);
-                    setCurrentReview(review);
-                  }}
-                  serviceId={service.id}
-                />
+                <ReviewForm sendCurrentReview={setCurrentReview} serviceId={service.id} />
               </section>
               <section className="lg:block hidden">
                 <ReviewDisplay currentReview={currentReview} dbReviews={service.reviews || []} />
@@ -405,7 +405,7 @@ export function ServiceDetailPage({service}: {service: Service}) {
                 </div>
               </div>
 
-              <section className="lg:hidden block">
+              <section className="block lg:hidden">
                 <ReviewDisplay currentReview={currentReview} dbReviews={service.reviews || []} />
               </section>
             </div>

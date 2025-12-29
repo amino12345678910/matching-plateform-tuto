@@ -33,7 +33,7 @@ async function FreelancerProfilePage({params}: {params: Promise<{slug: string}>}
                 packages: true,
                 reviews: {
                   include: {
-                    user: {
+                    client: {
                       select: {
                         id: true,
                         name: true,
@@ -65,7 +65,7 @@ async function FreelancerProfilePage({params}: {params: Promise<{slug: string}>}
                 slug: true,
               },
             },
-            user: {
+            client: {
               select: {
                 id: true,
                 name: true,
@@ -107,7 +107,7 @@ async function FreelancerProfilePage({params}: {params: Promise<{slug: string}>}
 
     // Prepare data for the client component
     const profileData = {
-      user: {
+      client: {
         id: freelancerData.id,
         name: freelancerData.name,
         email: freelancerData.email,
@@ -135,11 +135,13 @@ async function FreelancerProfilePage({params}: {params: Promise<{slug: string}>}
     };
 
     return (
-      <div className="container md:max-w-7xl mx-auto py-12 pt-8 px-6">
+      <>
+        {/* // <div className="container md:max-w-7xl mx-auto py-12 pt-8 px-6"> */}
         <Navbar />
         <FreelancerProfileView profileData={profileData} />
         <Footer />
-      </div>
+        {/* </div> */}
+      </>
     );
   } catch (error) {
     console.error('Error fetching freelancer profile:', error);

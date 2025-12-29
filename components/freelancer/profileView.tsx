@@ -25,7 +25,6 @@ import {
   Phone,
   Video,
   FileText,
-  Download,
   Filter,
   ThumbsUp,
 } from 'lucide-react';
@@ -36,7 +35,6 @@ import {Separator} from '@/components/ui/separator';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs';
 import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
 import {Progress} from '@/components/ui/progress';
-import {Textarea} from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -46,6 +44,7 @@ import {
 } from '@/components/ui/select';
 import {cloudinaryUrl} from '@/lib/cloudinary';
 import type {imageSources} from '@/generated/prisma';
+import type {Review} from '@/types/review';
 
 interface Service {
   id: string;
@@ -71,12 +70,12 @@ interface Service {
   reviews: Array<{
     id: string;
     rating: number;
-    comment: string ;
+    comment: string;
     createdAt: Date;
     updatedAt: Date;
     userId: string;
     serviceId: string;
-    user: {
+    client: {
       name: string;
       id: string;
       image: string | null;
@@ -88,23 +87,23 @@ interface Service {
   };
 }
 
-interface Review {
-  id: string;
-  rating: number;
-  comment: string;
-  createdAt: string;
-  service: {
-    title: string;
-    slug: string;
-  };
-  user: {
-    name: string;
-    image: string | null;
-  };
-}
+// interface Review {
+//   id: string;
+//   rating: number;
+//   comment: string;
+//   createdAt: string;
+//   service: {
+//     title: string;
+//     slug: string;
+//   };
+//   user: {
+//     name: string;
+//     image: string | null;
+//   };
+// }
 
 interface ProfileData {
-  user: {
+  client: {
     id: string;
     name: string;
     email: string;
@@ -147,7 +146,7 @@ export default function FreelancerProfileView({profileData}: FreelancerProfileVi
     );
   }
 
-  const {user, seller, services, reviews} = profileData;
+  const {client, seller, services, reviews} = profileData;
 
   const totalRatings = reviews?.length || 0;
   const positiveReviews = reviews?.filter(r => r.rating >= 4).length || 0;
@@ -166,13 +165,13 @@ export default function FreelancerProfileView({profileData}: FreelancerProfileVi
             <div className="flex-1">
               <div className="flex items-start gap-6">
                 <Avatar className="h-32 w-32 border-4 border-white shadow-lg">
-                  <AvatarImage src={seller.profilePhoto} alt={user.name} />
-                  <AvatarFallback className="text-2xl">{user.name.charAt(0)}</AvatarFallback>
+                  <AvatarImage src={seller.profilePhoto} alt={client.name} />
+                  <AvatarFallback className="text-2xl">{client.name.charAt(0)}</AvatarFallback>
                 </Avatar>
 
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h1 className="text-3xl font-bold text-gray-900">{user.name}</h1>
+                    <h1 className="text-3xl font-bold text-gray-900">{client.name}</h1>
                     {seller.isVerified && (
                       <Badge className="bg-blue-100 text-blue-700 border-blue-200">
                         <CheckCircle className="h-3 w-3 mr-1" />
@@ -344,50 +343,54 @@ export default function FreelancerProfileView({profileData}: FreelancerProfileVi
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Reviews</h2>
 
                 <div className="space-y-4">
-                  {reviews.slice(0, 3).map(review => (
-                    <Card key={review.id}>
-                      <CardContent className="pt-6">
-                        <div className="flex items-start gap-4">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={review.user.image || ''} />
-                            <AvatarFallback>{review.user.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
+                  {reviews.slice(0, 3).map(review => {
+                    const client = review?.client!;
+                    const service = review?.service!;
+                    return (
+                      <Card key={review.id}>
+                        <CardContent className="pt-6">
+                          <div className="flex items-start gap-4">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={client.avatar || ''} />
+                              <AvatarFallback>{client.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
 
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <div>
-                                <h4 className="font-semibold">{review.user.name}</h4>
-                                <Link
-                                  href={`/service/${review.service.slug}`}
-                                  className="text-sm text-primary hover:underline"
-                                >
-                                  {review.service.title}
-                                </Link>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-2">
+                                <div>
+                                  <h4 className="font-semibold">{client.name}</h4>
+                                  <Link
+                                    href={`/service/${service.slug}`}
+                                    className="text-sm text-primary hover:underline"
+                                  >
+                                    {service.title}
+                                  </Link>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  {[...Array(5)].map((_, i) => (
+                                    <Star
+                                      key={i}
+                                      className={`h-4 w-4 ${
+                                        i < review.rating
+                                          ? 'text-yellow-500 fill-yellow-500'
+                                          : 'text-gray-300'
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
                               </div>
-                              <div className="flex items-center gap-1">
-                                {[...Array(5)].map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={`h-4 w-4 ${
-                                      i < review.rating
-                                        ? 'text-yellow-500 fill-yellow-500'
-                                        : 'text-gray-300'
-                                    }`}
-                                  />
-                                ))}
+
+                              <p className="text-gray-700 mb-2">{review.comment}</p>
+
+                              <div className="text-sm text-gray-500">
+                                {new Date(review.createdAt).toLocaleDateString()}
                               </div>
-                            </div>
-
-                            <p className="text-gray-700 mb-2">{review.comment}</p>
-
-                            <div className="text-sm text-gray-500">
-                              {new Date(review.createdAt).toLocaleDateString()}
                             </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -516,8 +519,8 @@ export default function FreelancerProfileView({profileData}: FreelancerProfileVi
                 <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">Portfolio Coming Soon</h3>
                 <p className="text-gray-600 mb-6">
-                  {user.name} is currently working on their portfolio. Check back soon to see their
-                  amazing work!
+                  {client.name} is currently working on their portfolio. Check back soon to see
+                  their amazing work!
                 </p>
                 <Button>
                   <MessageSquare className="h-4 w-4 mr-2" />
@@ -601,63 +604,66 @@ export default function FreelancerProfileView({profileData}: FreelancerProfileVi
             <div className="space-y-6">
               {reviews &&
                 reviews.length > 0 &&
-                reviews.map(review => (
-                  <Card key={review.id}>
-                    <CardContent className="pt-6">
-                      <div className="flex items-start gap-4">
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src={review.user.image || ''} />
-                          <AvatarFallback>{review.user.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
+                reviews.map(review => {
+                  const service = review?.service!;
+                  return (
+                    <Card key={review.id}>
+                      <CardContent className="pt-6">
+                        <div className="flex items-start gap-4">
+                          <Avatar className="h-12 w-12">
+                            <AvatarImage src={client.image || ''} />
+                            <AvatarFallback>{client.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
 
-                        <div className="flex-1">
-                          <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-3">
-                            <div>
-                              <h4 className="font-semibold text-lg">{review.user.name}</h4>
-                              <Link
-                                href={`/service/${review.service.slug}`}
-                                className="text-sm text-primary hover:underline"
-                              >
-                                {review.service.title}
-                              </Link>
+                          <div className="flex-1">
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-3">
+                              <div>
+                                <h4 className="font-semibold text-lg">{client.name}</h4>
+                                <Link
+                                  href={`/service/${service.slug}`}
+                                  className="text-sm text-primary hover:underline"
+                                >
+                                  {service.title}
+                                </Link>
+                              </div>
+
+                              <div className="flex items-center gap-4 mt-2 lg:mt-0">
+                                <div className="flex items-center gap-1">
+                                  {[...Array(5)].map((_, i) => (
+                                    <Star
+                                      key={i}
+                                      className={`h-5 w-5 ${
+                                        i < review.rating
+                                          ? 'text-yellow-500 fill-yellow-500'
+                                          : 'text-gray-300'
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {new Date(review.createdAt).toLocaleDateString()}
+                                </div>
+                              </div>
                             </div>
 
-                            <div className="flex items-center gap-4 mt-2 lg:mt-0">
-                              <div className="flex items-center gap-1">
-                                {[...Array(5)].map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={`h-5 w-5 ${
-                                      i < review.rating
-                                        ? 'text-yellow-500 fill-yellow-500'
-                                        : 'text-gray-300'
-                                    }`}
-                                  />
-                                ))}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {new Date(review.createdAt).toLocaleDateString()}
-                              </div>
+                            <p className="text-gray-700 mb-4">{review.comment}</p>
+
+                            <div className="flex gap-3">
+                              <Button variant="ghost" size="sm">
+                                <ThumbsUp className="h-4 w-4 mr-1" />
+                                Helpful
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <MessageSquare className="h-4 w-4 mr-1" />
+                                Reply
+                              </Button>
                             </div>
-                          </div>
-
-                          <p className="text-gray-700 mb-4">{review.comment}</p>
-
-                          <div className="flex gap-3">
-                            <Button variant="ghost" size="sm">
-                              <ThumbsUp className="h-4 w-4 mr-1" />
-                              Helpful
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <MessageSquare className="h-4 w-4 mr-1" />
-                              Reply
-                            </Button>
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
             </div>
           </TabsContent>
 
@@ -668,7 +674,7 @@ export default function FreelancerProfileView({profileData}: FreelancerProfileVi
                 {/* Bio */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>About {user.name}</CardTitle>
+                    <CardTitle>About {client.name}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="prose max-w-none">
@@ -711,7 +717,7 @@ export default function FreelancerProfileView({profileData}: FreelancerProfileVi
                   <CardContent className="space-y-4">
                     <div className="flex items-center gap-3">
                       <Mail className="h-5 w-5 text-gray-500" />
-                      <span className="text-sm">{user.email}</span>
+                      <span className="text-sm">{client.email}</span>
                     </div>
 
                     <div className="flex items-center gap-3">

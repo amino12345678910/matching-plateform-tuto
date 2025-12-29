@@ -3,7 +3,6 @@
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card';
 import {Star} from 'lucide-react';
 import {cn} from '@/lib/utils';
-import {profilePhoto} from '../profile-url';
 import Image from 'next/image';
 import type {Review} from '@/types/review';
 
@@ -66,7 +65,7 @@ export function ReviewDisplay({dbReviews = [], currentReview}: ReviewDisplayProp
             No reviews yet. Be the first to leave a review!
           </div>
         ) : (
-          reviews.map(async review => {
+          reviews.map(review => {
             const client = review.client!;
             return (
               <div
@@ -78,10 +77,7 @@ export function ReviewDisplay({dbReviews = [], currentReview}: ReviewDisplayProp
                     <Image
                       loading="eager"
                       alt={client.name}
-                      src={await profilePhoto({
-                        imageUrl: client.avatar,
-                        imageSource: client.imageSource,
-                      })}
+                      src={client?.avatar!}
                       height={50}
                       width={50}
                       className="rounded-full object-cover h-12 w-12"
