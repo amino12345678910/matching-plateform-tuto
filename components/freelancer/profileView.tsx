@@ -72,7 +72,7 @@ export default function FreelancerProfileView({profileData}: {profileData: Profi
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-12">
       {/* Hero Section */}
       <div className="flex flex-col md:flex-row gap-8 items-start">
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           <Avatar className="h-40 w-40 border-4 border-background shadow-lg">
             <AvatarImage src={seller.profilePhoto} alt={client.name} />
             <AvatarFallback className="text-3xl">{client.name.charAt(0)}</AvatarFallback>

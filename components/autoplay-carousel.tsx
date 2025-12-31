@@ -1,22 +1,13 @@
-// Enhanced AutomatedCarousel component with navigation
 'use client';
 
 import * as React from 'react';
 import Autoplay from 'embla-carousel-autoplay';
 import useEmblaCarousel from 'embla-carousel-react';
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from '@/components/ui/carousel';
 import Image from 'next/image';
 import {cloudinaryUrl} from '@/lib/cloudinary';
 import {cn} from '@/lib/utils';
 import {Skeleton} from './loading-primitives';
 import {ChevronLeft, ChevronRight} from 'lucide-react';
-import type {vi} from 'date-fns/locale';
 
 interface CarouselProps {
   images: string[];

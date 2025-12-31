@@ -25,7 +25,6 @@
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.6",
     "@radix-ui/react-label": "^2.1.8",
-    "@radix-ui/react-navigation-menu": "^1.2.14",
     "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-progress": "^1.1.8",
     "@radix-ui/react-scroll-area": "^1.2.10",
@@ -47,7 +46,6 @@
     "class-variance-authority": "^0.7.1",
     "cloudinary": "^2.8.0",
     "clsx": "^2.1.1",
-    "date-fns": "^4.1.0",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "lucide-react": "^0.483.0",
@@ -63,13 +61,10 @@
     "react-hook-form": "^7.67.0",
     "react-use-measure": "^2.1.7",
     "react-webcam": "^7.2.0",
-    "recharts": "^2.15.1",
     "saas": "^1.0.0",
     "socket.io-client": "^4.8.1",
     "sonner": "^2.0.1",
-    "tailwind-merge": "^3.4.0",
-    "vaul": "^1.1.2",
-    "zod": "^3.25.76"
+    "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
