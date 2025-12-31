@@ -1,7 +1,6 @@
 'use server';
 
 import {prisma} from '../../lib/prisma';
-import {generateSlug} from '../use-slug';
 
 export const editService = async (
   service: any,
@@ -30,7 +29,7 @@ export const editService = async (
       return tag.replace('-false', '').replace(/-/g, ' ');
     };
 
-    const result = await prisma.service.update({
+    await prisma.service.update({
       where: {id: id},
       data: {
         title,

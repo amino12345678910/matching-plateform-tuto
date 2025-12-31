@@ -15,7 +15,9 @@ async function EditServicePage({params}: {params: Promise<{slug: string}>}) {
     const fetchedService = await dbContext.service.findFirst({
       where: {slug: resolvedParams},
       include: {
-        reviews: {include: {user: {select: {id: true, name: true, image: true}}}},
+        reviews: {
+          include: {client: {select: {id: true, name: true, image: true, imageSource: true}}},
+        },
         category: true,
         packages: true,
         seller: {

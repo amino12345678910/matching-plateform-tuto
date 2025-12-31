@@ -1,4 +1,3 @@
-// app/freelancer/[slug]/page.tsx
 'use server';
 
 import {notFound} from 'next/navigation';
@@ -16,84 +15,58 @@ async function FreelancerProfilePage({params}: {params: Promise<{slug: string}>}
   }
 
   try {
-    // Fetch freelancer data with related information
+    // Only fetch what's actually needed
     const freelancerData = await prisma.user.findFirst({
-      where: {
-        id: freelancerId,
-        role: 'SELLER',
-      },
-      include: {
+      where: {id: freelancerId, role: 'SELLER'},
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+        imageSource: true,
+        createdAt: true,
         seller: {
-          include: {
+          select: {
+            id: true,
+            bio: true,
+            isVerified: true,
+            createdAt: true,
             services: {
               where: {status: 'ACTIVE'},
-              include: {
-                category: true,
-                tags: true,
-                packages: true,
-                reviews: {
-                  include: {
-                    client: {
-                      select: {
-                        id: true,
-                        name: true,
-                        image: true,
-                        imageSource: true,
-                      },
-                    },
-                  },
-                },
-                _count: {
-                  select: {
-                    bookings: {
-                      where: {status: 'COMPLETED'},
-                    },
-                  },
-                },
+              select: {
+                id: true,
+                slug: true,
+                title: true,
+                description: true,
+                images: true,
+                category: {select: {name: true}},
+                tags: {select: {name: true, slug: true}},
+                packages: {select: {name: true, price: true, delivery: true, revisions: true}},
+                _count: {select: {bookings: {where: {status: 'COMPLETED'}}}},
               },
-              orderBy: {
-                createdAt: 'desc',
-              },
+              orderBy: {createdAt: 'desc'},
             },
           },
         },
         reviews: {
-          include: {
-            service: {
-              select: {
-                title: true,
-                slug: true,
-              },
-            },
-            client: {
-              select: {
-                id: true,
-                name: true,
-                image: true,
-                imageSource: true,
-              },
-            },
-          },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        },
-        _count: {
           select: {
-            services: {
-              where: {status: 'ACTIVE'},
-            },
-            reviews: true,
+            id: true,
+            rating: true,
+            comment: true,
+            createdAt: true,
+            service: {select: {title: true, slug: true}},
+            client: {select: {name: true}},
           },
+          orderBy: {createdAt: 'desc'},
         },
+        _count: {select: {services: {where: {status: 'ACTIVE'}}, reviews: true}},
       },
     });
 
-    if (!freelancerData) {
+    if (!freelancerData || !freelancerData.seller) {
       notFound();
     }
 
-    // Calculate average rating
     const averageRating =
       freelancerData.reviews.length > 0
         ? freelancerData.reviews.reduce((sum, review) => sum + review.rating, 0) /
@@ -105,43 +78,42 @@ async function FreelancerProfilePage({params}: {params: Promise<{slug: string}>}
       imageSource: freelancerData.imageSource,
     });
 
-    // Prepare data for the client component
+    // Calculate total orders
+    const totalOrders = freelancerData.seller.services.reduce(
+      (sum, service) => sum + service._count.bookings,
+      0
+    );
+
     const profileData = {
       client: {
         id: freelancerData.id,
         name: freelancerData.name,
         email: freelancerData.email,
         image: pfp,
-        createdAt: freelancerData.createdAt,
       },
-      seller: freelancerData.seller
-        ? {
-            id: freelancerData.seller.id,
-            bio: freelancerData.seller.bio,
-            profilePhoto: pfp,
-            isVerified: freelancerData.seller.isVerified,
-            joinedDate: freelancerData.seller.createdAt,
-            servicesCount: freelancerData._count.services,
-            totalReviews: freelancerData._count.reviews,
-            averageRating: Math.round(averageRating * 10) / 10,
-            totalOrders: freelancerData.seller.services.reduce(
-              (sum, service) => sum + service._count.bookings,
-              0
-            ),
-          }
-        : null,
-      services: freelancerData.seller?.services || [],
-      reviews: freelancerData.reviews || [],
+      seller: {
+        id: freelancerData.seller.id,
+        bio: freelancerData.seller.bio,
+        profilePhoto: pfp,
+        isVerified: freelancerData.seller.isVerified,
+        joinedDate: freelancerData.seller.createdAt,
+        servicesCount: freelancerData._count.services,
+        totalReviews: freelancerData._count.reviews,
+        averageRating: Math.round(averageRating * 10) / 10,
+        totalOrders,
+      },
+      services: freelancerData.seller.services,
+      reviews: freelancerData.reviews,
     };
 
     return (
-      <>
-        {/* // <div className="container md:max-w-7xl mx-auto py-12 pt-8 px-6"> */}
+      <div className="min-h-screen">
         <Navbar />
-        <FreelancerProfileView profileData={profileData} />
+        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+          <FreelancerProfileView profileData={profileData} />
+        </div>
         <Footer />
-        {/* </div> */}
-      </>
+      </div>
     );
   } catch (error) {
     console.error('Error fetching freelancer profile:', error);

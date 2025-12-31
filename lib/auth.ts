@@ -7,6 +7,8 @@ import {prisma} from './prisma';
 // import {PrismaPg} from '@prisma/adapter-pg';
 // const adapter = new PrismaPg({connectionString: env.DATABASE_URL});
 // const prisma = new PrismaClient();
+export type ImageSource = 'GOOGLE' | 'CLOUDINARY' | 'NULL';
+
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: 'postgresql',

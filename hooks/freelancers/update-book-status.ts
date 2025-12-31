@@ -1,17 +1,18 @@
 'use server';
 
 import {prisma} from '@/lib/prisma';
-import type {BookingStatus} from '@/types/service';
+import type {BookingStatus} from '@/types/bookings';
 
+type updateBookingStatusProps = {
+  bookingId: string;
+  freelancerId: string;
+  status: BookingStatus;
+};
 export async function updateBookingStatus({
   bookingId,
   freelancerId,
   status,
-}: {
-  bookingId: string;
-  freelancerId: string;
-  status: BookingStatus;
-}) {
+}: updateBookingStatusProps) {
   const booking = await prisma.booking.findUnique({
     where: {id: bookingId},
   });

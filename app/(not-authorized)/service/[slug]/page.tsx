@@ -12,16 +12,18 @@ import {Footer} from '@/components/footer/footer-2';
 import type {Service} from '@/types/service';
 import {profilePhoto} from '@/components/profile-url';
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{slug: string}>;
-}): Promise<Metadata> {
-  const slug = (await params).slug;
+type generateMetaDataProps = {
+  params: Promise<{
+    slug: string;
+  }>;
+};
+
+export async function generateMetadata({params}: generateMetaDataProps): Promise<Metadata> {
+  const resolvedParams = (await params).slug;
 
   const service = await prisma.service.findFirst({
-    where: {slug},
-    include: {tags: true, seller: {select: {user: {select: {name: true}}}}},
+    where: {slug: resolvedParams},
+    include: {tags: true, freelancer: {select: {name: true}}},
   });
 
   if (!service) {
@@ -33,7 +35,7 @@ export async function generateMetadata({
 
   // console.log('skuggg', slug, 'sur slug::', service.slug);
   return {
-    title: `${service.title} | ${service.seller.user.name}`,
+    title: `${service.title} | ${service.freelancer.name}`,
     description: service.description?.slice(0, 160) ?? '',
     keywords: service.tags.map(t => t.name),
     openGraph: {
@@ -51,14 +53,14 @@ export async function generateMetadata({
 }
 
 async function detailedPage({params}: {params: Promise<{slug: string}>}) {
-  const resolvedParams = (await params).slug;
+  const {slug} = await params;
 
-  if (resolvedParams.length < 0) {
-    throw new Error('Could not resolve this service pleaes try again');
+  if (!slug || slug.length === 0) {
+    throw new Error('Could not resolve this service please try again');
   }
 
   const fetchedService = await prisma.service.findFirst({
-    where: {slug: resolvedParams},
+    where: {slug},
     include: {
       bookings: {
         select: {hasSeen: true, createdAt: true},
