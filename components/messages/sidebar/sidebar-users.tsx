@@ -2,7 +2,7 @@ import type {Conversation} from '@/app/(shared)/dashboard/messages/page';
 import {cn} from '@/lib/utils';
 import Image from 'next/image';
 
-function MessageClient({
+export function SidebarUsers({
   conv,
   activeConv,
   onViewClick,
@@ -19,11 +19,13 @@ function MessageClient({
       key={conv.id}
       onClick={() => onViewClick(conv, true)}
       className={cn(
-        'w-full flex items-start gap-3 px-2 py-2 rounded-lg text-left transition',
+        'w-full flex items-start gap-3 px-2 py-2 rounded-lg text-left transition relative',
         'hover:bg-muted',
+
         activeConv?.id === conv.id && 'bg-muted'
       )}
     >
+      {/* <span className="h-2 w-2 animate-pulse bg-primary/90 rounded-full absolute right"></span> */}
       <Image
         alt={user.name}
         id="avatar-img"
@@ -43,5 +45,3 @@ function MessageClient({
     </button>
   );
 }
-
-export default MessageClient;

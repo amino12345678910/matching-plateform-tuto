@@ -102,16 +102,20 @@ export const Navbar = () => {
             <div className="flex items-center gap-3">
               {initialLoading ? (
                 <div className="flex items-center gap-3">
-                  <Skeleton className="h-8 w-8 rounded-full" />
-                  <Skeleton className="h-8 w-20 rounded-md hidden md:block" />
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                  <Skeleton className="h-8 w-22 rounded-md hidden md:block" />
                 </div>
               ) : isAuth ? (
                 <>
-                  <Button variant="ghost" size="icon" className="relative">
-                    <Bell className="h-5 w-5" />
-                    <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center">
-                      {notifications.length + 1 || 0}
-                    </Badge>
+                  <Button variant="ghost" size="icon" className="relative" asChild>
+                    <Link href="/notification">
+                      <Bell className="h-5 w-5" />
+                      {notifications.length > 0 && (
+                        <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center">
+                          {notifications.length}
+                        </Badge>
+                      )}
+                    </Link>
                   </Button>
 
                   <DropdownMenu>
@@ -229,8 +233,6 @@ export const Navbar = () => {
           </div>
         )}
       </nav>
-
-      {isAuth && <div className="lg:hidden h-16"></div>}
     </>
   );
 };

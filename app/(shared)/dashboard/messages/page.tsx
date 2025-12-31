@@ -1,6 +1,6 @@
 'use client';
 
-import MessagesList from '@/components/messages/messages-list';
+import SidebarList from '@/components/messages/sidebar/sidebar-list';
 import MessagesLoading from '@/components/messages/loader';
 import {getUserInfo} from '@/hooks/shared/get-user-info';
 import {profilePhoto} from '@/components/profile-url';
@@ -13,6 +13,7 @@ import {cn} from '@/lib/utils';
 import {useRef} from 'react';
 import MessagesEmptyState from '@/components/messages/empty-state';
 import type {BookingStatus} from '@/types/bookings';
+import {getOtherUser} from '@/hooks/message/utils';
 
 export type User = {
   id: string;
@@ -40,6 +41,8 @@ export type Conversation = {
 export default function MessagesPage() {
   const [socket, setSocket] = useState<SocketIOClient.Socket | null>(null);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [otherUserId, setOtherUserId] = useState<string>();
+  const [isOtherUserActive, setIsOtherUserActive] = useState<boolean>(false);
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConv, setActiveConv] = useState<Conversation | null>(null);
@@ -62,7 +65,7 @@ export default function MessagesPage() {
       setCurrentUser({id: user.userId, role: user.role as 'SELLER' | 'USER'});
 
       s = io('http://localhost:9000', {
-        auth: {userId: user.userId},
+        auth: {userId: user.userId, role: user.role},
       });
 
       setSocket(s);
@@ -103,30 +106,37 @@ export default function MessagesPage() {
   }, []);
 
   useEffect(() => {
-    if (!socket || !activeConv) return;
+    if (!socket || !activeConv || !currentUser) return;
+
     const roomId = activeConv.id;
 
     setMessages([]);
     socket.emit('join-room', roomId);
-    socket.emit('get-messages', {
-      roomId,
-      userId: currentUser?.id,
-      bookingId: activeConv.booking.id,
-    });
 
-    socket.on('messages', setMessages);
+    const handlePresence = ({onlineUsers}: {onlineUsers: string[]}) => {
+      const otherUserIdLocal = getOtherUser({roomId, role: currentUser.role});
+      setOtherUserId(otherUserIdLocal);
+      setIsOtherUserActive(onlineUsers.includes(otherUserIdLocal));
+    };
 
     const handleMessages = (msgs: Message[]) => {
       setMessages(msgs);
     };
 
+    socket.on('presence-update', handlePresence);
     socket.on('messages', handleMessages);
+
+    socket.emit('get-messages', {
+      roomId,
+      bookingId: activeConv.booking.id,
+    });
 
     return () => {
       socket.emit('leave-room', roomId);
+      socket.off('presence-update', handlePresence);
       socket.off('messages', handleMessages);
     };
-  }, [activeConv, socket]);
+  }, [socket, activeConv, currentUser]);
 
   const sendMessage = (text: string, cloudinaryFileUrls: string[]) => {
     if (!socket || !activeConv) return;
@@ -155,7 +165,7 @@ export default function MessagesPage() {
             )}
           >
             <h2 className="text-xl  font-semibold mx-2 my-3 p-1">Inbox</h2>
-            <MessagesList
+            <SidebarList
               activeConv={activeConv}
               enriched={conversations}
               onView={(conv, isActive) => {
@@ -167,6 +177,9 @@ export default function MessagesPage() {
 
           {activeConv ? (
             <Inbox
+              isOtherUserActive={isOtherUserActive}
+              otherUserId={otherUserId!}
+              roomId={activeConv.id}
               messages={messages}
               booking={activeConv.booking}
               currentUser={currentUser}

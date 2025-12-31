@@ -5,7 +5,7 @@ import {revalidatePath} from 'next/cache';
 import type {Notification, NotificationType} from '@/types/notification';
 
 export async function getNotifications(userId: string): Promise<Notification[]> {
-  return await dbContext.notification.findMany({
+  return dbContext.notification.findMany({
     where: {userId},
     orderBy: {createdAt: 'desc'},
   });

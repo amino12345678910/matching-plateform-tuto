@@ -280,6 +280,7 @@ model Message {
   roomId      String
   senderId    String
   text        String
+  read        Boolean     @default(false)
   contentType MessageType
   linkedUrls  String[]
   createdAt   DateTime    @default(now())

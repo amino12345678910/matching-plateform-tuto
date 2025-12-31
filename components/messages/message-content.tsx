@@ -14,10 +14,10 @@ export function MessageContent({message}: {message: Message}) {
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm underline underline-offset-2 hover:opacity-80"
+              className="flex bg-accent-foreground items-center gap-2 text-sm underline underline-offset-2"
             >
               <IconFile size={16} />
-              <span className="truncate max-w-[14rem]">{url}</span>
+              <span className="truncate max-w-[14rem]"> dd{url}</span>
             </a>
           ))}
         </div>

@@ -1,20 +1,23 @@
 'use client';
 
-import {IconArrowLeft, IconFile, IconLoader2, IconSend} from '@tabler/icons-react';
+import {IconArrowLeft, IconCheck, IconChecks, IconLoader2, IconSend} from '@tabler/icons-react';
 import {storeFilesToCloudinary} from '@/hooks/shared/store-files-to-cloudinary';
 import type {Booking, CurrentUser, User} from '@/app/(shared)/dashboard/messages/page';
 import {BookingActionCard} from './inbox/booking-actions';
 import {AutomatedMessage} from './inbox/automated-message';
-import {ListedFiles} from './inbox/listed-files';
+import {ListedFiles} from './inbox/fields/listed-files';
 import type {Message} from '@/types/messages';
 import {Button} from '../ui/button';
 import {Badge} from '../ui/badge';
-import {Label} from '../ui/label';
 import {Input} from '../ui/input';
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import {cn} from '@/lib/utils';
 import Image from 'next/image';
 import {toast} from 'sonner';
+import {SelectFile} from './inbox/fields/select-file';
+import {markMessageAsRead} from '@/hooks/message';
+import CheckCheck from './inbox/check-check';
+import MessageLinks from './inbox/links';
 
 const STATUS_LABEL: Record<Booking['status'], string> = {
   PENDING: 'Waiting for acceptance',
@@ -34,15 +37,10 @@ const CHAT_MODE: Record<Booking['status'], 'full' | 'read-only' | 'disabled'> = 
   DISPUTED: 'full',
 };
 
-export function Inbox({
-  messages,
-  booking,
-  currentUser,
-  onSend,
-  user,
-  isActiveConv,
-  onBack,
-}: {
+type InboxProps = {
+  isOtherUserActive: boolean;
+  otherUserId: string;
+  roomId: string;
   messages: Message[];
   booking: Booking;
   currentUser: CurrentUser;
@@ -50,34 +48,74 @@ export function Inbox({
   user: User;
   isActiveConv: boolean;
   onBack: () => void;
-}) {
+};
+
+export function Inbox({
+  isOtherUserActive = false,
+  otherUserId,
+  roomId,
+  messages,
+  booking,
+  currentUser,
+  onSend,
+  user,
+  isActiveConv,
+  onBack,
+}: InboxProps) {
   const [text, setText] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
-
   const [loading, setLoading] = useState(false);
 
   const chatMode = CHAT_MODE[booking.status];
   const canUploadFiles = chatMode === 'full';
 
+  useEffect(() => {
+    setTimeout(async () => {
+      await markMessageAsRead({roomId, otherUserId});
+    }, 3000);
+  }, [messages]);
+
   function handleBookingAction(action: string) {
     console.log('BOOKING ACTION:', action);
 
-    // ✅ In real app:
+    // n real app:
     // 1. update booking status
     // 2. insert SYSTEM message
   }
 
   const isChatDisabled = booking.status === 'COMPLETED' || booking.status === 'CANCELLED';
 
-  function getDisplayUrl(url: string) {
-    try {
-      const u = new URL(url);
-      return u.hostname.replace('www.', '');
-    } catch {
-      return url;
-    }
-  }
+  const handleFormSubmission = async (e: any) => {
+    e.preventDefault();
+    if (!text.trim() && attachedFiles.length === 0) return;
 
+    try {
+      setLoading(true);
+
+      let cloudinaryFileUrls: string[] = [];
+      if (attachedFiles.length > 0) {
+        const {cloudinaryFileUrls: urls, error} = await storeFilesToCloudinary(attachedFiles);
+
+        if (error || !urls?.length) {
+          toast.error('Failed to upload files');
+          return;
+        }
+        cloudinaryFileUrls = urls;
+      }
+
+      await onSend(text.trim(), cloudinaryFileUrls);
+
+      setText('');
+      setAttachedFiles([]);
+    } catch (error) {
+      console.error('Send message error:', error);
+      toast.error('Failed to send message');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  console.log('chachu ka status', isOtherUserActive);
   return (
     <section
       className={cn(
@@ -104,6 +142,8 @@ export function Inbox({
 
           <div>
             <p className="font-medium">{user.name}</p>
+            <p className="text-xs">{isOtherUserActive ? 'Online' : 'Offline'}</p>
+
             <p className="text-xs text-muted-foreground">Order #{booking.id}</p>
           </div>
         </div>
@@ -114,48 +154,27 @@ export function Inbox({
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.map(m => {
-          if (m.contentType === 'AUTOMATED') {
-            return <AutomatedMessage key={m.id} text={m.text} />;
+          if (m.contentType === 'AUTOMATED') return <AutomatedMessage key={m.id} text={m.text} />;
+          else {
+            const ifMyComment = m.senderId === currentUser.id;
+            return (
+              <div
+                key={m.id}
+                className={cn(
+                  'max-w-[70%] rounded-lg px-3 py-2 text-sm space-y-2 relative',
+                  ifMyComment ? 'ml-auto bg-primary/90 text-primary-foreground' : 'bg-muted '
+                )}
+              >
+                <CheckCheck ifMyComment={ifMyComment} read={m.read} />
+                <p className="whitespace-pre-wrap">{m.text}</p>
+                <MessageLinks
+                  linkedUrls={m.linkedUrls}
+                  currentUserId={currentUser.id}
+                  senderId={m.senderId}
+                />
+              </div>
+            );
           }
-
-          return (
-            <div
-              key={m.id}
-              className={cn(
-                'max-w-[70%] rounded-lg px-3 py-2 text-sm space-y-2',
-                m.senderId === currentUser.id
-                  ? 'ml-auto bg-primary text-primary-foreground'
-                  : 'bg-muted'
-              )}
-            >
-              {/* Message text */}
-              <p className="whitespace-pre-wrap">{m.text}</p>
-
-              {/* Linked URLs */}
-              {m.linkedUrls.length > 0 && (
-                <div className="space-y-1">
-                  {m.linkedUrls.map(url => (
-                    <a
-                      key={url}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={cn(
-                        'flex items-center gap-2 rounded-md px-2 py-1 text-xs',
-                        'border hover:bg-accent transition-colors',
-                        m.senderId === currentUser.id
-                          ? 'border-primary/20 text-primary-foreground/90'
-                          : 'border-border text-foreground'
-                      )}
-                    >
-                      <span className="text-muted-foreground">🔗</span>
-                      <span className="truncate">{getDisplayUrl(url)}</span>
-                    </a>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
         })}
 
         <BookingActionCard
@@ -165,85 +184,19 @@ export function Inbox({
         />
       </div>
 
-      <form
-        onSubmit={async e => {
-          e.preventDefault();
-          if (!text.trim() && attachedFiles.length === 0) return;
-
-          try {
-            setLoading(true);
-
-            let cloudinaryFileUrls: string[] = [];
-            if (attachedFiles.length > 0) {
-              const {cloudinaryFileUrls: urls, error} = await storeFilesToCloudinary(attachedFiles);
-
-              if (error || !urls?.length) {
-                toast.error('Failed to upload files');
-                return;
-              }
-              cloudinaryFileUrls = urls;
-            }
-
-            await onSend(text.trim(), cloudinaryFileUrls);
-
-            setText('');
-            setAttachedFiles([]);
-          } catch (error) {
-            console.error('Send message error:', error);
-            toast.error('Failed to send message');
-          } finally {
-            setLoading(false);
-          }
-        }}
-        className="border-t p-3 flex gap-2 items-start"
-      >
-        <Input
-          type="file"
-          hidden
-          multiple
-          disabled={loading || isChatDisabled}
-          id="file-picker"
-          onChange={e => {
-            const files = Array.from(e.target.files || []);
-            if (!files.length) return;
-
-            if (attachedFiles.length >= 5 || attachedFiles.length + files.length - 1 >= 5) {
-              toast.info('Exceed file limit by 5');
-              return;
-            } else {
-              setAttachedFiles(prev => [...prev, ...files]);
-            }
-            e.target.value = '';
-          }}
-        />
-
+      <form onSubmit={handleFormSubmission} className="border-t p-3 flex gap-2 items-start">
         {attachedFiles.length < 5 && (
-          <Button
-            asChild
-            size="sm"
-            variant="outline"
-            className={cn(
-              'h-9 wcursor-pointer',
-              'rounded-md border bg-background',
-              'hover:bg-accent/40  hover:opacity-70',
-              'relative mb-2',
-              'transition-colors',
-              !canUploadFiles && 'opacity-50 cursor-not-allowed'
-            )}
-          >
-            <Label htmlFor="file-picker">
-              <IconFile />
-            </Label>
-          </Button>
+          <SelectFile
+            loading={loading}
+            isChatDisabled={isChatDisabled}
+            canUploadFiles={canUploadFiles}
+            attachedFiles={attachedFiles}
+            updateAttachedFiles={setAttachedFiles}
+          />
         )}
 
         {attachedFiles.length > 0 && (
-          <ListedFiles
-            attachedFiles={attachedFiles}
-            filterFile={i => {
-              setAttachedFiles(prev => prev.filter((_, idx) => idx !== i));
-            }}
-          />
+          <ListedFiles attachedFiles={attachedFiles} filterFile={setAttachedFiles} />
         )}
 
         <Input

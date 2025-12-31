@@ -48,7 +48,7 @@ const items = [
   },
   {
     title: 'Notification',
-    url: '/dashboard/notification',
+    url: '/notification',
     icon: IconBell,
   },
   {

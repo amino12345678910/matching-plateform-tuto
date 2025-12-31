@@ -1,7 +1,7 @@
 import type {Conversation} from '@/app/(shared)/dashboard/messages/page';
-import MessageClient from './message-client';
+import {SidebarUsers} from './sidebar-users';
 
-export default function MessagesList({
+export default function SidebarList({
   enriched,
   activeConv,
   onView,
@@ -10,9 +10,9 @@ export default function MessagesList({
   activeConv: Conversation | null;
   onView: (conv: Conversation, isActiveConv: boolean) => void;
 }) {
-  console.log('active conversation', activeConv);
+  // console.log('active conversation', activeConv);
   return (
-    <div className="space-y-1 border-t">
+    <div className="space-y-1 border-t relative">
       {enriched
         .sort((a, b) => {
           const aTime = a.lastMessage?.createdAt
@@ -24,7 +24,7 @@ export default function MessagesList({
           return bTime - aTime;
         })
         .map(conv => (
-          <MessageClient activeConv={activeConv} conv={conv} onViewClick={onView} key={conv.id} />
+          <SidebarUsers activeConv={activeConv} conv={conv} onViewClick={onView} key={conv.id} />
         ))}
     </div>
   );

@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import {
+  IconBell,
   IconDashboard,
   IconDatabase,
   IconHome,
@@ -50,6 +51,11 @@ const data = {
       title: 'Add Service',
       url: `${defaultRoute}/create-service`,
       icon: IconServicemark,
+    },
+    {
+      title: 'Notifications',
+      url: '/notification',
+      icon: IconBell,
     },
     {
       title: 'Profile',

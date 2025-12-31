@@ -5,6 +5,7 @@ export type Message = {
   roomId: string;
   senderId: string;
   text: string;
+  read: boolean;
   contentType: MessageType;
   linkedUrls: string[] | [];
   createdAt: Date;
