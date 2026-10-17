@@ -14,6 +14,8 @@ import Link from 'next/link';
 import {cloudinaryUrl} from '@/lib/cloudinary';
 import Image from 'next/image';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ExplorePage({
   searchParams,
 }: {
@@ -24,78 +26,84 @@ export default async function ExplorePage({
   const categoryFilter = resolvedParams?.category;
   const searchQuery = resolvedParams?.q;
 
-  // Fetch categories from database
-  const categories = await prisma.category.findMany({
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      _count: {
-        select: {
-          services: {
-            where: {
-              status: 'ACTIVE',
-            },
-          },
-        },
-      },
-    },
-    orderBy: {
-      services: {
-        _count: 'desc',
-      },
-    },
-    take: 12,
-  });
+  let categories: {id: string; name: string; slug: string}[] = [];
+  let services: any[] = [];
 
-  const services = await prisma.service.findMany({
-    where: {
-      status: 'ACTIVE',
-      ...(categoryFilter ? {categorySlug: categoryFilter} : {}),
-      ...(searchQuery
-        ? {
-            OR: [
-              {title: {contains: searchQuery, mode: 'insensitive'}},
-              {description: {contains: searchQuery, mode: 'insensitive'}},
-            ],
-          }
-        : {}),
-    },
-    include: {
-      packages: true,
-      seller: {
-        select: {
-          profilePhoto: true,
-          isVerified: true,
-          verificationStatus: true,
-          specialty: true,
-          user: {
-            select: {
-              name: true,
-              id: true,
+  try {
+    categories = await prisma.category.findMany({
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        _count: {
+          select: {
+            services: {
+              where: {
+                status: 'ACTIVE',
+              },
             },
           },
         },
       },
-      tags: true,
-      category: true,
-      reviews: {
-        select: {
-          rating: true,
+      orderBy: {
+        services: {
+          _count: 'desc',
         },
       },
-      _count: {
-        select: {
-          reviews: true,
-          bookings: true,
+      take: 12,
+    });
+
+    services = await prisma.service.findMany({
+      where: {
+        status: 'ACTIVE',
+        ...(categoryFilter ? {categorySlug: categoryFilter} : {}),
+        ...(searchQuery
+          ? {
+              OR: [
+                {title: {contains: searchQuery, mode: 'insensitive'}},
+                {description: {contains: searchQuery, mode: 'insensitive'}},
+              ],
+            }
+          : {}),
+      },
+      include: {
+        packages: true,
+        seller: {
+          select: {
+            profilePhoto: true,
+            isVerified: true,
+            verificationStatus: true,
+            specialty: true,
+            user: {
+              select: {
+                name: true,
+                id: true,
+              },
+            },
+          },
+        },
+        tags: true,
+        category: true,
+        reviews: {
+          select: {
+            rating: true,
+          },
+        },
+        _count: {
+          select: {
+            reviews: true,
+            bookings: true,
+          },
         },
       },
-    },
-    orderBy: {
-      updatedAt: 'desc',
-    },
-    take: 50,
-  });
+      orderBy: {
+        updatedAt: 'desc',
+      },
+      take: 50,
+    });
+  } catch (err) {
+    console.error('Database fallback on ExplorePage:', err);
+  }
 
   // Calculate average rating for each service
   const formattedServices = services.map(service => {

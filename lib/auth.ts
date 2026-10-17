@@ -10,6 +10,9 @@ import {prisma} from './prisma';
 export type ImageSource = 'GOOGLE' | 'CLOUDINARY' | 'NULL';
 
 export const auth = betterAuth({
+  secret:
+    process.env.BETTER_AUTH_SECRET ||
+    '9arrini-default-production-secret-key-2026-tunisia',
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
   }),

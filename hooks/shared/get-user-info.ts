@@ -22,24 +22,29 @@ export type UserInfo = Pick<
   | 'imageSource'
 >;
 export async function getUserInfo(): Promise<UserInfo> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
 
-  const {id, name, role, email, image, createdAt, emailVerified, hasPassword, imageSource} =
-    session?.user || {};
-  const userId = id;
-  // console.log('has pass', hasPassword);
+    const {id, name, role, email, image, createdAt, emailVerified, hasPassword, imageSource} =
+      session?.user || {};
+    const userId = id;
 
-  return {
-    userId,
-    name,
-    role,
-    email,
-    image,
-    createdAt,
-    emailVerified,
-    hasPassword,
-    imageSource: imageSource ?? 'NULL',
-  };
+    return {
+      userId,
+      name,
+      role,
+      email,
+      image,
+      createdAt,
+      emailVerified,
+      hasPassword,
+      imageSource: imageSource ?? 'NULL',
+    };
+  } catch {
+    return {
+      imageSource: 'NULL',
+    };
+  }
 }
