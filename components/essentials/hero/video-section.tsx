@@ -44,68 +44,74 @@ function VideoSection() {
         {isPlaying ? <Pause size={20} /> : <Play size={20} />}
       </button>
 
-      <div className="absolute top-48 left-10 flex flex-col gap-4">
+      <div className="absolute top-44 left-10 flex flex-col gap-4 max-w-2xl">
         <div>
-          <p className="text-7xl font-light text-white">
-            Our freelancers <br />
-            will take it from here
+          <span className="inline-block bg-primary/20 text-emerald-300 border border-emerald-400/40 text-xs px-3 py-1 rounded-full mb-3 uppercase tracking-wider font-medium">
+            9arrini • قَرّيني — Matkhamemch, l9a el prof elli yse3dek!
+          </span>
+          <p className="text-5xl lg:text-7xl font-light text-white leading-tight">
+            Our expert tutors <br />
+            <span className="font-semibold text-emerald-400">9arrini</span> w tfawwa9!
+          </p>
+          <p className="text-white/80 text-lg mt-2 font-light">
+            E5tar el prof elli ywelemk, 7adher drousek, w jib note behya bkol souhoula.
           </p>
         </div>
-        <br />
         <div>
-          <div className="relative">
+          <form
+            onSubmit={e => {
+              e.preventDefault();
+              window.location.href = '/explore';
+            }}
+            className="relative"
+          >
             <input
               type="text"
-              placeholder="search for any services....."
-              className="text-gray-600 font-roboto text-[17px] rounded-2xl pl-4 pr-10 py-4 outline-none bg-white relative w-full"
+              placeholder="Lawwej 3la ay subject, tutor, walla cours (Math, Python, Anglais...)..."
+              className="text-gray-700 font-roboto text-[16px] rounded-2xl pl-4 pr-12 py-4 outline-none bg-white shadow-xl relative w-full"
             />
-            <div
-              className="absolute flex items-center justify-center right-1 top-1 w-[50px] h-[50px] rounded-2xl text-white"
-              style={{backgroundColor: '#222325'}}
+            <button
+              type="submit"
+              className="absolute flex items-center justify-center right-1.5 top-1.5 w-[46px] h-[46px] rounded-xl text-white cursor-pointer bg-primary hover:bg-primary/90 transition-all"
             >
               <Search size={20} />
-            </div>
+            </button>
+          </form>
+        </div>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <div
+            onClick={() => (window.location.href = '/explore')}
+            className="flex gap-2 px-3 py-1.5 rounded-full border text-white items-center justify-center cursor-pointer hover:bg-white/20 transition-all text-xs"
+            style={{backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: 'rgba(255,255,255,0.2)'}}
+          >
+            <span>📐 Math & Analyse</span>
+            <ArrowRight size={14} />
+          </div>
+          <div
+            onClick={() => (window.location.href = '/explore')}
+            className="flex gap-2 px-3 py-1.5 rounded-full border text-white items-center justify-center cursor-pointer hover:bg-white/20 transition-all text-xs"
+            style={{backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: 'rgba(255,255,255,0.2)'}}
+          >
+            <span>💻 Python & Coding</span>
+            <ArrowRight size={14} />
+          </div>
+          <div
+            onClick={() => (window.location.href = '/explore')}
+            className="flex gap-2 px-3 py-1.5 rounded-full border text-white items-center justify-center cursor-pointer hover:bg-white/20 transition-all text-xs"
+            style={{backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: 'rgba(255,255,255,0.2)'}}
+          >
+            <span>🗣️ Anglais & Français</span>
+            <ArrowRight size={14} />
+          </div>
+          <div
+            onClick={() => (window.location.href = '/explore')}
+            className="flex gap-2 px-3 py-1.5 rounded-full border text-white items-center justify-center cursor-pointer hover:bg-white/20 transition-all text-xs"
+            style={{backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: 'rgba(255,255,255,0.2)'}}
+          >
+            <span>🎯 Bac & Concours Prep</span>
+            <ArrowRight size={14} />
           </div>
         </div>
-        <div className="flex gap-2">
-          <div
-            className="flex gap-2 p-2 rounded-md border w-auto text-white items-center justify-center"
-            style={{backgroundColor: 'rgba(249, 250, 251, 0.1)', borderColor: '#d1d5db'}}
-          >
-            <button className="font-light text-[15px]">website development</button>
-            <ArrowRight size={20} />
-          </div>
-          <div
-            className="flex gap-2 p-2 rounded-md border w-auto text-white items-center justify-center"
-            style={{backgroundColor: 'rgba(249, 250, 251, 0.1)', borderColor: '#d1d5db'}}
-          >
-            <button className="font-light text-[15px]">logo design</button>
-            <ArrowRight size={20} />
-          </div>
-          <div
-            className="flex gap-2 p-2 rounded-md border w-auto text-white items-center justify-center"
-            style={{backgroundColor: 'rgba(249, 250, 251, 0.1)', borderColor: '#d1d5db'}}
-          >
-            <button className="font-light text-[15px]">video editing</button>
-            <ArrowRight size={20} />
-          </div>
-          <div
-            className="flex gap-2 p-2 rounded-md border w-auto text-white items-center justify-center"
-            style={{backgroundColor: 'rgba(249, 250, 251, 0.1)', borderColor: '#d1d5db'}}
-          >
-            <button className="font-light text-[15px]">architecture & interior design</button>
-            <ArrowRight size={20} />
-          </div>
-        </div>
-      </div>
-      <div className="absolute left-10 bottom-5 flex gap-14">
-        <p className="text-[15px] font-normal text-white">Trusted By: </p>
-        <Image src={metaIcon} alt="meta" width={50} height={30} />
-        <Image src={googleIcon} alt="google" width={50} height={30} />
-        <Image src={netflixIcon} alt="netflix" width={50} height={30} />
-        <Image src={pgIcon} alt="pg" width={50} height={30} />
-        <Image src={paypalIcon} alt="paypal" width={50} height={30} />
-        <Image src={pioneerIcon} alt="pioneer" width={50} height={30} />
       </div>
     </div>
   );

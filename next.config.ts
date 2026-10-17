@@ -2,10 +2,13 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   images: {
+    dangerouslyAllowSVG: true,
     remotePatterns: [
       {hostname: 'res.cloudinary.com'},
       {hostname: 'api.cloudinary.com'},
       {hostname: 'lh3.googleusercontent.com'},
+      {hostname: 'api.dicebear.com'},
+      {hostname: 'images.unsplash.com'},
     ],
   },
 
@@ -19,4 +22,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-``;

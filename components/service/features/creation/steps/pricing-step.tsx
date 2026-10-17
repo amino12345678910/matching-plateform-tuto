@@ -97,22 +97,22 @@ function PricingStep({
             <div className="flex items-center justify-between">
               <Label htmlFor={`${tabValue}-price`} className="flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
-                Price ($)
+                Soum bil Dinar (DT)
               </Label>
-              <span className="text-xs text-muted-foreground">Required</span>
+              <span className="text-xs text-muted-foreground">Obligatoire</span>
             </div>
             <div className="relative">
-              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-                $
+              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground text-xs font-bold">
+                DT
               </div>
               <Input
                 id={`${tabValue}-price`}
                 type="number"
                 min="5"
                 max="10000"
-                placeholder={tabValue === 'basic' ? '50' : tabValue === 'standard' ? '100' : '200'}
+                placeholder={tabValue === 'basic' ? '30' : tabValue === 'standard' ? '80' : '150'}
                 className={cn(
-                  'pl-8',
+                  'pl-10',
                   isInputInvalid(`${packageName}.price`)
                     ? 'border-destructive'
                     : getPackageError(packageName, 'price')

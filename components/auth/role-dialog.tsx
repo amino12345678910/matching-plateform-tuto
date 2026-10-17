@@ -46,7 +46,7 @@ export function RoleDialog({isOpen, onClose, onRoleSelect, authType}: RoleDialog
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* User Option */}
+          {/* Student Option */}
           <button
             type="button"
             onClick={() => handleSelect('USER')}
@@ -57,17 +57,17 @@ export function RoleDialog({isOpen, onClose, onRoleSelect, authType}: RoleDialog
             }`}
           >
             <div className="flex-shrink-0">
-              <Image src={userVector} alt="User" width={56} height={56} className="pr-3 border-r" />
+              <Image src={userVector} alt="Student" width={56} height={56} className="pr-3 border-r" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-foreground">USER</h3>
+              <h3 className="text-sm font-bold text-foreground">STUDENT / LEARNER</h3>
               <p className="text-xs text-muted-foreground mt-1">
-                I want to hire freelancers for services.
+                I want to find expert tutors, book lessons, and learn new skills.
               </p>
             </div>
           </button>
 
-          {/* Freelancer Option */}
+          {/* Tutor Option */}
           <button
             type="button"
             onClick={() => handleSelect('SELLER')}
@@ -80,16 +80,16 @@ export function RoleDialog({isOpen, onClose, onRoleSelect, authType}: RoleDialog
             <div className="flex-shrink-0">
               <Image
                 src={freelancerVector}
-                alt="Freelancer"
+                alt="Tutor"
                 width={56}
                 height={56}
                 className="pr-3 border-r"
               />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-foreground">FREELANCER</h3>
+              <h3 className="text-sm font-bold text-foreground">TUTOR / EDUCATOR</h3>
               <p className="text-xs text-muted-foreground mt-1">
-                I want to offer services and earn money.
+                I want to teach students, offer tutoring sessions, and earn money.
               </p>
             </div>
           </button>

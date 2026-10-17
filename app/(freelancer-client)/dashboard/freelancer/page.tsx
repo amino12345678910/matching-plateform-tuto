@@ -8,17 +8,26 @@ import {ServiceNav} from '@/components/freelancer/dashboard/service-nav';
 import getMyServicesLite, {
   type ServiceNavLite,
 } from '@/hooks/freelancers/dashboard/get-my-services-lite';
+import {getTutorVerificationData} from '@/hooks/freelancers/verification-actions';
+import {TutorVerificationBanner} from '@/components/freelancer/tutor-verification-banner';
 
 export default async function Page() {
   const {userId: fId, role} = await getUserInfo();
   if (role !== 'SELLER' || !fId) return;
-  const totalRevenue = await getRevenue(fId);
-  const pendingBookings = await getPendingBookings(fId);
-  const currentClientStory = await getCurrentClientStats(fId);
-  const services: ServiceNavLite[] = (await getMyServicesLite()) || [];
+  const [totalRevenue, pendingBookings, currentClientStory, services, sellerInfo] =
+    await Promise.all([
+      getRevenue(fId),
+      getPendingBookings(fId),
+      getCurrentClientStats(fId),
+      getMyServicesLite(),
+      getTutorVerificationData(),
+    ]);
+
+  const serviceList: ServiceNavLite[] = services || [];
 
   return (
-    <>
+    <div className="space-y-6">
+      <TutorVerificationBanner seller={sellerInfo} />
       <SectionCards
         totalRevenue={totalRevenue}
         pendingClients={pendingBookings}
@@ -26,8 +35,8 @@ export default async function Page() {
       />
       <div className="flex flex-col gap-4 px-4 lg:px-6">
         <FreelancerCalendar fId={fId} />
-        <ServiceNav services={services} />
+        <ServiceNav services={serviceList} />
       </div>
-    </>
+    </div>
   );
 }

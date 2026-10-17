@@ -80,16 +80,6 @@ const links = [
         href: 'https://www.linkedin.com/',
         title: 'Connect with us on LinkedIn',
       },
-      {
-        label: (
-          <div className="flex items-center gap-2">
-            <GithubIcon className="h-4 w-4" />
-            <span>Github</span>
-          </div>
-        ),
-        href: 'https://github.com/',
-        title: 'View our GitHub repository',
-      },
     ],
   },
 ];

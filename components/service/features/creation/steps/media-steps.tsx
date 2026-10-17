@@ -36,9 +36,9 @@ export function MediaStep({
       {/* Gallery Card */}
       <Card>
         <CardHeader>
-          <CardTitle>Gallery</CardTitle>
+          <CardTitle>Course & Session Gallery</CardTitle>
           <CardDescription>
-            Upload high-quality images that showcase your service. First image will be the
+            Upload images or slides that showcase your tutoring session. First image will be the
             thumbnail.
           </CardDescription>
         </CardHeader>
@@ -54,7 +54,7 @@ export function MediaStep({
                   {files.length} image{files.length !== 1 ? 's' : ''} ready to upload
                 </span>
                 {files.length < 1 && (
-                  <span className="text-amber-600">• Recommended: Add at least 3 images</span>
+                  <span className="text-amber-600">• Recommended: Add at least 1 cover image</span>
                 )}
               </div>
             )}
@@ -77,12 +77,12 @@ export function MediaStep({
 
           {/* Tips */}
           <div className="bg-muted/30 rounded-lg p-4">
-            <h4 className="font-medium text-sm mb-2">💡 Tips for great service images:</h4>
+            <h4 className="font-medium text-sm mb-2">💡 Tips for great tutoring thumbnails:</h4>
             <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-              <li>Showcase your best work first</li>
-              <li>Include before/after examples if applicable</li>
+              <li>Showcase the subject or syllabus clearly</li>
+              <li>Include sample study materials or diagrams if applicable</li>
               <li>Use high-resolution images (min. 1200px width)</li>
-              <li>Add captions to explain what clients are seeing</li>
+              <li>Highlight your credentials or teaching style</li>
             </ul>
           </div>
         </CardContent>
@@ -91,16 +91,16 @@ export function MediaStep({
       {/* Category & Tags Card */}
       <Card>
         <CardHeader>
-          <CardTitle>Category & Tags</CardTitle>
+          <CardTitle>Subject Category & Topics</CardTitle>
           <CardDescription>
-            Help clients find your service by categorizing it properly.
+            Help students find your tutoring session by selecting the right subject category.
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-6">
           {/* Category Selection */}
           <div className="space-y-3">
-            <Label htmlFor="category">Category *</Label>
+            <Label htmlFor="category">Subject Category *</Label>
             <div className="space-y-2">
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                 <SelectTrigger
@@ -109,23 +109,24 @@ export function MediaStep({
                     errors.category ? 'border-destructive' : ''
                   )}
                 >
-                  <SelectValue placeholder="Choose a category that best fits your service" />
+                  <SelectValue placeholder="Choose a subject category for your tutoring session" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="design">Graphics & Design</SelectItem>
-                  <SelectItem value="dev">Programming & Tech</SelectItem>
-                  <SelectItem value="writing">Writing & Translation</SelectItem>
-                  <SelectItem value="video">Video & Animation</SelectItem>
-                  <SelectItem value="music">Music & Audio</SelectItem>
-                  <SelectItem value="business">Business</SelectItem>
-                  <SelectItem value="lifestyle">Lifestyle</SelectItem>
+                  <SelectItem value="mathematics">Mathematics & Calculus</SelectItem>
+                  <SelectItem value="coding">Coding & Computer Science</SelectItem>
+                  <SelectItem value="languages">Languages & Literature</SelectItem>
+                  <SelectItem value="science">Science, Physics & Chemistry</SelectItem>
+                  <SelectItem value="ai-data">AI, Data Science & ML</SelectItem>
+                  <SelectItem value="music-arts">Music, Art & Design</SelectItem>
+                  <SelectItem value="business">Business, Finance & Economics</SelectItem>
+                  <SelectItem value="exam-prep">SAT, GRE & Exam Prep</SelectItem>
                 </SelectContent>
               </Select>
 
               {!selectedCategory && (
                 <div className="flex items-center gap-2 text-sm text-amber-600">
                   <AlertCircle className="h-4 w-4" />
-                  <span>Please select a category</span>
+                  <span>Please select a subject category</span>
                 </div>
               )}
             </div>
@@ -134,14 +135,14 @@ export function MediaStep({
           {/* Tags Input */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label htmlFor="tags">Tags</Label>
+              <Label htmlFor="tags">Subject Tags</Label>
               <span className="text-xs text-muted-foreground">{tagsCount}/15 tags</span>
             </div>
 
             <div className="space-y-2">
               <Input
                 id="tags"
-                placeholder="logo design, branding, modern, minimalist, business logo"
+                placeholder="calculus, linear algebra, python, exam prep, beginner friendly"
                 {...register('tags', {
                   validate: (value: string) => {
                     const tags = value.split(',').filter(tag => tag.trim());
@@ -163,7 +164,7 @@ export function MediaStep({
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  Add relevant keywords separated by commas. These help clients find your service.
+                  Add relevant subject keywords separated by commas so students can discover your lessons.
                 </p>
               )}
 

@@ -276,11 +276,11 @@ export default function Create() {
                   <TabsContent value="basic" className="pt-4 space-y-4">
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="basic-price">Price ($)</Label>
+                        <Label htmlFor="basic-price">Soum bil Dinar (DT)</Label>
                         <Input
                           id="basic-price"
                           type="number"
-                          placeholder="50"
+                          placeholder="30"
                           {...registerPackageField('basicPackage', 'price')}
                           className={isInputInvalid('basicPackage.price') ? 'border-red-500' : ''}
                         />
@@ -348,11 +348,11 @@ export default function Create() {
                   <TabsContent value="standard" className="pt-4 space-y-4">
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="standard-price">Price ($)</Label>
+                        <Label htmlFor="standard-price">Soum bil Dinar (DT)</Label>
                         <Input
                           id="standard-price"
                           type="number"
-                          placeholder="100"
+                          placeholder="80"
                           {...registerPackageField('standardPackage', 'price')}
                           className={
                             isInputInvalid('standardPackage.price') ? 'border-red-500' : ''
@@ -422,11 +422,11 @@ export default function Create() {
                   <TabsContent value="premium" className="pt-4 space-y-4">
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="premium-price">Price ($)</Label>
+                        <Label htmlFor="premium-price">Soum bil Dinar (DT)</Label>
                         <Input
                           id="premium-price"
                           type="number"
-                          placeholder="200"
+                          placeholder="150"
                           {...registerPackageField('premiumPackage', 'price')}
                           className={isInputInvalid('premiumPackage.price') ? 'border-red-500' : ''}
                         />

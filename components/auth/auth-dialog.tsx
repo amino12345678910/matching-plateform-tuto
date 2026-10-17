@@ -107,14 +107,14 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
 
   // Handle email registration start
   const handleEmailSignupStart = () => {
-    setPendingAuthType('email');
-    setShowRoleDialog(true);
+    setRegStep('create');
   };
 
   // Handle email registration
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    const selectedRole = regForm.role || 'USER';
 
     try {
       const {data, error} = await authClient.signUp.email(
@@ -122,7 +122,7 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
           email: regForm.email,
           password: regForm.password,
           name: regForm.username,
-          role: regForm.role as 'USER' | 'FREELANCER',
+          role: selectedRole,
           hasPassword: true,
           imageSource: 'NULL',
         },
@@ -132,7 +132,8 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
           },
           onSuccess: () => {
             toast.success('Account created successfully!');
-            setStep('login');
+            const targetUrl =
+              selectedRole === 'SELLER' ? '/dashboard/freelancer' : '/dashboard/client';
             setRegStep('null');
             setRegForm({
               email: '',
@@ -141,13 +142,8 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
               role: '',
             });
             setLoading(false);
-            router.push(
-              `/${
-                regForm.role.toLowerCase() === 'freelancer'
-                  ? 'dashboard/freelancer'
-                  : 'dashboard/client'
-              }`
-            );
+            onClose();
+            window.location.href = targetUrl;
           },
           onError: ctx => {
             toast.error(ctx.error.message || 'Registration failed');
@@ -155,6 +151,10 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
           },
         }
       );
+      if (error) {
+        toast.error(error.message || 'Registration failed');
+        setLoading(false);
+      }
     } catch (error: any) {
       toast.error(error.message || 'Registration failed');
       setLoading(false);
@@ -182,8 +182,8 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
             toast.success('Successfully logged in!');
             onClose();
             setLoginForm({email: '', password: ''});
-            router.push('/dashboard');
             setLoading(false);
+            window.location.href = '/dashboard';
           },
           onError: ctx => {
             toast.error(ctx.error.message || 'Login failed');
@@ -191,6 +191,10 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
           },
         }
       );
+      if (error) {
+        toast.error(error.message || 'Login failed');
+        setLoading(false);
+      }
     } catch (error: any) {
       toast.error(error.message || 'Login failed');
       setLoading(false);
@@ -250,7 +254,7 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
             <div className="hidden lg:block relative">
               <Image
                 src={girlImage}
-                alt="Success starts here"
+                alt="Learning starts here"
                 className="object-cover"
                 height={400}
                 width={500}
@@ -261,11 +265,11 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                 style={{background: 'linear-gradient(to right, rgba(0,0,0,0.7), transparent)'}}
               >
                 <div>
-                  <h2 className="text-3xl font-bold mb-4">Success starts here</h2>
+                  <h2 className="text-3xl font-bold mb-4">Learning starts here</h2>
                   <ul className="space-y-2 text-[18px]">
-                    <li>✓ Over 700 categories</li>
-                    <li>✓ Quality work done faster</li>
-                    <li>✓ Access to talent and businesses across the globe</li>
+                    <li>✓ Over 700+ academic & skill subjects</li>
+                    <li>✓ Personalized 1-on-1 tutoring sessions</li>
+                    <li>✓ Connect with top educators & mentors worldwide</li>
                   </ul>
                 </div>
               </div>
@@ -353,9 +357,9 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                   </Card>
 
                   <p className="text-xs text-muted-foreground mt-8 text-center">
-                    By joining, you agree to the Aiverr Terms of Service and to occasionally receive
-                    emails from us. Please read our Privacy Policy to learn how we use your personal
-                    data.
+                    By joining, you agree to the 9arrini Terms of Service and to occasionally receive
+                    learning updates from us. Please read our Privacy Policy to learn how we use your
+                    personal data.
                   </p>
                 </div>
               )}
@@ -531,18 +535,18 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                   <DialogHeader className="mb-6">
                     <DialogTitle className="text-2xl">Get your profile started</DialogTitle>
                     <DialogDescription>
-                      We'll help you set up your profile and get started on Aiverr. You can always
-                      change your profile later.
+                      We'll help you set up your learning or teaching profile on 9arrini. You can
+                      always update your profile later.
                     </DialogDescription>
                   </DialogHeader>
 
                   <div className="space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor="username">Choose a username</Label>
+                      <Label htmlFor="username">Choose a display name / username</Label>
                       <Input
                         id="username"
                         type="text"
-                        placeholder="Enter a username"
+                        placeholder="Enter your name or username"
                         value={regForm.username}
                         onChange={e => setRegForm({...regForm, username: e.target.value})}
                         required
@@ -554,7 +558,7 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                       className="w-full h-11"
                       disabled={regForm.username.length < 3}
                     >
-                      Create My Account
+                      Continue
                     </Button>
                   </div>
                 </div>
@@ -564,7 +568,7 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                 <div className="p-8 md:p-10">
                   <DialogHeader className="mb-6">
                     <DialogTitle className="text-2xl pb-4 border-b">
-                      Get your Role in Aiverr
+                      How would you like to use 9arrini?
                     </DialogTitle>
                   </DialogHeader>
 
@@ -582,16 +586,16 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                         <div className="flex-shrink-0">
                           <Image
                             src={userVector}
-                            alt="User"
+                            alt="Student"
                             width={56}
                             height={56}
                             className="pr-3 border-r"
                           />
                         </div>
                         <div>
-                          <h3 className="text-sm font-bold text-foreground">USER</h3>
+                          <h3 className="text-sm font-bold text-foreground">STUDENT / LEARNER</h3>
                           <p className="text-xs text-muted-foreground mt-1">
-                            I want to hire freelancers for services.
+                            I want to find expert tutors, book lessons, and learn new skills.
                           </p>
                         </div>
                       </button>
@@ -608,16 +612,16 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                         <div className="flex-shrink-0">
                           <Image
                             src={freelancerVector}
-                            alt="Freelancer"
+                            alt="Tutor"
                             width={56}
                             height={56}
                             className="pr-3 border-r"
                           />
                         </div>
                         <div>
-                          <h3 className="text-sm font-bold text-foreground">FREELANCER</h3>
+                          <h3 className="text-sm font-bold text-foreground">TUTOR / EDUCATOR</h3>
                           <p className="text-xs text-muted-foreground mt-1">
-                            I want to offer services and earn money.
+                            I want to teach students, offer tutoring sessions, and earn money.
                           </p>
                         </div>
                       </button>
@@ -629,7 +633,7 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                       disabled={loading || !regForm.role}
                     >
                       {loading ? <IconLoader className="h-4 w-4 mr-2 animate-spin" /> : null}
-                      Sign Up
+                      Create Account
                     </Button>
                   </form>
                 </div>

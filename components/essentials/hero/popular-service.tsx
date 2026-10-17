@@ -60,56 +60,56 @@ const PopularService = ({nextBtn, prevBtn}: PopularServiceProps) => {
 
   const data = [
     {
-      title: 'Web Development',
+      title: 'Web Dev & Coding Bootcamps',
       icon: (
         <Image src={webdev} alt="Web Development" className="rounded-lg" width={160} height={130} />
       ),
     },
     {
-      title: 'Logo Design',
+      title: 'Graphic Design & Illustration',
       icon: (
-        <Image src={logodes} alt="Logo Design" className="rounded-lg" width={160} height={130} />
+        <Image src={logodes} alt="Graphic Design" className="rounded-lg" width={160} height={130} />
       ),
     },
     {
-      title: 'SEO',
-      icon: <Image src={SEO} alt="SEO" width={160} height={130} />,
+      title: 'Calculus & Linear Algebra',
+      icon: <Image src={SEO} alt="Mathematics" width={160} height={130} />,
     },
     {
-      title: 'Architecture & Interior Design',
-      icon: <Image src={architecture} alt="Architecture Design" width={160} height={130} />,
+      title: 'Architecture & CAD Tutoring',
+      icon: <Image src={architecture} alt="Architecture Tutoring" width={160} height={130} />,
     },
     {
-      title: 'Voice Over',
-      icon: <Image src={voice} alt="Voice Over" width={160} height={130} />,
+      title: 'Language & Pronunciation',
+      icon: <Image src={voice} alt="Language Coaching" width={160} height={130} />,
     },
     {
-      title: 'Social media Marketing',
-      icon: <Image src={social} alt="Social Media Marketing" width={160} height={130} />,
+      title: 'Digital Marketing & Strategy',
+      icon: <Image src={social} alt="Marketing Lessons" width={160} height={130} />,
     },
     {
-      title: 'UGC Videos',
-      icon: <Image src={ugc} alt="UGC Videos" width={160} height={130} />,
+      title: 'Public Speaking & Presentation',
+      icon: <Image src={ugc} alt="Public Speaking" width={160} height={130} />,
     },
     {
-      title: 'Software Development',
-      icon: <Image src={software} alt="Software Development" width={160} height={130} />,
+      title: 'Computer Science & Algorithms',
+      icon: <Image src={software} alt="Computer Science" width={160} height={130} />,
     },
     {
-      title: 'Data Science & ML',
+      title: 'Data Science & Machine Learning',
       icon: <Image src={science} alt="Data Science" width={160} height={130} />,
     },
     {
-      title: 'Product Photography',
-      icon: <Image src={product} alt="Product Photography" width={160} height={130} />,
+      title: 'Photography & Visual Arts',
+      icon: <Image src={product} alt="Photography Lessons" width={160} height={130} />,
     },
     {
-      title: 'E-Commerce marketing',
-      icon: <Image src={ecommerce} alt="E-commerce Marketing" width={160} height={130} />,
+      title: 'Economics & Business Studies',
+      icon: <Image src={ecommerce} alt="Economics" width={160} height={130} />,
     },
     {
-      title: 'Video Editing',
-      icon: <Image src={videoedit} alt="Video Editing" width={160} height={130} />,
+      title: 'Film & Video Production',
+      icon: <Image src={videoedit} alt="Film Production" width={160} height={130} />,
     },
   ];
 

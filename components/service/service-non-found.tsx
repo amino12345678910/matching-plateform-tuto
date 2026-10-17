@@ -17,10 +17,10 @@ export default function NoServicesFound() {
         </svg>
       </div>
 
-      <h2 className="mt-6 text-lg font-semibold text-gray-900">No Services Found</h2>
+      <h2 className="mt-6 text-lg font-semibold text-gray-900">No Tutoring Sessions Found</h2>
 
       <p className="mt-2 text-sm text-gray-500 max-w-xs">
-        Try adjusting your filters or check again later.
+        Try adjusting your subject filters or check back soon for new tutors.
       </p>
     </div>
   );

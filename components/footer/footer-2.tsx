@@ -2,8 +2,10 @@ export const Footer = () => {
   return (
     <div className="border-t-2 p-6 mt-8 mb-1">
       <div className="container flex flex-col gap-4 text-foreground lg:flex-row justify-between items-center">
-        <div className="font-bold text-lg">Fives.</div>
-        <div>© Fives International Ltd. 2025</div>
+        <div className="font-black text-xl text-emerald-600">
+          9arrini<span className="text-foreground font-semibold">.tn</span> • قَرّيني
+        </div>
+        <div className="text-sm text-muted-foreground">© 9arrini — Plateforme Éducative N°1 fi Tounes 2026.</div>
         <div className="flex gap-4">
           <svg
             xmlns="http://www.w3.org/2000/svg"

@@ -55,11 +55,9 @@ export function LoginForm({className, ...props}: React.ComponentProps<'div'>) {
           setLoading(true);
         },
         onSuccess: ctx => {
-          // redirect to the dashboard
-          //alert("Logged in successfully");
+          window.location.href = '/dashboard';
         },
         onError: ctx => {
-          // display the error message
           setError(ctx.error.message);
           setLoading(false);
         },

@@ -17,7 +17,7 @@ function SelectRoleComponent() {
     try {
       setLoading(true);
       await authClient.updateUser({role, hasPassword: false});
-      router.push(role === 'SELLER' ? '/dashboard' : '/explore');
+      router.push(role === 'SELLER' ? '/dashboard/freelancer' : '/dashboard/client');
     } catch (error) {
       console.error(error);
     } finally {
@@ -29,18 +29,18 @@ function SelectRoleComponent() {
     <Card className="w-full max-w-lg">
       <CardContent className="flex flex-col gap-y-2 w-full max-w-2xl">
         <CardTitle className="text-foreground font-semibold">
-          What is your vision after logging in?
+          How would you like to use 9arrini?
         </CardTitle>
         <label className="sr-only" htmlFor="role">
-          What is your vision after logging in?
+          How would you like to use 9arrini?
         </label>
         <Select onValueChange={value => setRole(value as 'USER' | 'SELLER')}>
           <SelectTrigger name="role" id="role" className="w-full mt-1">
-            <SelectValue placeholder="What is your purpose here" />
+            <SelectValue placeholder="Choose your learning or teaching role" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="USER">Find freelancer (USER)</SelectItem>
-            <SelectItem value="SELLER">Become freelancer (SELLER)</SelectItem>
+            <SelectItem value="USER">Find a Tutor & Learn (Student)</SelectItem>
+            <SelectItem value="SELLER">Become a Tutor & Teach (Educator)</SelectItem>
           </SelectContent>
         </Select>
       </CardContent>

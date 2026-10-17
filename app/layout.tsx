@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Five Services',
-  description: 'Five Services - All your services at one place',
+  title: '9arrini (قَرّيني) — A7san Profs & Drous fi Tounes',
+  description: 'L9a el prof elli ywelemk, réservez des cours particuliers en ligne ou à domicile, w tfawwa9 fi 9raytek!',
 };
 
 export default function RootLayout({

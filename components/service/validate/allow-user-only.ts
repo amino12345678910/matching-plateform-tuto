@@ -13,7 +13,7 @@ async function allowClientOnly(): Promise<{
 
   if (!role || !name) console.error(`Cannot access user`);
 
-  if (role == 'USER' && clientId) disable = false;
+  if ((role == 'USER' || role == 'ADMIN') && clientId) disable = false;
 
   return {disable, role, clientId, name};
 }

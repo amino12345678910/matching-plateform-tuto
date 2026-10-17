@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {cloudinaryUrl} from '@/lib/cloudinary';
 import type {ServiceCard as ServiceCardType} from '@/types/service';
-import {Star, Clock, Heart, Check} from 'lucide-react';
+import {Star, Clock, Heart, Check, ShieldCheck, GraduationCap, Coins} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Badge} from '@/components/ui/badge';
 import {Card, CardContent} from '@/components/ui/card';
@@ -13,6 +13,22 @@ import {cn} from '@/lib/utils';
 
 interface EnhancedServiceCardType extends ServiceCardType {
   averageRating: number;
+}
+
+const FALLBACK_COURSE_IMAGE =
+  'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=900&auto=format&fit=crop&q=80';
+
+function formatCleanCourseTitle(title: string, sellerName?: string): string {
+  const cleaned = (title || '').trim();
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length < 5 || cleaned.toLowerCase().startsWith('i teach')) {
+    const topic = cleaned.replace(/^i\s+teach\s+/i, '').trim() || 'Soutien Scolaire';
+    const capTopic = topic.charAt(0).toUpperCase() + topic.slice(1);
+    return `Cours & Révision : ${capTopic} — Accompagnement Personnalisé${
+      sellerName ? ` avec ${sellerName}` : ''
+    }`;
+  }
+  return cleaned;
 }
 
 export function ServiceCardComponent({service}: {service: EnhancedServiceCardType}) {
@@ -25,16 +41,25 @@ export function ServiceCardComponent({service}: {service: EnhancedServiceCardTyp
   const hasMultiplePrices = minPrice !== maxPrice;
   const deliveryDays = service.packages[0]?.delivery || 3;
 
+  const isSellerVerified =
+    (service.seller as any)?.isVerified !== false && service.seller?.verified !== false;
+  const displayTitle = formatCleanCourseTitle(service.title, service.seller?.user?.name);
+  const imageSrc =
+    service.images && service.images.length > 0 && service.images[0]
+      ? cloudinaryUrl(service.images[0], 'q_40,f_auto,w_600')
+      : FALLBACK_COURSE_IMAGE;
+
   const sellerAvatar =
     (service?.seller?.profilePhoto ? cloudinaryUrl(service.seller?.profilePhoto) : undefined) ||
     `https://api.dicebear.com/6.x/initials/svg?seed=${service.seller.user.name}`;
 
   const getBadges = () => {
     const badges = [];
-    if (service._count.bookings > 50) badges.push({text: 'Popular', variant: 'default' as const});
+    if (service._count.bookings > 20)
+      badges.push({text: '🔥 Populaire', variant: 'default' as const});
     if (service.averageRating >= 4.5)
-      badges.push({text: 'Top Rated', variant: 'secondary' as const});
-    if (deliveryDays <= 1) badges.push({text: 'Fast', variant: 'outline' as const});
+      badges.push({text: '⭐ Top Prof', variant: 'secondary' as const});
+    if (deliveryDays <= 2) badges.push({text: '⚡ Intensif', variant: 'outline' as const});
     return badges.slice(0, 2);
   };
 
@@ -43,54 +68,73 @@ export function ServiceCardComponent({service}: {service: EnhancedServiceCardTyp
   return (
     <Card
       className={cn(
-        'group relative overflow-hidden transition-all duration-300 h-full hover:shadow-lg border',
-        'border-none shadow-none hover:shadow-none relative',
-        isHovered && 'shadow-md'
+        'group relative overflow-hidden transition-all duration-300 h-full hover:shadow-xl border border-slate-200/80 dark:border-slate-800 rounded-2xl bg-card',
+        isHovered && 'shadow-lg border-emerald-500/40'
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="relative aspect-video overflow-hidden">
+      <div className="relative aspect-video overflow-hidden bg-slate-100">
         <Image
-          src={cloudinaryUrl(service.images[0], 'q_40,f_auto,w_600')}
-          alt={service.title}
+          src={imageSrc}
+          alt={displayTitle}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className="object-cover h-full transition-transform duration-500 group-hover:scale-[102%]"
+          className="object-cover h-full transition-transform duration-500 group-hover:scale-[103%]"
         />
 
-        {isHovered && service.packages[0].id && (
+        {isHovered && service.packages[0]?.id && (
           <CardContent
             className={cn(
-              'absolute h-60 aspect-video w-full overflow-hidden inset-0 bottom-full mb-2 bg-secondary/50 p-4 z-50 ',
-              'transition-all duration-500 group-hover:backdrop-blur-xs'
+              'absolute h-60 aspect-video w-full overflow-hidden inset-0 bottom-full mb-2 bg-slate-950/85 text-white p-4 z-40',
+              'transition-all duration-300 backdrop-blur-sm flex flex-col justify-between'
             )}
           >
-            <div className="space-y-3 tracking-tighter">
-              <h4 className="font-semibold tracking-tighter text-sm">Popular Packages</h4>
-              {service.packages.slice(0, 2).map((pkg, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-foreground flex-shrink-0" />
-                  <p className="text-xs text-foreground group-hover:underline ">
-                    ${pkg.price} • {pkg.delivery} days
-                  </p>
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-xs uppercase tracking-wider text-emerald-400">
+                  Packs de Drous disponibles
+                </h4>
+                <span className="text-[11px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">
+                  1 Pt = 1 DT
+                </span>
+              </div>
+              {service.packages.slice(0, 3).map((pkg, index) => (
+                <div key={index} className="flex items-center justify-between text-xs border-b border-white/10 pb-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <Check className="h-3.5 w-3.5 text-emerald-400 flex-shrink-0" />
+                    <span className="font-medium">{pkg.name}</span>
+                  </div>
+                  <span className="font-bold text-emerald-300">
+                    {pkg.price} Pts ({pkg.price} DT) • {pkg.delivery}j
+                  </span>
                 </div>
               ))}
-              <Button variant="outline" size="sm" className="w-full text-xs" asChild>
-                <Link href={`/service/${service.slug}`}>Compare all packages</Link>
-              </Button>
             </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="w-full text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white border-none"
+              asChild
+            >
+              <Link href={`/service/${service.slug}`}>Voir le programme complet →</Link>
+            </Button>
           </CardContent>
         )}
 
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
 
         {/* Top Row Badges & Actions */}
         <div className="absolute top-3 left-3 right-3 flex items-start justify-between">
-          {/* Badges */}
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1.5">
+            {service.category?.name && (
+              <Badge className="bg-slate-900/80 text-white hover:bg-slate-900 text-[11px] px-2.5 py-0.5 backdrop-blur-sm">
+                <GraduationCap className="h-3 w-3 mr-1 text-emerald-400" />
+                {service.category.name}
+              </Badge>
+            )}
             {badges.map((badge, index) => (
-              <Badge key={index} variant={badge.variant} className="text-xs px-2 py-1 font-medium">
+              <Badge key={index} variant={badge.variant} className="text-[11px] px-2 py-0.5 font-medium">
                 {badge.text}
               </Badge>
             ))}
@@ -99,7 +143,7 @@ export function ServiceCardComponent({service}: {service: EnhancedServiceCardTyp
           <Button
             variant="secondary"
             size="icon"
-            className="h-8 w-8 z-50 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background"
+            className="h-8 w-8 z-50 rounded-full bg-background/85 backdrop-blur-sm hover:bg-background"
             onClick={e => {
               e.preventDefault();
               e.stopPropagation();
@@ -117,85 +161,101 @@ export function ServiceCardComponent({service}: {service: EnhancedServiceCardTyp
       </div>
 
       {/* Content Section */}
-      <CardContent className="p-4 pt-0 space-y-3">
-        {/* Seller Info */}
-        <div className="flex items-center gap-2">
-          <div className="relative h-6 w-6 overflow-hidden rounded-full">
-            <Image
-              src={sellerAvatar}
-              alt={service.seller.user.name}
-              fill
-              className="object-cover"
-            />
+      <CardContent className="p-4 space-y-3">
+        {/* Seller Info + Verification Badge */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="relative h-7 w-7 overflow-hidden rounded-full ring-2 ring-emerald-500/20 shrink-0">
+              <Image
+                src={sellerAvatar}
+                alt={service.seller.user.name}
+                fill
+                className="object-cover"
+              />
+            </div>
+            <Link
+              href={`/freelancer/${service.seller.user.id}`}
+              className="text-sm font-semibold hover:underline truncate"
+              onClick={e => e.stopPropagation()}
+            >
+              {service.seller.user.name}
+            </Link>
           </div>
-          <Link
-            href={`/freelancer/${service.seller.user.id}`}
-            className="text-sm font-medium hover:underline truncate"
-            onClick={e => e.stopPropagation()}
-          >
-            {service.seller.user.name}
-          </Link>
+
+          {isSellerVerified ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+              <ShieldCheck className="h-3 w-3 text-emerald-600" />
+              Prof Vérifié
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400 border border-amber-500/20 shrink-0">
+              En confirmation
+            </span>
+          )}
         </div>
 
-        {/* Title */}
+        {/* Clean Formatted Title */}
         <Link href={`/service/${service.slug}`} className="block">
-          <h3 className="font-semibold leading-tight line-clamp-2 text-base group-hover:underline transition-colors">
-            {service.title}
+          <h3 className="font-bold leading-snug line-clamp-2 text-base group-hover:text-emerald-700 transition-colors min-h-[2.75rem]">
+            {displayTitle}
           </h3>
         </Link>
 
+        {/* Structured Academic Format Pills */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+          <span className="text-[11px] bg-muted px-2 py-0.5 rounded-md text-muted-foreground font-medium">
+            ✓ Séance 1-on-1
+          </span>
+          <span className="text-[11px] bg-muted px-2 py-0.5 rounded-md text-muted-foreground font-medium">
+            ✓ Résumé & Séries PDF
+          </span>
+        </div>
+
         {/* Stats Row */}
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center gap-2">
-            {/* Rating */}
+        <div className="flex items-center justify-between text-xs pt-1 border-t border-border/60">
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-1">
-              <Star className="h-4 w-4 text-primary fill-primary" />
-              <span className="font-semibold">{service.averageRating.toFixed(1)}</span>
+              <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+              <span className="font-bold">{service.averageRating.toFixed(1)}</span>
               <span className="text-muted-foreground">({reviewCount})</span>
             </div>
 
-            {/* Delivery Time */}
             <div className="flex items-center gap-1 text-muted-foreground">
-              <Clock className="h-4 w-4" />
+              <Clock className="h-3.5 w-3.5" />
               <span>
-                {deliveryDays} day{deliveryDays !== 1 ? 's' : ''}
+                {deliveryDays} jour{deliveryDays !== 1 ? 's' : ''}
               </span>
             </div>
           </div>
 
-          {/* Orders Count */}
-          <div className="text-muted-foreground">{service._count.bookings} orders</div>
+          <div className="text-muted-foreground font-medium">
+            {service._count.bookings} élève{service._count.bookings !== 1 ? 's' : ''}
+          </div>
         </div>
 
-        {/* {service.tags && service.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 pt-2 border-t">
-            {service.tags.slice(0, 3).map(tag => (
-              <span
-                key={tag.id}
-                className="px-2 py-1 text-xs rounded-md bg-muted text-muted-foreground"
-              >
-                {tag.name}
-              </span>
-            ))}
-          </div>
-        )} */}
-
-        {/* Price & CTA */}
-        <div className="flex items-center justify-between pt-2">
+        {/* Price in Points & DT */}
+        <div className="flex items-center justify-between pt-1">
           <div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold">${minPrice}</span>
-              {hasMultiplePrices && (
-                <span className="text-sm text-muted-foreground">- ${maxPrice}</span>
-              )}
+            <div className="flex items-baseline gap-1.5">
+              <span className="inline-flex items-center gap-1 text-xl font-extrabold text-emerald-700 dark:text-emerald-400">
+                <Coins className="h-4 w-4 text-emerald-600" />
+                {minPrice} Pts
+              </span>
+              <span className="text-xs font-semibold text-muted-foreground">
+                ({minPrice} DT{hasMultiplePrices ? ` - ${maxPrice} DT` : ''})
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground">Starting price</p>
+            <p className="text-[11px] text-muted-foreground">Payable avec Solde Points (1 Pt = 1 DT)</p>
           </div>
 
-          {/* <Button size="sm" className="gap-2">
-            <Zap className="h-4 w-4" />
-            View
-          </Button> */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs font-semibold border-emerald-500/30 text-emerald-700 hover:bg-emerald-50"
+            asChild
+          >
+            <Link href={`/service/${service.slug}`}>Réserver</Link>
+          </Button>
         </div>
       </CardContent>
     </Card>

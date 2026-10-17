@@ -52,12 +52,20 @@ const createSeller = async (sellerData: {
   }
   // public / seller / images / cug3ihpapdxsknpxouox;
 
-  const prismaResult = await dbContext.seller.create({
-    data: {
+  const prismaResult = await dbContext.seller.upsert({
+    where: {userId: sellerData.userId},
+    update: {
+      bio: sellerData.bio,
+      profilePhoto: profilePhoto || undefined,
+      verificationStatus: 'PENDING',
+    },
+    create: {
       bio: sellerData.bio,
       userId: sellerData.userId,
       profilePhoto: profilePhoto || '',
       imageSource: 'CLOUDINARY',
+      isVerified: false,
+      verificationStatus: 'PENDING',
     },
   });
 

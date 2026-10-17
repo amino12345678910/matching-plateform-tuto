@@ -33,22 +33,22 @@ import type {UserInfo} from '@/hooks/shared/get-user-info';
 const data = {
   navMain: [
     {
-      title: 'Dashboard',
+      title: 'Tutor Dashboard',
       url: defaultRoute,
       icon: IconDashboard,
     },
     {
-      title: 'Manage',
+      title: 'Manage Sessions',
       url: `${defaultRoute}/manage`,
       icon: IconTools,
     },
     {
-      title: 'Messages',
+      title: 'Student Messages',
       url: '/dashboard/messages',
       icon: IconSend,
     },
     {
-      title: 'Add Service',
+      title: 'Create Session',
       url: `${defaultRoute}/create-service`,
       icon: IconServicemark,
     },
@@ -58,7 +58,7 @@ const data = {
       icon: IconBell,
     },
     {
-      title: 'Profile',
+      title: 'Tutor Profile',
       url: '/dashboard/profile',
       icon: IconUserCircle,
     },
@@ -71,14 +71,14 @@ const data = {
       icon: IconHome,
     },
     {
-      title: 'Explore',
+      title: 'Explore Tutors',
       url: '/explore',
       icon: IconListSearch,
     },
   ],
   documents: [
     {
-      name: 'Data Library',
+      name: 'Teaching Resources',
       url: '#',
       icon: IconDatabase,
     },
@@ -109,11 +109,13 @@ export function FreelancerSidebar({user, ...props}: FreelancerSidebarProps) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
-              <Link href="/" className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-                  FiveS
-                  <span className="text-primary">.</span>
-                </h1>
+              <Link href="/" className="flex items-center gap-1.5">
+                <span className="text-2xl font-black text-emerald-600 tracking-tight">
+                  9arrini<span className="text-gray-900 font-medium">.tn</span>
+                </span>
+                <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-1 py-0.5 rounded">
+                  Tutor
+                </span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

@@ -32,19 +32,17 @@ export function SectionCards({
     servicePackageTier: PackageTier;
   } | null;
 }) {
-  if (!currentClientStory) {
-    console.log('currentClientStory nahi hai');
-    return;
-  }
-  const {acceptedAt, client, delivery, service, servicePackageTier, totalPrice} =
-    currentClientStory;
-
-  const fromto = acceptedAt!.getTime() + delivery * 24 * 60 * 60 * 1000;
+  const acceptedAt = currentClientStory?.acceptedAt;
+  const delivery = currentClientStory?.delivery ?? 0;
+  const fromto = acceptedAt
+    ? new Date(acceptedAt).getTime() + delivery * 24 * 60 * 60 * 1000
+    : Date.now() + delivery * 24 * 60 * 60 * 1000;
   const inXdays = moment(fromto).fromNow();
 
   const today = new Date();
   const future2days = today.setDate(today.getDate() + 4);
-  const lastDaysToDeliver = future2days >= fromto;
+  const lastDaysToDeliver = Boolean(currentClientStory && future2days >= fromto);
+
   return (
     <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-bl *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
       <Card
@@ -58,68 +56,84 @@ export function SectionCards({
           size={400}
           className="from-transparent via-red-500/70 to-transparent"
         />
-        {lastDaysToDeliver && (
-          <BorderBeam
-            duration={4}
-            delay={3}
-            size={400}
-            borderWidth={2}
-            className="from-transparent via-red-500 to-transparent"
-          />
+        {currentClientStory ? (
+          <>
+            <CardHeader className="space-y-1 pb-2">
+              <div className="flex items-center justify-between">
+                <CardDescription className="text-sm">Teaching Student</CardDescription>
+                <Badge variant="secondary" className="uppercase text-xs">
+                  Active Lesson
+                </Badge>
+              </div>
+
+              <CardTitle className="text-2xl font-semibold">
+                {currentClientStory.client.name ?? 'Active Student'}
+              </CardTitle>
+
+              <p className="text-sm text-muted-foreground">
+                {currentClientStory.service.title} ·{' '}
+                <span className="font-medium capitalize">
+                  {currentClientStory.servicePackageTier}
+                </span>
+              </p>
+
+              <div className="pt-2 flex items-center justify-between">
+                <span className="text-2xl font-bold tabular-nums text-emerald-700">
+                  {currentClientStory.totalPrice} DT ({currentClientStory.totalPrice} Pts)
+                </span>
+
+                <div className="flex gap-2">
+                  <Badge asChild variant="outline" className="cursor-pointer">
+                    <Link
+                      href={`/dashboard/messages/${currentClientStory.client.clientConversations[0]?.id ?? ''}`}
+                    >
+                      <IconMessage2 className="mr-1 h-4 w-4" />
+                      Message
+                    </Link>
+                  </Badge>
+
+                  <Badge asChild variant="outline" className="cursor-pointer">
+                    <Link href="/dashboard/freelancer/manage">View Session</Link>
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardFooter className="flex-col items-start pb-2 gap-1 text-sm">
+              <div className="flex items-center gap-2 font-medium">
+                Active tutoring session in progress
+                <IconTrendingUp className="h-4 w-4" />
+              </div>
+              <div
+                className={cn(
+                  'text-muted-foreground text-balance',
+                  lastDaysToDeliver && 'text-md text-red-700'
+                )}
+              >
+                {lastDaysToDeliver ? '⚠ Session milestone tomorrow' : `Next milestone ${inXdays}`}
+              </div>
+            </CardFooter>
+          </>
+        ) : (
+          <>
+            <CardHeader className="space-y-1 pb-2">
+              <div className="flex items-center justify-between">
+                <CardDescription className="text-sm">Current Tutoring Session</CardDescription>
+                <Badge variant="outline" className="uppercase text-xs">
+                  Ready
+                </Badge>
+              </div>
+              <CardTitle className="text-2xl font-semibold">No active lesson yet</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Publish a tutoring session so students can discover you and book 1-on-1 lessons.
+              </p>
+            </CardHeader>
+            <CardFooter className="pt-2">
+              <Badge asChild variant="default" className="cursor-pointer px-3 py-1">
+                <Link href="/dashboard/freelancer/create-service">+ Create Tutoring Session</Link>
+              </Badge>
+            </CardFooter>
+          </>
         )}
-        <CardHeader className="space-y-1 pb-2">
-          {/* Top row: Client + Status */}
-          <div className="flex items-center justify-between">
-            <CardDescription className="text-sm">Working with</CardDescription>
-
-            <Badge variant="secondary" className="uppercase text-xs">
-              Active
-            </Badge>
-          </div>
-
-          <CardTitle className="text-2xl font-semibold">
-            {client.name ?? 'No active client'}
-          </CardTitle>
-
-          {/* Service + Tier */}
-          <p className="text-sm text-muted-foreground">
-            {service.title} · <span className="font-medium capitalize">{servicePackageTier}</span>
-          </p>
-
-          {/* Price */}
-          <div className="pt-2 flex items-center justify-between">
-            <span className="text-3xl font-bold tabular-nums">${totalPrice}</span>
-
-            {/* Actions */}
-            <div className="flex gap-2">
-              <Badge asChild variant="outline" className="cursor-pointer">
-                <Link href={`/dashboard/messages/${client.clientConversations[0]?.id}`}>
-                  <IconMessage2 className="mr-1 h-4 w-4" />
-                  Message
-                </Link>
-              </Badge>
-
-              <Badge asChild variant="outline" className="cursor-pointer">
-                <Link href={`/dashboard/freelancer/bookings`}>View Booking</Link>
-              </Badge>
-            </div>
-          </div>
-        </CardHeader>
-        <CardFooter className="flex-col items-start pb-2 gap-1 text-sm">
-          <div className="flex items-center gap-2 font-medium">
-            Active booking in progress
-            <IconTrendingUp className="h-4 w-4" />
-          </div>
-          <div
-            className={cn(
-              'text-muted-foreground text-balance',
-              lastDaysToDeliver && 'text-md  text-red-700'
-            )}
-          >
-            {lastDaysToDeliver ? '⚠ Deadline tomorrow' : `Delivery date is ${inXdays}`}
-            {/* {new Date(acceptedAt.getTime() + delivery * 24 * 60 * 60 * 1000).toLocaleDateString()} */}
-          </div>
-        </CardFooter>
       </Card>
 
       <Card className="@container/card relative">
@@ -129,14 +143,14 @@ export function SectionCards({
           className="from-transparent via-red-500/70 to-transparent"
         />
         <CardHeader>
-          <CardDescription>Total Revenue</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {totalRevenue}
+          <CardDescription>Total Tutoring Earnings</CardDescription>
+          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl text-emerald-700">
+            {totalRevenue} DT ({totalRevenue} Pts)
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
-              <IconTrendingDown />
-              -20%
+              <IconTrendingUp />
+              Active
             </Badge>
           </CardAction>
           <div className="flex w-full gap-1">
@@ -144,22 +158,14 @@ export function SectionCards({
             <div className="h-1 flex-1 rounded bg-primary/40" />
             <div className="h-1 flex-1 rounded bg-primary/20" />
           </div>
-          <span className="text-xs text-muted-foreground mt-1">70% from premium packages</span>
+          <span className="text-xs text-muted-foreground mt-1">
+            1 Point = 1 Dinar Tunisien (DT)
+          </span>
         </CardHeader>
         <CardFooter className="flex flex-col gap-2 text-sm">
           <div className="flex justify-between w-full">
-            <span className="text-muted-foreground">Last 30 days</span>
-            <span className="font-medium">$1,240</span>
-          </div>
-
-          <div className="flex justify-between w-full">
-            <span className="text-muted-foreground">Previous 30 days</span>
-            <span className="text-muted-foreground">$1,550</span>
-          </div>
-
-          <div className="flex items-center gap-2 text-xs text-red-500">
-            <IconTrendingDown className="h-3 w-3" />
-            Revenue dropped compared to last period
+            <span className="text-muted-foreground">Completed lessons</span>
+            <span className="font-medium">{totalRevenue} DT</span>
           </div>
         </CardFooter>
       </Card>
@@ -170,14 +176,14 @@ export function SectionCards({
           className="from-transparent via-red-500/70 to-transparent"
         />
         <CardHeader>
-          <CardDescription>Pending Clients</CardDescription>
+          <CardDescription>Pending Student Requests</CardDescription>
           <CardTitle className="text-2xl w-full font-semibold tabular-nums @[250px]/card:text-3xl">
             {pendingClients.length === 0 ? (
               <span className="text-muted-foreground text-sm w-full">
-                No pending requests — you’re fully booked 🎯
+                No pending student requests right now 🎯
               </span>
             ) : (
-              <CardTitle>...</CardTitle>
+              <span>{pendingClients.length} Student(s)</span>
             )}
           </CardTitle>
           <CardAction>

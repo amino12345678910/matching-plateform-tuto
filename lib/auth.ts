@@ -13,25 +13,26 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
   }),
+  trustedOrigins: ['http://localhost:3001', 'http://localhost:3000'],
   user: {
     additionalFields: {
       imageSource: {
         type: 'string',
         default: 'NULL',
-        required: true,
+        required: false,
         returned: true,
         input: true,
       },
       hasPassword: {
         type: 'boolean',
-        required: true,
-        default: false,
+        required: false,
+        default: true,
         returned: true,
         input: true,
       },
       role: {
         type: 'string',
-        required: true,
+        required: false,
         default: 'USER',
         returned: true,
         input: true,
@@ -46,7 +47,31 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async user => {
-          return {data: {...user, hasPassword: false}};
+          const validSources = ['GOOGLE', 'CLOUDINARY', 'NULL'];
+          const safeImageSource = validSources.includes(user.imageSource as string)
+            ? user.imageSource
+            : 'NULL';
+          return {
+            data: {
+              ...user,
+              role: user.role || 'USER',
+              imageSource: safeImageSource,
+              hasPassword: user.hasPassword ?? true,
+            },
+          };
+        },
+        after: async user => {
+          if (user.role === 'SELLER') {
+            try {
+              await prisma.seller.upsert({
+                where: {userId: user.id},
+                update: {},
+                create: {userId: user.id},
+              });
+            } catch (e) {
+              console.error('Error creating tutor profile:', e);
+            }
+          }
         },
       },
     },
@@ -54,7 +79,7 @@ export const auth = betterAuth({
 
   socialProviders: {
     google: {
-      enabled: true,
+      enabled: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
       prompt: 'select_account consent',
       clientId: env.GOOGLE_CLIENT_ID || '',
       clientSecret: env.GOOGLE_CLIENT_SECRET || '',

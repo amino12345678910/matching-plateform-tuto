@@ -60,11 +60,29 @@ function CreationSteps() {
     defaultValues: {
       title: '',
       description: '',
-      tags: '',
+      tags: 'cours, soutien, bac, révision',
       images: [],
-      basicPackage: {price: 50, delivery: 3, revisions: 2, description: ''},
-      standardPackage: {price: 100, delivery: 5, revisions: 5, description: ''},
-      premiumPackage: {price: 200, delivery: 7, revisions: 10, description: ''},
+      basicPackage: {
+        price: 25,
+        delivery: 2,
+        revisions: 2,
+        description:
+          '1 séance de cours 1-on-1 (60 min) + explication détaillée + série d’exercices PDF',
+      },
+      standardPackage: {
+        price: 70,
+        delivery: 7,
+        revisions: 5,
+        description:
+          'Pack 3 séances de cours particuliers + correction de devoirs + fiches résumé',
+      },
+      premiumPackage: {
+        price: 130,
+        delivery: 14,
+        revisions: 10,
+        description:
+          'Pack intensif 6 séances (Préparation Examen / Bac) + suivi personnalisé + Q&A illimité',
+      },
       faqs: [],
     },
     mode: 'onSubmit',
@@ -82,12 +100,12 @@ function CreationSteps() {
         fieldsToValidate = ['title', 'description'];
         break;
       case 'media':
-        fieldsToValidate = ['images'];
         if (!selectedCategory) {
-          setFormErrors(['Please select a category']);
+          setFormErrors(['Please select a subject category']);
           return false;
         }
-        break;
+        setFormErrors([]);
+        return true;
       case 'pricing':
         fieldsToValidate = ['basicPackage', 'standardPackage', 'premiumPackage'];
         break;
@@ -167,7 +185,7 @@ function CreationSteps() {
         title: data.title.trim(),
         description: data.description.trim(),
         categorySlug: selectedCategory || null,
-        status: 'PAUSED',
+        status: 'ACTIVE',
         sellerId: sellerId,
 
         tags: data.tags
@@ -213,12 +231,12 @@ function CreationSteps() {
       setUploadProgress(100);
 
       if (serviceError) {
-        toast.error('Service creation failed', {
+        toast.error('Session creation failed', {
           description: serviceError || 'Please try again.',
         });
       } else if (serviceSuccess) {
-        toast.success('Service created successfully!', {
-          description: 'Your service is now ready for review.',
+        toast.success('Tutoring session published!', {
+          description: 'Your tutoring session is now live for students.',
         });
 
         setTimeout(() => {
@@ -228,7 +246,7 @@ function CreationSteps() {
     } catch (err: unknown) {
       clearInterval(progressInterval);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
-      toast.error('Failed to create service', {
+      toast.error('Failed to create tutoring session', {
         description: errorMessage,
       });
     } finally {
@@ -373,9 +391,13 @@ function CreationSteps() {
           <div className="lg:col-span-3 space-y-6">
             {step === 'overview' && (
               <OverviewStep
-                updateDescriptionValue={(desc: string) => setValue('description', desc)}
+                updateDescriptionValue={(desc: string) =>
+                  setValue('description', desc, {shouldDirty: true, shouldValidate: true})
+                }
                 register={register}
                 errors={errors}
+                setValue={setValue}
+                watch={watch}
               />
             )}
             {step === 'media' && (

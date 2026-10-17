@@ -51,16 +51,14 @@ export function SignupForm({className, ...props}: React.ComponentProps<'div'>) {
             setLoading(true);
           },
           onSuccess: ctx => {
-            // redirect to the dashboard
-            //alert("Logged in successfully");
-            if (role == 'USER') router.push('/dashboard/client');
-            if (role == 'SELLER') router.push('/dashboard/freelancer');
-            else if (!role) {
-              toast.error('There are some issues regardless to your role please login again');
+            toast.success('Account created successfully!');
+            if (role === 'SELLER') {
+              window.location.href = '/dashboard/freelancer';
+            } else {
+              window.location.href = '/dashboard/client';
             }
           },
           onError: ctx => {
-            // display the error message
             setError(ctx.error.message);
             setLoading(false);
           },
@@ -69,7 +67,6 @@ export function SignupForm({className, ...props}: React.ComponentProps<'div'>) {
       if (signupError) {
         throw signupError;
       }
-      router.push('/dashboard');
     } catch (err: any) {
       setError(err?.message || 'Unexpected error');
     } finally {
@@ -82,26 +79,26 @@ export function SignupForm({className, ...props}: React.ComponentProps<'div'>) {
       <Card>
         <CardHeader>
           <CardTitle>Create an account</CardTitle>
-          <CardDescription>Get started with your new account</CardDescription>
+          <CardDescription>Join 9arrini as a Student or Tutor</CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
             <Alert className="mb-4 border border-red-500" variant="destructive">
               <Terminal className="h-4 w-4" />
-              <AlertTitle>Some Issues</AlertTitle>
+              <AlertTitle>Registration Issue</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
           <form onSubmit={e => handleSubmit(e)}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-3">
-                <Label htmlFor="email">Full Name</Label>
+                <Label htmlFor="name">Full Name</Label>
                 <Input
                   onChange={e => setFullname(e.target.value)}
                   value={fullname}
                   id="name"
                   type="text"
-                  placeholder="Achour Meguenni"
+                  placeholder="Alex Rivera"
                   required
                 />
               </div>
@@ -134,14 +131,17 @@ export function SignupForm({className, ...props}: React.ComponentProps<'div'>) {
                   required
                 />
               </div>
-              <Label htmlFor="role">What is your vision after logging in?</Label>
-              <Select onValueChange={value => setRole(value as 'USER' | 'SELLER')}>
+              <Label htmlFor="role">How would you like to use 9arrini?</Label>
+              <Select
+                defaultValue="USER"
+                onValueChange={value => setRole(value as 'USER' | 'SELLER')}
+              >
                 <SelectTrigger name="role" id="role" className="w-full">
-                  <SelectValue placeholder="What is your purpose here" />
+                  <SelectValue placeholder="Choose your role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="USER">Find freelancer</SelectItem>
-                  <SelectItem value="SELLER">Become freelancer</SelectItem>
+                  <SelectItem value="USER">Find a Tutor & Learn (Student)</SelectItem>
+                  <SelectItem value="SELLER">Become a Tutor & Teach (Educator)</SelectItem>
                 </SelectContent>
               </Select>
 

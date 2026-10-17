@@ -25,11 +25,13 @@ model User {
   updatedAt     DateTime       @updatedAt
   role          String?
   hasPassword   Boolean        @default(true)
+  points        Int            @default(0)
   sessions      Session[]
   accounts      Account[]
   notifications Notification[]
   seller        Seller?
   reviews       Review[]
+  pointTransactions PointTransaction[]
 
   clientConversations     Conversation[] @relation("ClientConversations")
   freelancerConversations Conversation[] @relation("FreelancerConversations")
@@ -95,11 +97,16 @@ model Verification {
 /// Services table
 
 model Seller {
-  id           String       @id @default(uuid())
-  bio          String?
-  profilePhoto String?
-  imageSource  imageSources @default(NULL)
-  isVerified   Boolean      @default(false)
+  id                 String       @id @default(uuid())
+  bio                String?
+  profilePhoto       String?
+  imageSource        imageSources @default(NULL)
+  isVerified         Boolean      @default(false)
+  verificationStatus String       @default("UNVERIFIED")
+  specialty          String?
+  experience         String?
+  credentials        String?
+  phone              String?
 
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -265,7 +272,6 @@ model Booking {
   sellerId      String
   conversations Conversation[]
 
-  @@unique([serviceId, clientId])
   @@index([serviceId, clientId])
   @@index([freelancerId])
   @@index([clientId])
@@ -310,7 +316,6 @@ model Conversation {
   createdAt DateTime  @default(now())
   messages  Message[]
 
-  @@unique([bookingId])
   @@index([clientId])
   @@index([freelancerId])
   @@map("conversation")
@@ -334,4 +339,18 @@ model Notification {
   createdAt DateTime         @default(now())
 
   user User @relation(fields: [userId], references: [id])
+}
+
+model PointTransaction {
+  id          String   @id @default(uuid())
+  userId      String
+  amount      Int
+  type        String   // "TOPUP" | "BOOKING" | "ADMIN_GRANT" | "EARNING"
+  description String
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("point_transaction")
 }

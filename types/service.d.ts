@@ -10,6 +10,11 @@ export type Seller = {
   userId: string;
   user: Pick<User, 'id' | 'name' | 'image' | 'email'>;
   isVerified: boolean;
+  verified?: boolean;
+  verificationStatus?: string;
+  specialty?: string;
+  credentials?: string;
+  experience?: string;
   profilePhoto?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -167,6 +172,9 @@ export type ServiceCard = {
   sellerId: string;
   seller: {
     profilePhoto?: string;
+    verified?: boolean;
+    verificationStatus?: string;
+    specialty?: string;
     user: {
       id: string;
       name: string;

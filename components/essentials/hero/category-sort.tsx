@@ -21,40 +21,40 @@ function CategorySortSection() {
 
   const categories = [
     {
-      title: 'Programming & Tech',
-      icon: <Image src={programming} width={30} height={30} alt="Programming" />,
+      title: 'Coding & CS Tutoring',
+      icon: <Image src={programming} width={30} height={30} alt="Coding & CS" />,
     },
     {
-      title: 'Graphics & Design',
-      icon: <Image src={graphics} width={30} height={30} alt="Graphics Design" />,
+      title: 'Art & Design Lessons',
+      icon: <Image src={graphics} width={30} height={30} alt="Art & Design" />,
     },
     {
-      title: 'Digital Marketing',
-      icon: <Image src={digital} width={30} height={30} alt="Digital Marketing" />,
+      title: 'Math & Statistics',
+      icon: <Image src={digital} width={30} height={30} alt="Mathematics" />,
     },
     {
-      title: 'Writing & Translation',
-      icon: <Image src={writing} width={30} height={30} alt="Writing Translation" />,
+      title: 'Languages & Writing',
+      icon: <Image src={writing} width={30} height={30} alt="Languages & Writing" />,
     },
     {
-      title: 'Video & Animation',
-      icon: <Image src={video} width={30} height={30} alt="Video Animation" />,
+      title: 'Science & Physics',
+      icon: <Image src={video} width={30} height={30} alt="Science & Physics" />,
     },
     {
-      title: 'AI Services',
-      icon: <Image src={aiserivce} width={30} height={30} alt="AI Services" />,
+      title: 'AI & Data Science',
+      icon: <Image src={aiserivce} width={30} height={30} alt="AI & Data Science" />,
     },
     {
-      title: 'Music & Audio',
-      icon: <Image src={music} width={30} height={30} alt="Music Audio" />,
+      title: 'Music & Instruments',
+      icon: <Image src={music} width={30} height={30} alt="Music Lessons" />,
     },
     {
-      title: 'Business',
-      icon: <Image src={business} width={30} height={30} alt="Business" />,
+      title: 'Business & Finance',
+      icon: <Image src={business} width={30} height={30} alt="Business & Finance" />,
     },
     {
-      title: 'Consulting',
-      icon: <Image src={consulting} width={30} height={30} alt="Consulting" />,
+      title: 'Exam Prep & Coaching',
+      icon: <Image src={consulting} width={30} height={30} alt="Exam Prep" />,
     },
   ];
 

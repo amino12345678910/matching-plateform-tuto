@@ -56,8 +56,8 @@ export default function FreelancerProfileView({profileData}: {profileData: Profi
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Profile Not Found</CardTitle>
-            <CardDescription>This user is not registered as a freelancer.</CardDescription>
+            <CardTitle>Tutor Profile Not Found</CardTitle>
+            <CardDescription>This user is not registered as a tutor.</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -85,7 +85,7 @@ export default function FreelancerProfileView({profileData}: {profileData: Profi
             {seller.isVerified && (
               <Badge variant="secondary" className="gap-1">
                 <CheckCircle className="h-3 w-3" />
-                Verified
+                Verified Tutor
               </Badge>
             )}
           </div>
@@ -96,15 +96,15 @@ export default function FreelancerProfileView({profileData}: {profileData: Profi
                 <Star className="h-5 w-5 text-[var(--star-filled)] fill-[var(--star-filled)]" />
                 <span className="ml-1 font-bold text-lg">{seller.averageRating.toFixed(1)}</span>
               </div>
-              <span className="text-muted-foreground">({seller.totalReviews} reviews)</span>
+              <span className="text-muted-foreground">({seller.totalReviews} student reviews)</span>
             </div>
 
             <div className="flex items-center gap-2 text-muted-foreground">
               <Calendar className="h-4 w-4" />
-              <span>Joined {new Date(seller.joinedDate).getFullYear()}</span>
+              <span>Teaching since {new Date(seller.joinedDate).getFullYear()}</span>
             </div>
 
-            <div className="text-muted-foreground">{seller.totalOrders} orders completed</div>
+            <div className="text-muted-foreground">{seller.totalOrders} lessons completed</div>
           </div>
 
           {seller.bio && (
@@ -114,7 +114,7 @@ export default function FreelancerProfileView({profileData}: {profileData: Profi
           <div className="flex gap-3">
             <Button size="lg" className="gap-2">
               <MessageSquare className="h-4 w-4" />
-              Contact Me
+              Message Tutor
             </Button>
           </div>
         </div>
@@ -124,13 +124,13 @@ export default function FreelancerProfileView({profileData}: {profileData: Profi
       {displayedServices.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-foreground">Services</h2>
+            <h2 className="text-2xl font-bold text-foreground">Tutoring Sessions & Courses</h2>
             {services.length > 6 && (
               <Link
                 href={`/freelancer/${client.id}/services`}
                 className="text-primary hover:underline text-sm font-medium flex items-center gap-1"
               >
-                View all {services.length} services
+                View all {services.length} sessions
                 <ExternalLink className="h-3 w-3" />
               </Link>
             )}
@@ -171,7 +171,7 @@ export default function FreelancerProfileView({profileData}: {profileData: Profi
                       </Badge>
                       <h3 className="font-semibold text-lg line-clamp-1 mb-2">{service.title}</h3>
                       <p className="text-muted-foreground text-sm line-clamp-2">
-                        {service.description}
+                        {service.description.replace(/<[^>]*>?/gm, '')}
                       </p>
                     </div>
 
@@ -189,7 +189,7 @@ export default function FreelancerProfileView({profileData}: {profileData: Profi
                     </div>
 
                     <Button className="w-full" size="sm" asChild>
-                      <Link href={`/service/${service.slug}`}>View Service Details</Link>
+                      <Link href={`/service/${service.slug}`}>View Lesson Details</Link>
                     </Button>
                   </CardContent>
                 </Card>
@@ -205,7 +205,7 @@ export default function FreelancerProfileView({profileData}: {profileData: Profi
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-2xl font-bold text-foreground mb-2">
-                Reviews ({reviews.length})
+                Student Reviews ({reviews.length})
               </h2>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
@@ -213,7 +213,7 @@ export default function FreelancerProfileView({profileData}: {profileData: Profi
                   <span className="text-2xl font-bold">{seller.averageRating.toFixed(1)}</span>
                 </div>
                 <span className="text-muted-foreground">
-                  Average rating from {seller.totalReviews} reviews
+                  Average rating from {seller.totalReviews} student reviews
                 </span>
               </div>
             </div>
@@ -259,7 +259,7 @@ export default function FreelancerProfileView({profileData}: {profileData: Profi
 
                   {review.service && (
                     <div className="mt-4 pt-4 border-t text-sm text-muted-foreground">
-                      Service: {review.service.title}
+                      Session: {review.service.title}
                     </div>
                   )}
                 </CardContent>
@@ -282,7 +282,7 @@ export default function FreelancerProfileView({profileData}: {profileData: Profi
       {/* Skills Section */}
       {services.length > 0 && (
         <section>
-          <h2 className="text-2xl font-bold text-foreground mb-6">Skills & Expertise</h2>
+          <h2 className="text-2xl font-bold text-foreground mb-6">Subjects & Teaching Expertise</h2>
           <div className="flex flex-wrap gap-2">
             {Array.from(new Set(services.flatMap(service => service.tags.map(tag => tag.name))))
               .slice(0, 15)
@@ -305,15 +305,15 @@ export default function FreelancerProfileView({profileData}: {profileData: Profi
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center">
               <div className="text-3xl font-bold text-primary mb-2">{seller.totalOrders}</div>
-              <div className="text-muted-foreground">Projects Completed</div>
+              <div className="text-muted-foreground">Lessons Completed</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-primary mb-2">{seller.servicesCount}</div>
-              <div className="text-muted-foreground">Services Offered</div>
+              <div className="text-muted-foreground">Tutoring Sessions Offered</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-primary mb-2">{seller.totalReviews}</div>
-              <div className="text-muted-foreground">Client Reviews</div>
+              <div className="text-muted-foreground">Student Reviews</div>
             </div>
           </div>
         </CardContent>

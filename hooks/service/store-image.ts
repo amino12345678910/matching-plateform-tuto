@@ -1,6 +1,6 @@
 'use server';
 
-import {unlink, writeFile} from 'fs/promises';
+import {mkdir, unlink, writeFile} from 'fs/promises';
 import {v2 as cloudinary} from 'cloudinary';
 import path from 'path';
 
@@ -12,47 +12,58 @@ export const storeImageToCloudinary = async (
     const {pathOverride = 'services/images', preset = 'five_services_images'} = configs;
 
     if (!images || images.length === 0) {
-      return {error: 'No images uploaded', message: undefined, cloudinaryImageUrls: []};
+      return {
+        message: 'Using default image',
+        error: undefined,
+        cloudinaryImageUrls: ['/assets/service-fallback.svg'],
+      };
     }
 
-    let cloudinaryUrls: string[] = [];
+    const cloudinaryUrls: string[] = [];
+    const uploadDir = path.join(process.cwd(), 'public/services/images');
+    await mkdir(uploadDir, {recursive: true});
 
     for (const file of images) {
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
 
-      const uploadDir = path.join(process.cwd(), 'public/services/images');
-      const uniqueName = `${file.name}-${new Date().getTime().toString().at(-4)}`;
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const uniqueName = `${Date.now()}-${safeName}`;
       const filePath = path.join(uploadDir, uniqueName);
 
       await writeFile(filePath, buffer);
 
-      // console.log(`Saved file to ${filePath}`);
-      await cloudinary.uploader
-        .upload(filePath, {
-          upload_preset: preset || 'five_services_images',
-          folder: `/${pathOverride || 'services/images'}`,
-          resource_type: 'image',
-          allowed_formats: ['jpg', 'png', 'jpeg', 'gif', 'webp'],
-        })
-        .then(result => {
+      if (process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+        try {
+          const result = await cloudinary.uploader.upload(filePath, {
+            upload_preset: preset || 'five_services_images',
+            folder: `/${pathOverride || 'services/images'}`,
+            resource_type: 'image',
+            allowed_formats: ['jpg', 'png', 'jpeg', 'gif', 'webp'],
+          });
           cloudinaryUrls.push(result.public_id);
-          // console.log('Cloudinary upload result:', result);
-        })
-        .catch(error => {
-          console.error(`Cloudinary upload failed: ${error.message}`);
-        });
-
-      await unlink(filePath);
+          await unlink(filePath);
+        } catch (error: any) {
+          console.error(`Cloudinary upload failed, keeping local file: ${error.message}`);
+          cloudinaryUrls.push(`/services/images/${uniqueName}`);
+        }
+      } else {
+        cloudinaryUrls.push(`/services/images/${uniqueName}`);
+      }
     }
 
     return {
       message: 'Images uploaded successfully',
-      cloudinaryImageUrls: cloudinaryUrls ?? [],
+      cloudinaryImageUrls:
+        cloudinaryUrls.length > 0 ? cloudinaryUrls : ['/assets/service-fallback.svg'],
       error: undefined,
     };
   } catch (error) {
     console.error('Error processing images:', error);
-    return {error: 'Error processing images', message: undefined, cloudinaryImageUrls: []};
+    return {
+      error: undefined,
+      message: 'Fallback image used',
+      cloudinaryImageUrls: ['/assets/service-fallback.svg'],
+    };
   }
 };
