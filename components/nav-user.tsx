@@ -62,7 +62,7 @@ export function NavUser({user}: {user: UserInfo}) {
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage className="object-cover" src={avatar} alt={user.name} />
                   <AvatarFallback className="rounded-lg uppercase">
-                    {(user?.name || user.email!).slice(0, 2)}
+                    {(user?.name || user?.email || '9A').slice(0, 2)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
