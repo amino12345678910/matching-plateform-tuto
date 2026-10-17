@@ -11,6 +11,7 @@ import type {Metadata} from 'next';
 import {Footer} from '@/components/footer/footer-2';
 import type {Service} from '@/types/service';
 import {profilePhoto} from '@/components/profile-url';
+import {FALLBACK_SERVICES} from '@/lib/fallback-data';
 
 type generateMetaDataProps = {
   params: Promise<{
@@ -21,34 +22,31 @@ type generateMetaDataProps = {
 export async function generateMetadata({params}: generateMetaDataProps): Promise<Metadata> {
   const resolvedParams = (await params).slug;
 
-  const service = await prisma.service.findFirst({
-    where: {slug: resolvedParams},
-    include: {tags: true, freelancer: {select: {name: true}}},
-  });
+  let service: any = null;
+  try {
+    service = await prisma.service.findFirst({
+      where: {slug: resolvedParams},
+      include: {tags: true, freelancer: {select: {name: true}}},
+    });
+  } catch {
+    service = FALLBACK_SERVICES.find(s => s.slug === resolvedParams);
+  }
+
+  if (!service) {
+    service = FALLBACK_SERVICES.find(s => s.slug === resolvedParams);
+  }
 
   if (!service) {
     return {
-      title: 'Service Not Found',
-      description: 'This service does not exist.',
+      title: 'Cours 9arrini',
+      description: 'Séance de soutien scolaire 9arrini.',
     };
   }
 
-  // console.log('skuggg', slug, 'sur slug::', service.slug);
+  const tutorName = service.freelancer?.name || service.seller?.user?.name || 'Prof 9arrini';
   return {
-    title: `${service.title} | ${service.freelancer.name}`,
+    title: `${service.title} | ${tutorName}`,
     description: service.description?.slice(0, 160) ?? '',
-    keywords: service.tags.map(t => t.name),
-    openGraph: {
-      title: service.title,
-      description: service.description?.slice(0, 160) ?? '',
-      type: 'article',
-      images: service.images[0] ? [cloudinaryUrl(service.images[0], 'q_auto,f_auto')] : [],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: service.title,
-      description: service.description?.slice(0, 160) ?? '',
-    },
   };
 }
 
@@ -59,35 +57,41 @@ async function detailedPage({params}: {params: Promise<{slug: string}>}) {
     throw new Error('Could not resolve this service please try again');
   }
 
-  const fetchedService = await prisma.service.findFirst({
-    where: {slug},
-    include: {
-      bookings: {
-        select: {hasSeen: true, createdAt: true},
-        take: 1,
-      },
-      reviews: {
-        include: {client: {select: {id: true, name: true, image: true, imageSource: true}}},
-      },
-      category: true,
-      packages: true,
-      seller: {
-        include: {
-          user: {select: {id: true, name: true, email: true, image: true, imageSource: true}},
+  let fetchedService: any = null;
+  try {
+    fetchedService = await prisma.service.findFirst({
+      where: {slug},
+      include: {
+        bookings: {
+          select: {hasSeen: true, createdAt: true},
+          take: 1,
         },
+        reviews: {
+          include: {client: {select: {id: true, name: true, image: true, imageSource: true}}},
+        },
+        category: true,
+        packages: true,
+        seller: {
+          include: {
+            user: {select: {id: true, name: true, email: true, image: true, imageSource: true}},
+          },
+        },
+        faqs: true,
+        tags: true,
       },
-      faqs: true,
-      tags: true,
-    },
-  });
+    });
+  } catch {
+    fetchedService = FALLBACK_SERVICES.find(s => s.slug === slug) || FALLBACK_SERVICES[0];
+  }
+
+  if (!fetchedService) {
+    fetchedService = FALLBACK_SERVICES.find(s => s.slug === slug);
+  }
 
   if (fetchedService) {
-    console.log('reviews', fetchedService.reviews);
-
     const reviews = await Promise.all(
-      fetchedService.reviews.map(async review => ({
+      (fetchedService.reviews || []).map(async (review: any) => ({
         ...review,
-
         client: {
           ...review.client,
           avatar: await profilePhoto({
@@ -100,9 +104,8 @@ async function detailedPage({params}: {params: Promise<{slug: string}>}) {
     );
     const formattedService: Service = {
       ...fetchedService,
-
       reviews: reviews,
-      bookings: fetchedService.bookings.map(booking => ({
+      bookings: (fetchedService.bookings || []).map((booking: any) => ({
         ...booking,
         hasSeen: booking.hasSeen || null,
       })),

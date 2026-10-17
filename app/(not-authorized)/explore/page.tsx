@@ -13,6 +13,7 @@ import {ScrollArea} from '@/components/ui/scroll-area';
 import Link from 'next/link';
 import {cloudinaryUrl} from '@/lib/cloudinary';
 import Image from 'next/image';
+import {FALLBACK_CATEGORIES, FALLBACK_SERVICES} from '@/lib/fallback-data';
 
 export const dynamic = 'force-dynamic';
 
@@ -103,7 +104,12 @@ export default async function ExplorePage({
     });
   } catch (err) {
     console.error('Database fallback on ExplorePage:', err);
+    categories = FALLBACK_CATEGORIES;
+    services = FALLBACK_SERVICES;
   }
+
+  if (categories.length === 0) categories = FALLBACK_CATEGORIES;
+  if (services.length === 0 && !categoryFilter && !searchQuery) services = FALLBACK_SERVICES;
 
   // Calculate average rating for each service
   const formattedServices = services.map(service => {

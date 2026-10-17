@@ -1,0 +1,9 @@
+[build]
+  command = "npx prisma generate && npm run build"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  NODE_VERSION = "20"
+  BETTER_AUTH_SECRET = "9arrini-default-production-secret-key-2026-tunisia"
