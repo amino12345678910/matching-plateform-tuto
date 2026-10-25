@@ -65,6 +65,20 @@ export function GoogleAuthModal({
   }, [defaultRole]);
 
   useEffect(() => {
+    if (!isOpen) return;
+    // If real Google OAuth credentials (GOOGLE_CLIENT_ID & GOOGLE_CLIENT_SECRET) are configured,
+    // redirect straight to Google's official accounts.google.com device account chooser!
+    fetch('/api/auth/google?check=1')
+      .then(r => r.json())
+      .then(data => {
+        if (data?.configured) {
+          window.location.href = `/api/auth/google?role=${defaultRole}`;
+        }
+      })
+      .catch(() => {});
+  }, [isOpen, defaultRole]);
+
+  useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {

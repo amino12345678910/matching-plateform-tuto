@@ -1,0 +1,59 @@
+import {NextRequest, NextResponse} from 'next/server';
+import {cloudGoogleSignIn} from '@/hooks/auth/cloud-auth';
+
+export async function GET(request: NextRequest) {
+  const code = request.nextUrl.searchParams.get('code');
+  const stateRole = request.nextUrl.searchParams.get('state') || 'USER';
+  const role: 'USER' | 'SELLER' = stateRole === 'SELLER' ? 'SELLER' : 'USER';
+
+  if (!code) {
+    return NextResponse.redirect(new URL('/auth/login', request.url));
+  }
+
+  const clientId =
+    process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
+  const origin = request.nextUrl.origin;
+  const redirectUri =
+    process.env.GOOGLE_REDIRECT_URI || `${origin}/api/auth/google/callback`;
+
+  try {
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: new URLSearchParams({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      }),
+    });
+
+    const tokenData = await tokenRes.json();
+    if (!tokenData.access_token) {
+      return NextResponse.redirect(new URL('/auth/login?error=google_token', request.url));
+    }
+
+    const userRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: {Authorization: `Bearer ${tokenData.access_token}`},
+    });
+    const profile = await userRes.json();
+
+    if (!profile?.email) {
+      return NextResponse.redirect(new URL('/auth/login?error=google_profile', request.url));
+    }
+
+    const res = await cloudGoogleSignIn({
+      email: profile.email,
+      name: profile.name || profile.given_name || profile.email.split('@')[0],
+      role,
+    });
+
+    const target =
+      res.redirectTo || (role === 'SELLER' ? '/dashboard/freelancer' : '/dashboard/client');
+    return NextResponse.redirect(new URL(target, request.url));
+  } catch {
+    return NextResponse.redirect(new URL('/auth/login?error=google_oauth', request.url));
+  }
+}
