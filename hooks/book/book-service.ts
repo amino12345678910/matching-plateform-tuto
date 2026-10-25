@@ -8,6 +8,7 @@ import {createNotifications} from '../notification';
 import {revalidatePath} from 'next/cache';
 import {readCloudStore, writeCloudStore} from '@/lib/cloud-store';
 import {getCloudSessionCookie, setCloudSessionCookie} from '@/hooks/auth/cloud-auth';
+import {saveClientBookingCookie} from '@/hooks/book/bookings-store';
 
 export type BookServiceProps = {
   serviceName: string;
@@ -61,7 +62,7 @@ export const bookService = async ({
   const store = readCloudStore();
   let cloudStudent = store.users.find(u => u.id === clientId);
 
-  let currentPoints = cloudStudent?.points ?? cloudSession?.points ?? 50;
+  let currentPoints = cloudSession?.points ?? cloudStudent?.points ?? 50;
 
   try {
     const student = await dbContext.user.findUnique({
@@ -222,7 +223,7 @@ export const bookService = async ({
     createdAt: now,
   });
 
-  store.bookings.unshift({
+  const newBooking = {
     id: `bk_${Date.now()}`,
     serviceId,
     serviceTitle: serviceName,
@@ -237,10 +238,12 @@ export const bookService = async ({
     totalPrice: priceInPoints,
     delivery,
     revisions,
-    status: 'CONFIRMED',
+    status: 'CONFIRMED' as const,
     createdAt: now,
-  });
+  };
 
+  await saveClientBookingCookie(newBooking);
+  store.bookings.unshift(newBooking);
   writeCloudStore(store);
 
   if (cloudSession) {

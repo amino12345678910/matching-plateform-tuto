@@ -2,6 +2,7 @@ import type {ClientActiveOrder} from '@/app/(freelancer-client)/dashboard/client
 import {prisma as dbContext} from '@/lib/prisma';
 import {getUserInfo} from '../shared/get-user-info';
 import {readCloudStore} from '@/lib/cloud-store';
+import {getClientBookingsCookie} from '@/hooks/book/bookings-store';
 
 export const getActiveOrders = async (): Promise<ClientActiveOrder> => {
   const {userId} = await getUserInfo();
@@ -46,8 +47,10 @@ export const getActiveOrders = async (): Promise<ClientActiveOrder> => {
     // Cloud fallback
   }
 
+  const cookieBookings = await getClientBookingsCookie(userId);
   const store = readCloudStore();
-  const cloudBooking = store.bookings.find(b => b.clientId === userId);
+  const allUserBookings = [...cookieBookings, ...store.bookings.filter(b => b.clientId === userId)];
+  const cloudBooking = allUserBookings[0];
   if (cloudBooking) {
     return {
       id: cloudBooking.id,

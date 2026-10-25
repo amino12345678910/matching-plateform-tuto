@@ -78,6 +78,9 @@ export async function getCloudSessionCookie(): Promise<SessionCookiePayload | nu
           }
         }
         writeCloudStore(store);
+      } else if (typeof session.points === 'number') {
+        existing.points = session.points;
+        writeCloudStore(store);
       } else if (typeof existing.points === 'number') {
         session.points = existing.points;
       }

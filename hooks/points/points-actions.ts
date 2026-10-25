@@ -4,6 +4,7 @@ import {prisma} from '@/lib/prisma';
 import {getUserInfo} from '@/hooks/shared/get-user-info';
 import {getCloudSessionCookie, setCloudSessionCookie} from '@/hooks/auth/cloud-auth';
 import {readCloudStore, writeCloudStore} from '@/lib/cloud-store';
+import {getClientBookingsCookie} from '@/hooks/book/bookings-store';
 import {revalidatePath} from 'next/cache';
 
 export async function getStudentPointsData() {
@@ -50,7 +51,7 @@ export async function getStudentPointsData() {
   const store = readCloudStore();
   const cloudSession = await getCloudSessionCookie();
   const cloudUser = store.users.find(u => u.id === userId);
-  const points = cloudUser?.points ?? cloudSession?.points ?? 50;
+  const points = cloudSession?.points ?? cloudUser?.points ?? 50;
   const userTx = store.transactions
     .filter(t => t.userId === userId)
     .map(t => ({
@@ -175,6 +176,15 @@ export async function checkUserHasBookedService(serviceId: string): Promise<bool
   const {userId} = await getUserInfo();
   if (!userId) return false;
 
+  // 1. Check persistent client bookings cookie
+  try {
+    const cookieBookings = await getClientBookingsCookie(userId);
+    if (cookieBookings.some(b => b.serviceId === serviceId)) return true;
+  } catch {
+    // ignore
+  }
+
+  // 2. Check Prisma
   try {
     const booking = await prisma.booking.findFirst({
       where: {
@@ -188,6 +198,7 @@ export async function checkUserHasBookedService(serviceId: string): Promise<bool
     // ignore
   }
 
+  // 3. Check Cloud store
   try {
     const store = readCloudStore();
     return (store.bookings || []).some(

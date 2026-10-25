@@ -2,6 +2,7 @@ import {prisma as dbContext} from '@/lib/prisma';
 import {type UserInfo} from './get-user-info';
 import type {BookedServiceType} from '@/types/bookings';
 import {readCloudStore, getAllCloudServices} from '@/lib/cloud-store';
+import {getClientBookingsCookie} from '@/hooks/book/bookings-store';
 
 type Role = 'CLIENT' | 'FREELANCER';
 
@@ -85,11 +86,16 @@ async function getMyBookings({
     // Cloud fallback
   }
 
+  const cookieBookings = await getClientBookingsCookie(user.userId);
   const store = readCloudStore();
   const allServices = getAllCloudServices();
-  const userBookings = store.bookings.filter(b =>
-    isClient ? b.clientId === user.userId : b.freelancerId === user.userId
-  );
+  const rawBookings = [
+    ...cookieBookings,
+    ...store.bookings.filter(b =>
+      isClient ? b.clientId === user.userId : b.freelancerId === user.userId
+    ),
+  ];
+  const userBookings = Array.from(new Map(rawBookings.map(b => [b.id, b])).values());
 
   return userBookings.map(b => {
     const matchedService = allServices.find(s => s.id === b.serviceId || s.slug === b.serviceSlug);
