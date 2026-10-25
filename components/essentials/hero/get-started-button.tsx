@@ -10,10 +10,10 @@ function GetStartedButton() {
     <>
       <button
         onClick={() => setIsAuthModalOpen(true)}
-        className="py-2 px-4 rounded-md z-10"
+        className="py-2.5 px-5 rounded-md z-10 font-semibold cursor-pointer"
         style={{color: 'black', backgroundColor: '#fef3c7'}}
       >
-        Get started
+        Commencer maintenant
       </button>
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </>

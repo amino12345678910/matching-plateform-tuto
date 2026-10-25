@@ -23,5 +23,5 @@ export default function LogoutButton() {
       window.location.href = '/auth/login';
     }
   }
-  return <button onClick={() => handleLogOut()}>{loading ? 'Logging out...' : 'Log out'}</button>;
+  return <button onClick={() => handleLogOut()}>{loading ? 'Déconnexion...' : 'Déconnexion'}</button>;
 }

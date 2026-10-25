@@ -33,22 +33,22 @@ import type {UserInfo} from '@/hooks/shared/get-user-info';
 const data = {
   navMain: [
     {
-      title: 'Tutor Dashboard',
+      title: 'Espace Professeur',
       url: defaultRoute,
       icon: IconDashboard,
     },
     {
-      title: 'Manage Sessions',
+      title: 'Gérer mes Séances',
       url: `${defaultRoute}/manage`,
       icon: IconTools,
     },
     {
-      title: 'Student Messages',
+      title: 'Messages Élèves',
       url: '/dashboard/messages',
       icon: IconSend,
     },
     {
-      title: 'Create Session',
+      title: 'Publier un Cours',
       url: `${defaultRoute}/create-service`,
       icon: IconServicemark,
     },
@@ -58,7 +58,7 @@ const data = {
       icon: IconBell,
     },
     {
-      title: 'Tutor Profile',
+      title: 'Profil Professeur',
       url: '/dashboard/profile',
       icon: IconUserCircle,
     },
@@ -66,32 +66,22 @@ const data = {
 
   navSecondary: [
     {
-      title: 'Home',
+      title: 'Accueil',
       url: '/',
       icon: IconHome,
     },
     {
-      title: 'Explore Tutors',
+      title: 'Explorer les Profs',
       url: '/explore',
       icon: IconListSearch,
     },
   ],
   documents: [
     {
-      name: 'Teaching Resources',
+      name: 'Ressources Pédagogiques',
       url: '#',
       icon: IconDatabase,
     },
-    // {
-    //   name: "Reports",
-    //   url: "#",
-    //   icon: IconReport,
-    // },
-    // {
-    //   name: "Word Assistant",
-    //   url: "#",
-    //   icon: IconFileWord,
-    // },
   ],
 };
 
@@ -114,7 +104,7 @@ export function FreelancerSidebar({user, ...props}: FreelancerSidebarProps) {
                   9arrini<span className="text-gray-900 font-medium">.tn</span>
                 </span>
                 <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-1 py-0.5 rounded">
-                  Tutor
+                  Professeur
                 </span>
               </Link>
             </SidebarMenuButton>

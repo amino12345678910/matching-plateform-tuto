@@ -19,15 +19,15 @@ async function Page() {
       {services.length === 0 && (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center space-y-4">
-            <h2 className="text-lg font-semibold">No services yet</h2>
+            <h2 className="text-lg font-semibold">Aucun cours publié pour le moment</h2>
             <p className="text-sm text-muted-foreground max-w-sm">
-              Create your first service to start receiving bookings and earning.
+              Publiez votre premier cours pour recevoir des réservations d’élèves.
             </p>
             <Link
-              href="/dashboard/create-service"
+              href="/dashboard/freelancer/create-service"
               className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition"
             >
-              Create Service
+              Publier un Cours
             </Link>
           </CardContent>
         </Card>
@@ -37,14 +37,14 @@ async function Page() {
         <>
           <section className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold">Recent Bookings</h2>
-              <p className="text-sm text-muted-foreground">Latest activity across your services</p>
+              <h2 className="text-lg font-semibold">Réservations Récentes</h2>
+              <p className="text-sm text-muted-foreground">Activité récente sur vos séances de cours</p>
             </div>
 
             <Card className="shadow-sm">
               <CardContent className="p-0">
                 {bookedServices.length === 0 ? (
-                  <div className="p-6 text-sm text-muted-foreground">No bookings yet.</div>
+                  <div className="p-6 text-sm text-muted-foreground">Aucune réservation pour le moment.</div>
                 ) : (
                   <div className="max-h-[420px] overflow-y-auto divide-y">
                     {bookedServices.map(service =>
@@ -62,8 +62,8 @@ async function Page() {
 
           <section className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Your Services</h2>
-              <span className="text-sm text-muted-foreground">{services.length} total</span>
+              <h2 className="text-lg font-semibold">Vos Cours Publiés</h2>
+              <span className="text-sm text-muted-foreground">{services.length} au total</span>
             </div>
 
             <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">

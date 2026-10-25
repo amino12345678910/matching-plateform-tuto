@@ -14,7 +14,7 @@ export function ServiceNav({services}: {services: ServiceNavLite[]}) {
   if (!services.length) {
     return (
       <div className="rounded-xl border bg-muted/40 p-6 text-sm text-muted-foreground">
-        You haven’t created any tutoring sessions yet.
+        Vous n’avez pas encore publié de séance de cours.
       </div>
     );
   }

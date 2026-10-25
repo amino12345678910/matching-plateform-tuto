@@ -4,6 +4,7 @@ import {Geist, Geist_Mono} from 'next/font/google';
 import './globals.css';
 import NextTopLoader from 'nextjs-toploader';
 import {Toaster} from 'sonner';
+import {LanguageProvider} from '@/lib/i18n';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -18,8 +19,9 @@ const geistMono = Geist_Mono({
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: '9arrini (قَرّيني) — A7san Profs & Drous fi Tounes',
-  description: 'L9a el prof elli ywelemk, réservez des cours particuliers en ligne ou à domicile, w tfawwa9 fi 9raytek!',
+  title: '9arrini (قَرّيني) — Les Meilleurs Professeurs & Cours Particuliers en Tunisie',
+  description:
+    'Trouvez le professeur idéal, réservez vos séances de cours particuliers en ligne sur Google Meet et réussissez vos études avec 9arrini.',
 };
 
 export default function RootLayout({
@@ -29,31 +31,23 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="fr"
       suppressHydrationWarning
       className="overflow-x-hidden max-w-[100vw] antialiased h-full max-h-[100svh]"
     >
-      {/* <head> */}
-      {/* <script
-          defer
-          src="https://cloud.umami.is/script.js"
-          data-website-id="352eab6a-a921-4d6b-b73c-3282f2a38d2f"
-        /> */}
-      {/* </head> */}
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased h-full tracking-tighter `}
       >
         <NextTopLoader showSpinner={false} color="#0bf59e" />
-        {children}
+        <LanguageProvider>{children}</LanguageProvider>
         <Toaster
           className="z-50"
           mobileOffset={20}
           expand
           closeButton
-          containerAriaLabel="Message Box"
+          containerAriaLabel="Notifications"
           position="bottom-right"
           richColors
-          // theme={toasterTheme}
         />
       </body>
     </html>

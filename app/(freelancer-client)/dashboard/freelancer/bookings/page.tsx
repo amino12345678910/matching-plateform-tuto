@@ -3,7 +3,6 @@
 import {getUserInfo} from '@/hooks/shared/get-user-info';
 import {getMyBookings} from '@/hooks/shared/get-my-bookings';
 import type {BookedServiceType} from '@/types/bookings';
-import {BookedServiceCardComponent} from '@/components/client/booked-service-card';
 import {FreelancerBookedServiceCard} from '@/components/freelancer/booked-service-card';
 
 async function Page() {
@@ -18,29 +17,23 @@ async function Page() {
   return (
     <section className="w-full max-w-6xl">
       <header className="mb-8">
-        <h1 className="text-xl font-semibold tracking-tight">Booked services</h1>
+        <h1 className="text-xl font-semibold tracking-tight">Séances Réservées par vos Élèves</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Services you have purchased and are currently in progress
+          Séances de cours réservées et actuellement en cours
         </p>
       </header>
 
       {services.length === 0 ? (
-        <div
-          className="
-            flex flex-col items-start
-            border border-border
-            p-6
-          "
-        >
-          <p className="text-sm font-medium text-foreground">No bookings yet</p>
+        <div className="flex flex-col items-start border border-border rounded-xl p-6">
+          <p className="text-sm font-medium text-foreground">Aucune séance réservée pour le moment</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            When you book a service, it will appear here with its status and seller details.
+            Lorsqu’un élève réserve l’un de vos cours, il apparaîtra ici avec ses détails.
           </p>
         </div>
       ) : (
         <>
           <div className="mb-4 text-sm text-muted-foreground">
-            {services.length} active booking{services.length > 1 ? 's' : ''}
+            {services.length} séance{services.length > 1 ? 's' : ''} active{services.length > 1 ? 's' : ''}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {services.map(service => (

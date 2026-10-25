@@ -43,7 +43,7 @@ function VideoSection() {
       <button
         onClick={toggleVideo}
         type="button"
-        aria-label={isPlaying ? 'Pause video' : 'Play video'}
+        aria-label={isPlaying ? 'Mettre en pause la vidéo' : 'Lire la vidéo'}
         className="absolute bottom-4 right-4 z-20 rounded-full p-3 shadow-lg transition cursor-pointer"
         style={{backgroundColor: '#4b5563', color: 'white'}}
       >
@@ -53,14 +53,15 @@ function VideoSection() {
       <div className="absolute top-44 left-10 z-10 flex flex-col gap-4 max-w-2xl">
         <div>
           <span className="inline-block bg-primary/20 text-emerald-300 border border-emerald-400/40 text-xs px-3 py-1 rounded-full mb-3 uppercase tracking-wider font-medium">
-            9arrini • قَرّيني — Matkhamemch, l9a el prof elli yse3dek!
+            9arrini • قَرّيني — Trouvez le professeur idéal pour réussir !
           </span>
           <p className="text-5xl lg:text-7xl font-light text-white leading-tight">
-            Our expert tutors <br />
-            <span className="font-semibold text-emerald-400">9arrini</span> w tfawwa9!
+            <span>Nos professeurs experts</span> <br />
+            <span className="font-semibold text-emerald-400">9arrini</span>{' '}
+            <span>pour votre réussite !</span>
           </p>
           <p className="text-white/80 text-lg mt-2 font-light">
-            E5tar el prof elli ywelemk, 7adher drousek, w jib note behya bkol souhoula.
+            Choisissez le professeur qui vous correspond, réservez vos séances en ligne et progressez rapidement.
           </p>
         </div>
         <div>
@@ -73,7 +74,7 @@ function VideoSection() {
           >
             <input
               type="text"
-              placeholder="Lawwej 3la ay subject, tutor, walla cours (Math, Python, Anglais...)..."
+              placeholder="Rechercher une matière, un professeur ou un cours (Math, Python, Anglais...)..."
               className="text-gray-700 font-roboto text-[16px] rounded-2xl pl-4 pr-12 py-4 outline-none bg-white shadow-xl relative w-full"
             />
             <button
@@ -86,10 +87,10 @@ function VideoSection() {
         </div>
         <div className="flex flex-wrap gap-2 pt-1">
           {[
-            '📐 Math & Analyse',
-            '💻 Python & Coding',
+            '📐 Mathématiques & Analyse',
+            '💻 Python & Programmation',
             '🗣️ Anglais & Français',
-            '🎯 Bac & Concours Prep',
+            '🎯 Préparation Bac & Concours',
           ].map(label => (
             <div
               key={label}

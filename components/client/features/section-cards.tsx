@@ -30,19 +30,19 @@ export function ClientSectionCards({activeOrder}: {activeOrder: ClientActiveOrde
           />
           <CardHeader className="space-y-1 pb-2">
             <div className="flex items-center justify-between">
-              <CardDescription className="text-sm">Current Learning Session</CardDescription>
+              <CardDescription className="text-sm">Séance d’apprentissage actuelle</CardDescription>
               <Badge variant="outline" className="uppercase text-xs">
-                Ready to Learn
+                Prêt à apprendre
               </Badge>
             </div>
-            <CardTitle className="text-2xl font-semibold">No active lessons booked</CardTitle>
+            <CardTitle className="text-2xl font-semibold">Aucune séance active réservée</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Browse verified tutors across 700+ subjects and book your first 1-on-1 lesson.
+              Parcourez les professeurs vérifiés et réservez votre première séance individuelle.
             </p>
           </CardHeader>
           <CardFooter className="pt-2">
             <Badge asChild variant="default" className="cursor-pointer px-3 py-1">
-              <Link href="/explore">Find a Tutor</Link>
+              <Link href="/explore">Trouver un Professeur</Link>
             </Badge>
           </CardFooter>
         </Card>
@@ -89,22 +89,18 @@ export function ClientSectionCards({activeOrder}: {activeOrder: ClientActiveOrde
         )}
 
         <CardHeader className="space-y-1 pb-2">
-          {/* Top row */}
           <div className="flex items-center justify-between">
-            <CardDescription className="text-sm">Learning with Tutor</CardDescription>
+            <CardDescription className="text-sm">Cours avec votre Professeur</CardDescription>
 
             <Badge variant="secondary" className="uppercase text-xs">
               {status}
             </Badge>
           </div>
 
-          {/* Tutor name */}
           <CardTitle className="text-2xl font-semibold">{freelancer.name}</CardTitle>
 
-          {/* Session */}
           <p className="text-sm text-muted-foreground">{service.title}</p>
 
-          {/* Price + Actions */}
           <div className="pt-2 flex items-center justify-between">
             <span className="text-2xl font-bold tabular-nums text-emerald-700">
               {totalPrice} Pts ({totalPrice} DT)
@@ -119,14 +115,14 @@ export function ClientSectionCards({activeOrder}: {activeOrder: ClientActiveOrde
               </Badge>
 
               <Badge asChild variant="outline" className="cursor-pointer">
-                <Link href={`/dashboard/messages/${freelancer.conversations[0]?.id ?? ''}`}>
+                <Link href={`/dashboard/messages`}>
                   <IconMessage2 className="mr-1 h-4 w-4" />
                   Message
                 </Link>
               </Badge>
 
               <Badge asChild variant="outline" className="cursor-pointer">
-                <Link href="/dashboard/client/bookings">View Lesson</Link>
+                <Link href="/dashboard/client/bookings">Voir la séance</Link>
               </Badge>
             </div>
           </div>
@@ -134,7 +130,7 @@ export function ClientSectionCards({activeOrder}: {activeOrder: ClientActiveOrde
 
         <CardFooter className="flex-col items-start pb-2 gap-1 text-sm">
           <div className="flex items-center gap-2 font-medium">
-            Lesson in progress
+            Séance en cours
             <IconTrendingUp className="h-4 w-4" />
           </div>
 
@@ -146,9 +142,9 @@ export function ClientSectionCards({activeOrder}: {activeOrder: ClientActiveOrde
           >
             {acceptedAt
               ? lastDaysToDeliver
-                ? '⚠ Next session milestone very soon'
-                : `Expected completion ${inXdays}`
-              : 'Waiting for tutor confirmation'}
+                ? '⚠ Prochaine séance très bientôt'
+                : `Prévue ${inXdays}`
+              : 'Séance confirmée'}
           </div>
         </CardFooter>
       </Card>
@@ -162,14 +158,14 @@ export function ClientSectionCards({activeOrder}: {activeOrder: ClientActiveOrde
         />
 
         <CardHeader>
-          <CardDescription>Course Schedule</CardDescription>
+          <CardDescription>Calendrier du Cours</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {deliveryAt ? moment(deliveryAt).format('MMM DD') : '--'}
+            {deliveryAt ? moment(deliveryAt).format('DD MMM') : '--'}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
               <IconClock />
-              {deliveryAt ? inXdays : 'Pending'}
+              {deliveryAt ? inXdays : 'En attente'}
             </Badge>
           </CardAction>
 
@@ -180,12 +176,12 @@ export function ClientSectionCards({activeOrder}: {activeOrder: ClientActiveOrde
           </div>
 
           <span className="text-xs text-muted-foreground mt-1">
-            Automatically updates based on lesson status
+            Mis à jour automatiquement selon le statut de votre séance
           </span>
         </CardHeader>
 
         <CardFooter className="text-sm text-muted-foreground">
-          Message your tutor anytime with study questions
+          Envoyez un message à votre professeur à tout moment pour vos questions
         </CardFooter>
       </Card>
 
@@ -198,12 +194,12 @@ export function ClientSectionCards({activeOrder}: {activeOrder: ClientActiveOrde
         />
 
         <CardHeader>
-          <CardDescription>Lesson Status</CardDescription>
-          <CardTitle className="text-2xl font-semibold @[250px]/card:text-3xl">Progress</CardTitle>
+          <CardDescription>Suivi de la Séance</CardDescription>
+          <CardTitle className="text-2xl font-semibold @[250px]/card:text-3xl">Progression</CardTitle>
         </CardHeader>
 
         <CardFooter className="flex flex-col gap-2 text-sm">
-          {['Lesson Booked', 'Tutor Confirmed', 'Learning in Progress', 'Completed'].map(
+          {['Séance réservée', 'Confirmée par le prof', 'Cours en cours', 'Terminée'].map(
             (label, i) => (
               <div key={label} className="flex items-center justify-between w-full">
                 <span className="truncate">{label}</span>
@@ -218,7 +214,7 @@ export function ClientSectionCards({activeOrder}: {activeOrder: ClientActiveOrde
                   {i < (status === 'DELIVERED' ? 4 : status === 'ACTIVE' ? 3 : 2) ? (
                     <IconCheck className="h-3 w-3" />
                   ) : (
-                    'Pending'
+                    'En attente'
                   )}
                 </Badge>
               </div>

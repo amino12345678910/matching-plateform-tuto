@@ -70,31 +70,30 @@ export default function FreelancerCalendar({fId}: {fId: string}) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Availability</CardTitle>
-        <CardDescription>Your accepted bookings automatically block dates</CardDescription>
+        <CardTitle>Disponibilité</CardTitle>
+        <CardDescription>Vos réservations acceptées bloquent automatiquement les dates</CardDescription>
       </CardHeader>
 
       <div className="grid gap-6 p-6 lg:grid-cols-[280px_1fr]">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
           <div className="rounded-lg border p-4">
-            <div className="text-sm text-muted-foreground">Active bookings</div>
+            <div className="text-sm text-muted-foreground">Réservations actives</div>
             <div className="mt-1 flex items-center gap-2">
               <span className="text-2xl font-semibold">{pastFreeRanges ? 0 : bookings.length}</span>
-              <Badge variant="secondary">counts</Badge>
+              <Badge variant="secondary">séances</Badge>
             </div>
           </div>
 
           <div className="rounded-lg border p-4">
-            <div className="text-sm text-muted-foreground">Total busy days</div>
+            <div className="text-sm text-muted-foreground">Jours occupés au total</div>
             <div className="mt-1 flex items-center gap-2">
               <span className="text-2xl font-semibold">{pastFreeRanges ? 0 : totalBusyDays}</span>
-              <Badge variant="secondary">days</Badge>
+              <Badge variant="secondary">jours</Badge>
             </div>
           </div>
 
           <div className="rounded-lg border p-4 text-sm text-muted-foreground sm:col-span-2 lg:col-span-1">
-            Clients cannot book you on highlighted dates. You’ll be available again once delivery
-            periods end.
+            Vos séances réservées apparaissent dans votre planning pour organiser votre emploi du temps.
           </div>
         </div>
 

@@ -27,13 +27,13 @@ export function NavMain({
         <SidebarMenu>
           <SidebarMenuItem className="flex items-center gap-2">
             <SidebarMenuButton
-              tooltip="Quick Create"
+              tooltip="Nouveau Cours"
               className="bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground min-w-8 duration-200 ease-linear"
               asChild
             >
               <Link href="/dashboard/freelancer/create-service">
                 <IconCirclePlusFilled />
-                <span>Quick Create</span>
+                <span>Nouveau Cours</span>
               </Link>
             </SidebarMenuButton>
             <Button
@@ -44,7 +44,7 @@ export function NavMain({
             >
               <Link href="/dashboard/messages">
                 <IconMail />
-                <span className="sr-only">Inbox</span>
+                <span className="sr-only">Messagerie</span>
               </Link>
             </Button>
           </SidebarMenuItem>

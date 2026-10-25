@@ -1,5 +1,5 @@
 'use client';
-import {IconMessage2, IconTrendingDown, IconTrendingUp} from '@tabler/icons-react';
+import {IconMessage2, IconTrendingUp} from '@tabler/icons-react';
 
 import {Badge} from '@/components/ui/badge';
 import {
@@ -60,14 +60,14 @@ export function SectionCards({
           <>
             <CardHeader className="space-y-1 pb-2">
               <div className="flex items-center justify-between">
-                <CardDescription className="text-sm">Teaching Student</CardDescription>
+                <CardDescription className="text-sm">Élève en cours</CardDescription>
                 <Badge variant="secondary" className="uppercase text-xs">
-                  Active Lesson
+                  Séance Active
                 </Badge>
               </div>
 
               <CardTitle className="text-2xl font-semibold">
-                {currentClientStory.client.name ?? 'Active Student'}
+                {currentClientStory.client.name ?? 'Élève inscrit'}
               </CardTitle>
 
               <p className="text-sm text-muted-foreground">
@@ -84,23 +84,21 @@ export function SectionCards({
 
                 <div className="flex gap-2">
                   <Badge asChild variant="outline" className="cursor-pointer">
-                    <Link
-                      href={`/dashboard/messages/${currentClientStory.client.clientConversations[0]?.id ?? ''}`}
-                    >
+                    <Link href={`/dashboard/messages`}>
                       <IconMessage2 className="mr-1 h-4 w-4" />
                       Message
                     </Link>
                   </Badge>
 
                   <Badge asChild variant="outline" className="cursor-pointer">
-                    <Link href="/dashboard/freelancer/manage">View Session</Link>
+                    <Link href="/dashboard/freelancer/manage">Voir la séance</Link>
                   </Badge>
                 </div>
               </div>
             </CardHeader>
             <CardFooter className="flex-col items-start pb-2 gap-1 text-sm">
               <div className="flex items-center gap-2 font-medium">
-                Active tutoring session in progress
+                Séance de cours en progression
                 <IconTrendingUp className="h-4 w-4" />
               </div>
               <div
@@ -109,7 +107,7 @@ export function SectionCards({
                   lastDaysToDeliver && 'text-md text-red-700'
                 )}
               >
-                {lastDaysToDeliver ? '⚠ Session milestone tomorrow' : `Next milestone ${inXdays}`}
+                {lastDaysToDeliver ? '⚠ Prochaine séance demain' : `Prochaine étape ${inXdays}`}
               </div>
             </CardFooter>
           </>
@@ -117,19 +115,19 @@ export function SectionCards({
           <>
             <CardHeader className="space-y-1 pb-2">
               <div className="flex items-center justify-between">
-                <CardDescription className="text-sm">Current Tutoring Session</CardDescription>
+                <CardDescription className="text-sm">Séance de Cours Actuelle</CardDescription>
                 <Badge variant="outline" className="uppercase text-xs">
-                  Ready
+                  Prêt
                 </Badge>
               </div>
-              <CardTitle className="text-2xl font-semibold">No active lesson yet</CardTitle>
+              <CardTitle className="text-2xl font-semibold">Aucune séance active pour le moment</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Publish a tutoring session so students can discover you and book 1-on-1 lessons.
+                Publiez un cours pour que les élèves puissent vous découvrir et réserver des séances individuelles.
               </p>
             </CardHeader>
             <CardFooter className="pt-2">
               <Badge asChild variant="default" className="cursor-pointer px-3 py-1">
-                <Link href="/dashboard/freelancer/create-service">+ Create Tutoring Session</Link>
+                <Link href="/dashboard/freelancer/create-service">+ Créer une Séance de Cours</Link>
               </Badge>
             </CardFooter>
           </>
@@ -143,14 +141,14 @@ export function SectionCards({
           className="from-transparent via-red-500/70 to-transparent"
         />
         <CardHeader>
-          <CardDescription>Total Tutoring Earnings</CardDescription>
+          <CardDescription>Revenus Totaux des Cours</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl text-emerald-700">
             {totalRevenue} DT ({totalRevenue} Pts)
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
               <IconTrendingUp />
-              Active
+              Actif
             </Badge>
           </CardAction>
           <div className="flex w-full gap-1">
@@ -164,7 +162,7 @@ export function SectionCards({
         </CardHeader>
         <CardFooter className="flex flex-col gap-2 text-sm">
           <div className="flex justify-between w-full">
-            <span className="text-muted-foreground">Completed lessons</span>
+            <span className="text-muted-foreground">Séances complétées</span>
             <span className="font-medium">{totalRevenue} DT</span>
           </div>
         </CardFooter>
@@ -176,20 +174,20 @@ export function SectionCards({
           className="from-transparent via-red-500/70 to-transparent"
         />
         <CardHeader>
-          <CardDescription>Pending Student Requests</CardDescription>
+          <CardDescription>Demandes d’Élèves en Attente</CardDescription>
           <CardTitle className="text-2xl w-full font-semibold tabular-nums @[250px]/card:text-3xl">
             {pendingClients.length === 0 ? (
               <span className="text-muted-foreground text-sm w-full">
-                No pending student requests right now 🎯
+                Aucune demande en attente pour le moment 🎯
               </span>
             ) : (
-              <span>{pendingClients.length} Student(s)</span>
+              <span>{pendingClients.length} Élève(s)</span>
             )}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
               <IconTrendingUp />
-              +12.5%
+              Actif
             </Badge>
           </CardAction>
         </CardHeader>
@@ -198,14 +196,14 @@ export function SectionCards({
             <div key={c.name} className="flex items-center justify-between w-full">
               <span className="truncate">{c.name}</span>
               <Badge variant="secondary" className="text-xs">
-                Pending
+                En attente
               </Badge>
             </div>
           ))}
 
           {pendingClients.length > 3 && (
             <span className="text-xs text-muted-foreground">
-              +{pendingClients.length - 3} more waiting
+              +{pendingClients.length - 3} autres en attente
             </span>
           )}
         </CardFooter>

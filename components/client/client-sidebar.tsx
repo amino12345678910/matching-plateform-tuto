@@ -5,8 +5,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -26,29 +24,27 @@ import {cn} from '@/lib/utils';
 import {defaultRoute} from '@/app/(freelancer-client)/dashboard/client/config';
 import Link from 'next/link';
 import {Button} from '../ui/button';
-import type {User} from 'better-auth';
 import {NavUser} from '../nav-user';
 import type {UserInfo} from '@/hooks/shared/get-user-info';
 
-// Menu items.
 const items = [
   {
-    title: 'Student Dashboard',
+    title: 'Espace Élève',
     url: defaultRoute,
     icon: IconDashboard,
   },
   {
-    title: 'Points Account (1 Pt = 1 DT)',
+    title: 'Solde Points (1 Pt = 1 DT)',
     url: `${defaultRoute}/points`,
     icon: IconCoin,
   },
   {
-    title: 'My Lessons',
+    title: 'Mes Cours Réservés',
     url: `${defaultRoute}/bookings`,
     icon: IconBrandBooking,
   },
   {
-    title: 'Tutor Messages',
+    title: 'Messages Professeurs',
     url: '/dashboard/messages',
     icon: IconSend,
   },
@@ -58,7 +54,7 @@ const items = [
     icon: IconBell,
   },
   {
-    title: 'Student Profile',
+    title: 'Profil Élève',
     url: '/dashboard/profile',
     icon: IconUserCircle,
   },
@@ -80,7 +76,7 @@ export function ClientSidebar({user, ...props}: ClientSidebarProps) {
                   9arrini<span className="text-gray-900 font-medium">.tn</span>
                 </span>
                 <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-1 py-0.5 rounded">
-                  Student
+                  Élève
                 </span>
               </Link>
             </SidebarMenuButton>
@@ -92,13 +88,13 @@ export function ClientSidebar({user, ...props}: ClientSidebarProps) {
           <SidebarMenu>
             <SidebarMenuItem className="flex items-center gap-2">
               <SidebarMenuButton
-                tooltip="Explore Tutors"
+                tooltip="Explorer les Profs"
                 className="bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground min-w-8 duration-200 ease-linear"
                 asChild
               >
                 <Link href="/explore">
                   <IconListSearch />
-                  <span>Find a Tutor</span>
+                  <span>Trouver un Professeur</span>
                 </Link>
               </SidebarMenuButton>
               <Button
@@ -109,20 +105,18 @@ export function ClientSidebar({user, ...props}: ClientSidebarProps) {
               >
                 <Link href="/dashboard/messages">
                   <IconMail />
-                  <span className="sr-only">Inbox</span>
+                  <span className="sr-only">Messagerie</span>
                 </Link>
               </Button>
             </SidebarMenuItem>
           </SidebarMenu>
-          {/* <SidebarGroupLabel className="mt-1">Application</SidebarGroupLabel> */}
-          {/* <SidebarGroupContent> */}
           <SidebarMenu>
             {items.map(item => (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton asChild>
                   <a href={item.url} className="relative">
                     <item.icon />
-                    {item.title == 'Messages' && (
+                    {item.title == 'Messages Professeurs' && (
                       <span
                         className={cn(
                           'bg-red-600 w-1 h-1',
@@ -137,7 +131,6 @@ export function ClientSidebar({user, ...props}: ClientSidebarProps) {
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
-          {/* </SidebarGroupContent> */}
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>

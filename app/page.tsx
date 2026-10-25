@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import {BadgeCheck, ArrowLeft, ArrowRight, Search} from 'lucide-react';
-import {catogary, fiverPro, happy, matching, quick} from '@/lib/assets';
+import {catogary, happy, matching, quick} from '@/lib/assets';
 import PopularService from '@/components/essentials/hero/popular-service';
 import {Navbar} from '@/components/essentials/Navbar';
 import {Footer} from '@/components/footer/footer-2';
@@ -23,26 +23,28 @@ export default function HomePage() {
             9arrini • قَرّيني
           </span>
           <h1 className="text-2xl font-semibold text-white">
-            Matkhamemch, l9a el prof elli yse3dek!
+            Trouvez facilement le professeur idéal pour réussir !
           </h1>
           <p className="text-white/80 text-sm mt-1">
-            Les meilleurs profs w tlamdha f tounes bkolha
+            Les meilleurs professeurs et tuteurs vérifiés dans toute la Tunisie
           </p>
         </div>
         <div className="flex justify-center items-center">
-          <div className="relative w-full max-w-md">
+          <form action="/explore" method="GET" className="relative w-full max-w-md">
             <input
               type="text"
-              placeholder="Jarreb Math, Python, Anglais, Bac..."
+              name="q"
+              placeholder="Ex: Mathématiques, Python, Anglais, Bac..."
               className="text-gray-700 font-roboto text-[15px] rounded-xl pl-4 pr-10 py-3 outline-none bg-white relative w-full shadow-md"
             />
-            <div
-              className="absolute right-1.5 top-1.5 p-2 rounded-lg text-white"
+            <button
+              type="submit"
+              className="absolute right-1.5 top-1.5 p-2 rounded-lg text-white cursor-pointer"
               style={{backgroundColor: '#166534'}}
             >
               <Search size={18} />
-            </div>
-          </div>
+            </button>
+          </form>
         </div>
       </div>
       <VideoSection />
@@ -53,7 +55,7 @@ export default function HomePage() {
         {/* Popular Subjects & Tutoring Sessions */}
         <div className="flex flex-col gap-10 mt-5">
           <h1 className="font-normal text-3xl lg:text-5xl" style={{color: '#404145'}}>
-            Popular Tutoring Subjects
+            Matières de Soutien Populaires
           </h1>
           <div className="relative">
             <PopularService nextBtn={'.next-Btn'} prevBtn={'.prev-Btn'} />
@@ -72,7 +74,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* AI Section */}
+        {/* 9arrini Plus Section */}
         <div className="relative flex flex-col lg:flex-row-reverse gap-4 rounded-lg bg-black p-8">
           <div className="flex-1 overflow-hidden rounded-xl bg-emerald-950/40 min-h-[260px]">
             <video
@@ -91,18 +93,17 @@ export default function HomePage() {
               9arrini <span className="font-light text-emerald-400">Plus+</span>
             </h1>
             <h2 className="font-light text-3xl font-aldrich lg:text-6xl">
-              Aqwa drous. A7san profs.
+              Les meilleurs cours. Les meilleurs professeurs.
             </h2>
             <p className="font-normal text-[15px] z-10 text-white/90">
-              Fhem s3ib? Dourousek msha3bka? Ma3andekch waqt? 9arrini tjiblk a7san les profs w el mentors 
-              elli yfasroulek b tari9a sahla w claire. Réservez votre séance 1-on-1, posez vos questions, w tfawwa9 fi 9raytek!
+              Un chapitre difficile ? Des examens qui approchent ? 9arrini vous connecte avec les meilleurs professeurs et mentors qui expliquent de manière claire et méthodique. Réservez votre séance individuelle en direct et réussissez vos études !
             </p>
             <div className="flex items-center justify-center lg:justify-start">
               <GetStartedButton />
             </div>
           </div>
           <div
-            className="absolute bottom-0 left-0 h-[500px] w-full rounded-lg"
+            className="absolute bottom-0 left-0 h-[500px] w-full rounded-lg pointer-events-none"
             style={{
               background:
                 'radial-gradient(circle at center, rgba(34, 197, 94, 0.3), transparent 70%)',
@@ -110,7 +111,7 @@ export default function HomePage() {
           ></div>
         </div>
 
-        {/* Pro Section */}
+        {/* Academy Section */}
         <div
           className="grid lg:grid-cols-2 gap-4 p-4 rounded-lg"
           style={{backgroundColor: '#E8FAF4'}}
@@ -120,29 +121,25 @@ export default function HomePage() {
               9arrini <span className="font-normal text-emerald-700">Academy.</span>
             </div>
             <div className="font-normal text-2xl leading-normal lg:text-5xl lg:leading-16">
-              El{' '}
-              <span className="font-cormorant font-bold" style={{color: '#1DBF73'}}>
-                solution
-              </span>{' '}
-              lkol tlemidha w etudiants elli y7ebbou ynaj7ou
+              La solution complète pour tous les élèves et étudiants qui visent l’excellence
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {[
                 {
-                  title: 'Profs vérifiés w expérimentés',
-                  desc: 'Asatdha w ingénieurs kfée y3awnouk f kol sghira w kbira f drousek.',
+                  title: 'Professeurs vérifiés et expérimentés',
+                  desc: 'Des enseignants et ingénieurs qualifiés pour vous accompagner dans chaque matière.',
                 },
                 {
-                  title: 'Dhaman al fhem w el jawda',
-                  desc: 'Seances 100% interactives m3a prof mrakkez m3ak wahdek.',
+                  title: 'Garantie de compréhension et de qualité',
+                  desc: 'Des séances 100% interactives en direct avec un professeur dédié à votre progression.',
                 },
                 {
-                  title: 'Barnamej 3la 9yasek',
-                  desc: 'Tabba3 el progrés mte3ek seance b seance w slah el devoirs.',
+                  title: 'Programme sur mesure',
+                  desc: 'Suivez vos progrès séance après séance avec exercices corrigés et révisions.',
                 },
                 {
-                  title: 'As3ar bil Dinar mrigla',
-                  desc: 'Tarifs fi moutanawal el jami3 (par heure walla pack drous) b soum ma39oul.',
+                  title: 'Tarifs accessibles en Dinars',
+                  desc: 'Des formules adaptées à tous les budgets (à la séance ou en pack de cours).',
                 },
               ].map((item, idx) => (
                 <div key={idx} className="flex flex-col gap-2">
@@ -168,7 +165,7 @@ export default function HomePage() {
                 priority
               />
               <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-800 shadow">
-                🎓 Drous 1-on-1 & Groupes m3a a7san asatdha
+                🎓 Cours particuliers 1-on-1 & Groupes avec les meilleurs professeurs
               </div>
             </div>
           </div>
@@ -177,10 +174,10 @@ export default function HomePage() {
         {/* Success Story */}
         <div className="flex flex-col gap-6">
           <h1 className="font-normal text-4xl" style={{color: '#111827'}}>
-            Kifech 9arrini tbaddel tari9et 9rayetkom
+            Comment 9arrini transforme votre façon d’apprendre
           </h1>
           <p className="font-light text-sm" style={{color: '#4b5563'}}>
-            Meyat el tlamdha w el etudiants sta3mlou 9arrini bech yejbdo notes tayara w yet3almo maharat jdida.
+            Des centaines d’élèves et d’étudiants utilisent 9arrini pour améliorer leurs notes et maîtriser de nouvelles compétences.
           </p>
           <video
             src="/assets/gemini_generated_video_68919dca.mp4"
@@ -198,25 +195,25 @@ export default function HomePage() {
         {/* Features Section */}
         <div className="flex flex-col gap-8">
           <div className="text-4xl font-normal" style={{color: '#1f2937'}}>
-            Kol chay yebdà b prof behy yefhmek
+            Tout commence par un bon professeur qui vous comprend
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {[
               {
                 icon: catogary,
-                text: 'A7san el asatdha f akther men 50 matiére w takhasses',
+                text: 'Les meilleurs professeurs dans plus de 50 matières et spécialités',
               },
               {
                 icon: matching,
-                text: 'Matching sahla w rapide m3a el prof elli ywelem moustewak',
+                text: 'Mise en relation simple et rapide avec le professeur adapté à votre niveau',
               },
               {
                 icon: quick,
-                text: 'Drous 3la 9ad rythm mte3ek w budget mte3ek bil Dinar',
+                text: 'Des cours à votre rythme et selon votre budget en Dinars (DT)',
               },
               {
                 icon: happy,
-                text: 'Erté7 w tfawwa9 m3a suivi personnalisé men lawwel seance',
+                text: 'Progressez sereinement avec un suivi personnalisé dès la première séance',
               },
             ].map((item, idx) => (
               <div key={idx} className="flex flex-col gap-4">

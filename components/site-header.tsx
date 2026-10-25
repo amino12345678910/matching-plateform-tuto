@@ -1,6 +1,8 @@
-import {Button} from '@/components/ui/button';
+'use client';
+
 import {Separator} from '@/components/ui/separator';
 import {SidebarTrigger} from '@/components/ui/sidebar';
+import {LanguageSwitcher} from '@/lib/i18n';
 
 export function SiteHeader() {
   return (
@@ -8,9 +10,10 @@ export function SiteHeader() {
       <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
         <SidebarTrigger className="-ml-1" />
         <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
-        <h1 className="text-base font-medium">Dashboard</h1>
+        <h1 className="text-base font-medium">Tableau de bord</h1>
         <div className="ml-auto flex items-center gap-2">
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <LanguageSwitcher />
+          <span className="hidden sm:inline-block text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
             9arrini • قَرّيني
           </span>
         </div>

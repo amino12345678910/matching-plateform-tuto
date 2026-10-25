@@ -1,4 +1,3 @@
-// component2/components/PopularService.tsx
 'use client';
 
 import React, {useCallback, useEffect, useState} from 'react';
@@ -23,7 +22,7 @@ interface PopularServiceProps {
   prevBtn?: string;
 }
 
-const PopularService = ({nextBtn, prevBtn}: PopularServiceProps) => {
+const PopularService = ({}: PopularServiceProps) => {
   const [emblaRef, emblaApi] = useEmblaCarousel({
     slidesToScroll: 1,
     breakpoints: {
@@ -60,56 +59,56 @@ const PopularService = ({nextBtn, prevBtn}: PopularServiceProps) => {
 
   const data = [
     {
-      title: 'Web Dev & Coding Bootcamps',
+      title: 'Développement Web & Programmation',
       icon: (
-        <Image src={webdev} alt="Web Development" className="rounded-lg" width={160} height={130} />
+        <Image src={webdev} alt="Développement Web" className="rounded-lg" width={160} height={130} />
       ),
     },
     {
-      title: 'Graphic Design & Illustration',
+      title: 'Design Graphique & Illustration',
       icon: (
-        <Image src={logodes} alt="Graphic Design" className="rounded-lg" width={160} height={130} />
+        <Image src={logodes} alt="Design Graphique" className="rounded-lg" width={160} height={130} />
       ),
     },
     {
-      title: 'Calculus & Linear Algebra',
-      icon: <Image src={SEO} alt="Mathematics" width={160} height={130} />,
+      title: 'Analyse & Algèbre Linéaire',
+      icon: <Image src={SEO} alt="Mathématiques" width={160} height={130} />,
     },
     {
-      title: 'Architecture & CAD Tutoring',
-      icon: <Image src={architecture} alt="Architecture Tutoring" width={160} height={130} />,
+      title: 'Architecture & CAO (AutoCAD)',
+      icon: <Image src={architecture} alt="Architecture" width={160} height={130} />,
     },
     {
-      title: 'Language & Pronunciation',
-      icon: <Image src={voice} alt="Language Coaching" width={160} height={130} />,
+      title: 'Langues & Communication Orale',
+      icon: <Image src={voice} alt="Langues" width={160} height={130} />,
     },
     {
-      title: 'Digital Marketing & Strategy',
-      icon: <Image src={social} alt="Marketing Lessons" width={160} height={130} />,
+      title: 'Marketing Digital & Stratégie',
+      icon: <Image src={social} alt="Marketing" width={160} height={130} />,
     },
     {
-      title: 'Public Speaking & Presentation',
-      icon: <Image src={ugc} alt="Public Speaking" width={160} height={130} />,
+      title: 'Prise de Parole & Soutenance PFE',
+      icon: <Image src={ugc} alt="Soutenance PFE" width={160} height={130} />,
     },
     {
-      title: 'Computer Science & Algorithms',
-      icon: <Image src={software} alt="Computer Science" width={160} height={130} />,
+      title: 'Algorithmique & Génie Logiciel',
+      icon: <Image src={software} alt="Informatique" width={160} height={130} />,
     },
     {
-      title: 'Data Science & Machine Learning',
+      title: 'Data Science & Intelligence Artificielle',
       icon: <Image src={science} alt="Data Science" width={160} height={130} />,
     },
     {
-      title: 'Photography & Visual Arts',
-      icon: <Image src={product} alt="Photography Lessons" width={160} height={130} />,
+      title: 'Photographie & Arts Visuels',
+      icon: <Image src={product} alt="Photographie" width={160} height={130} />,
     },
     {
-      title: 'Economics & Business Studies',
-      icon: <Image src={ecommerce} alt="Economics" width={160} height={130} />,
+      title: 'Économie, Gestion & Comptabilité',
+      icon: <Image src={ecommerce} alt="Économie" width={160} height={130} />,
     },
     {
-      title: 'Film & Video Production',
-      icon: <Image src={videoedit} alt="Film Production" width={160} height={130} />,
+      title: 'Montage Vidéo & Production',
+      icon: <Image src={videoedit} alt="Montage Vidéo" width={160} height={130} />,
     },
   ];
 

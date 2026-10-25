@@ -46,10 +46,6 @@ export default function AccountPage() {
     init();
   }, []);
 
-  /* ================================
-     PROFILE IMAGE UPDATE
-  ================================= */
-
   const handleUpdateImage = async () => {
     if (!imageFile) return;
 
@@ -71,21 +67,18 @@ export default function AccountPage() {
       setPreview(null);
       setImageFile(null);
       setUser((u: any) => ({...u, image: upload[0]}));
+      toast.success('Photo de profil mise à jour !');
     } catch (err) {
       console.error(err);
-      toast.error('Failed to update profile photo');
+      toast.error('Impossible de mettre à jour la photo de profil');
     } finally {
       setSavingImage(false);
     }
   };
 
-  /* ================================
-     CREATE PASSWORD (OAUTH USERS)
-  ================================= */
-
   const handleCreatePassword = async () => {
     if (createPassword.length < 8) {
-      toast.info('Password must be at least 8 characters');
+      toast.info('Le mot de passe doit contenir au moins 8 caractères');
       return;
     }
 
@@ -93,7 +86,6 @@ export default function AccountPage() {
       setPasswordLoading(true);
 
       if (!user?.userId) {
-        console.log('User id not found');
         return;
       }
       const {status} = await setPassword({newPassword: createPassword, userId: user?.userId});
@@ -102,25 +94,21 @@ export default function AccountPage() {
       else if (status) {
         setCurrentPassword('');
         setNewPassword('');
-        toast.success('Password created');
+        toast.success('Mot de passe créé avec succès');
       }
 
       setUser((u: any) => ({...u, hasPassword: true}));
       setCreatePassword('');
     } catch {
-      toast.error('Could not create password');
+      toast.error('Impossible de créer le mot de passe');
     } finally {
       setPasswordLoading(false);
     }
   };
 
-  /* ================================
-     CHANGE PASSWORD
-  ================================= */
-
   const handleChangePassword = async () => {
     if (!currentPassword || newPassword.length < 8) {
-      toast.error('Invalid password');
+      toast.error('Mot de passe invalide');
       return;
     }
 
@@ -136,10 +124,10 @@ export default function AccountPage() {
       else if (data?.token) {
         setCurrentPassword('');
         setNewPassword('');
-        toast.success('Password updated');
+        toast.success('Mot de passe mis à jour');
       }
     } catch {
-      toast.error('Current password is incorrect');
+      toast.error('Le mot de passe actuel est incorrect');
     } finally {
       setPasswordLoading(false);
     }
@@ -169,7 +157,7 @@ export default function AccountPage() {
         <div className="relative h-20 w-20">
           <Image
             src={preview || avatar || '/avatar.png'}
-            alt="Profile photo"
+            alt="Photo de profil"
             loading="eager"
             fill
             sizes="1"
@@ -182,16 +170,16 @@ export default function AccountPage() {
           <p className="text-sm text-muted-foreground">{user.email}</p>
         </div>
 
-        <Badge variant="secondary">{isFreelancer ? 'Freelancer' : 'Client'}</Badge>
+        <Badge variant="secondary">{isFreelancer ? 'Professeur' : 'Élève'}</Badge>
       </section>
 
       {/* COMPLETE ACCOUNT */}
       {(!user.image || !user.hasPassword) && (
         <section className="rounded-lg border bg-muted/30 p-4 text-sm">
-          <p className="font-medium mb-2">Complete your account</p>
+          <p className="font-medium mb-2">Complétez votre profil</p>
           <ul className="space-y-1 text-muted-foreground text-xs">
-            {!user.image && <li>• Upload a profile photo</li>}
-            {!user.hasPassword && <li>• Create a password</li>}
+            {!user.image && <li>• Ajoutez une photo de profil</li>}
+            {!user.hasPassword && <li>• Créez un mot de passe</li>}
           </ul>
         </section>
       )}
@@ -200,13 +188,13 @@ export default function AccountPage() {
 
       {/* PROFILE IMAGE */}
       <section className="space-y-3">
-        <h3 className="text-sm font-medium">Profile photo</h3>
+        <h3 className="text-sm font-medium">Photo de profil</h3>
 
         <div className="flex items-center gap-4">
           <img
             src={preview || avatar}
             className="h-14 w-14 rounded-full border object-cover"
-            alt="Preview"
+            alt="Aperçu"
           />
 
           <Input
@@ -221,7 +209,7 @@ export default function AccountPage() {
           />
 
           <Button size="sm" onClick={handleUpdateImage} disabled={!imageFile || savingImage}>
-            {savingImage ? 'Saving...' : 'Update'}
+            {savingImage ? 'Enregistrement...' : 'Mettre à jour'}
           </Button>
         </div>
       </section>
@@ -230,31 +218,31 @@ export default function AccountPage() {
 
       {/* PASSWORD */}
       <section className="space-y-4">
-        <h3 className="text-sm font-medium">Sign-in & security</h3>
+        <h3 className="text-sm font-medium">Connexion & sécurité</h3>
 
         {!user.hasPassword ? (
           <div className="rounded-md border bg-muted/40 p-4 space-y-3">
             <Input
               type="password"
-              placeholder="Create password"
+              placeholder="Créer un mot de passe"
               value={createPassword}
               onChange={e => setCreatePassword(e.target.value)}
             />
             <Button size="sm" onClick={handleCreatePassword} disabled={passwordLoading}>
-              {passwordLoading ? 'Saving...' : 'Set password'}
+              {passwordLoading ? 'Enregistrement...' : 'Définir le mot de passe'}
             </Button>
           </div>
         ) : (
           <div className="rounded-md border p-4 space-y-3">
             <Input
               type="password"
-              placeholder="Current password"
+              placeholder="Mot de passe actuel"
               value={currentPassword}
               onChange={e => setCurrentPassword(e.target.value)}
             />
             <Input
               type="password"
-              placeholder="New password"
+              placeholder="Nouveau mot de passe"
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
             />
@@ -264,7 +252,7 @@ export default function AccountPage() {
               onClick={handleChangePassword}
               disabled={passwordLoading}
             >
-              {passwordLoading ? 'Updating...' : 'Update password'}
+              {passwordLoading ? 'Mise à jour...' : 'Modifier le mot de passe'}
             </Button>
           </div>
         )}

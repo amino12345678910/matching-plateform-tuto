@@ -5,7 +5,7 @@ export const Footer = () => {
         <div className="font-black text-xl text-emerald-600">
           9arrini<span className="text-foreground font-semibold">.tn</span> • قَرّيني
         </div>
-        <div className="text-sm text-muted-foreground">© 9arrini — Plateforme Éducative N°1 fi Tounes 2026.</div>
+        <div className="text-sm text-muted-foreground">© 9arrini — Plateforme Éducative N°1 en Tunisie 2026.</div>
         <div className="flex gap-4">
           <svg
             xmlns="http://www.w3.org/2000/svg"

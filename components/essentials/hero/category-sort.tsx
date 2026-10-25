@@ -21,40 +21,40 @@ function CategorySortSection() {
 
   const categories = [
     {
-      title: 'Coding & CS Tutoring',
-      icon: <Image src={programming} width={30} height={30} alt="Coding & CS" />,
+      title: 'Informatique & Programmation',
+      icon: <Image src={programming} width={30} height={30} alt="Informatique & Programmation" />,
     },
     {
-      title: 'Art & Design Lessons',
-      icon: <Image src={graphics} width={30} height={30} alt="Art & Design" />,
+      title: 'Arts & Design Graphique',
+      icon: <Image src={graphics} width={30} height={30} alt="Arts & Design Graphique" />,
     },
     {
-      title: 'Math & Statistics',
-      icon: <Image src={digital} width={30} height={30} alt="Mathematics" />,
+      title: 'Mathématiques & Statistiques',
+      icon: <Image src={digital} width={30} height={30} alt="Mathématiques & Statistiques" />,
     },
     {
-      title: 'Languages & Writing',
-      icon: <Image src={writing} width={30} height={30} alt="Languages & Writing" />,
+      title: 'Langues & Rédaction',
+      icon: <Image src={writing} width={30} height={30} alt="Langues & Rédaction" />,
     },
     {
-      title: 'Science & Physics',
-      icon: <Image src={video} width={30} height={30} alt="Science & Physics" />,
+      title: 'Physique & Sciences',
+      icon: <Image src={video} width={30} height={30} alt="Physique & Sciences" />,
     },
     {
-      title: 'AI & Data Science',
-      icon: <Image src={aiserivce} width={30} height={30} alt="AI & Data Science" />,
+      title: 'IA & Science des Données',
+      icon: <Image src={aiserivce} width={30} height={30} alt="IA & Science des Données" />,
     },
     {
-      title: 'Music & Instruments',
-      icon: <Image src={music} width={30} height={30} alt="Music Lessons" />,
+      title: 'Musique & Instruments',
+      icon: <Image src={music} width={30} height={30} alt="Musique & Instruments" />,
     },
     {
-      title: 'Business & Finance',
-      icon: <Image src={business} width={30} height={30} alt="Business & Finance" />,
+      title: 'Économie, Gestion & Finance',
+      icon: <Image src={business} width={30} height={30} alt="Économie, Gestion & Finance" />,
     },
     {
-      title: 'Exam Prep & Coaching',
-      icon: <Image src={consulting} width={30} height={30} alt="Exam Prep" />,
+      title: 'Préparation Bac & Concours',
+      icon: <Image src={consulting} width={30} height={30} alt="Préparation Bac & Concours" />,
     },
   ];
 
@@ -110,7 +110,7 @@ function CategorySortSection() {
               className="text-sm font-semibold"
               style={{color: '#1f2937'}}
             >
-              View 3 More
+              Voir 3 de plus
             </button>
             <ArrowDown size={16} />
           </div>

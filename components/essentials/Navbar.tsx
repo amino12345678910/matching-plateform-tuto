@@ -21,9 +21,11 @@ import {profilePhoto} from '../profile-url';
 import {getNotifications} from '@/hooks/notification/get-notifications';
 import {getStudentPointsData} from '@/hooks/points/points-actions';
 import {Skeleton} from '../loading-primitives';
+import {LanguageSwitcher, useLanguage} from '@/lib/i18n';
 
 export const Navbar = () => {
   const router = useRouter();
+  const {t} = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [authModalRole, setAuthModalRole] = useState<'USER' | 'SELLER'>('USER');
   const [authModalStep, setAuthModalStep] = useState<'signup' | 'login'>('signup');
@@ -99,10 +101,10 @@ export const Navbar = () => {
   }, []);
 
   const navItems = [
-    {label: 'Explore Tutors', href: '/explore', icon: Compass, isPublic: true},
-    {label: 'Messages', href: '/dashboard/messages', icon: MessageSquare, isPublic: false},
+    {label: t('Explorer les Profs'), href: '/explore', icon: Compass, isPublic: true},
+    {label: t('Messagerie'), href: '/dashboard/messages', icon: MessageSquare, isPublic: false},
     {
-      label: 'My Lessons',
+      label: t('Mes Cours'),
       href: role === 'SELLER' ? '/dashboard/freelancer/bookings' : '/dashboard/client/bookings',
       icon: Briefcase,
       isPublic: false,
@@ -163,6 +165,7 @@ export const Navbar = () => {
             </div>
 
             <div className="flex items-center gap-3">
+              <LanguageSwitcher />
               {initialLoading ? (
                 <div className="flex items-center gap-3">
                   <Skeleton className="h-8 w-8 rounded-md" />
@@ -247,7 +250,7 @@ export const Navbar = () => {
                             <User className="h-4 w-4" />
                           </AvatarFallback>
                         </Avatar>
-                        <span className="hidden md:inline hover:opacity-90 ">Profile</span>
+                        <span className="hidden md:inline hover:opacity-90 ">{t('Profil')}</span>
                         <ChevronDown className="h-4 w-4 hover:opacity-90 " />
                       </Badge>
                     </DropdownMenuTrigger>
@@ -385,7 +388,7 @@ export const Navbar = () => {
                 className="flex flex-col items-center justify-center h-full"
               >
                 <BarChart3 className="h-5 w-5" />
-                <span className="text-xs mt-1">Dashboard</span>
+                <span className="text-xs mt-1">{t('Tableau de bord')}</span>
               </Button>
             </div>
           </div>

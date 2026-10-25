@@ -42,7 +42,9 @@ export function NavUser({user}: {user: UserInfo}) {
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage className="object-cover" src={avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">{user.name?.slice(0, 2)?.toUpperCase() || 'US'}</AvatarFallback>
+                <AvatarFallback className="rounded-lg">
+                  {user.name?.slice(0, 2)?.toUpperCase() || 'US'}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
@@ -75,7 +77,7 @@ export function NavUser({user}: {user: UserInfo}) {
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <IconUserCircle />
-                Account
+                Mon Profil
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
