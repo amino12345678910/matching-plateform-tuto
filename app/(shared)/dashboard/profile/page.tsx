@@ -10,10 +10,8 @@ import {Badge} from '@/components/ui/badge';
 import {getUserInfo, type UserInfo} from '@/hooks/shared/get-user-info';
 import {profilePhoto} from '@/components/profile-url';
 import {storeImageToCloudinary} from '@/hooks/service/store-image';
-import {prisma} from '@/lib/prisma';
 import {updateImage} from '@/hooks/shared/update-image';
 import {authClient} from '@/lib/auth-client';
-import {auth} from '@/lib/auth';
 import {setPassword} from '@/hooks/shared/update-password';
 import {toast} from 'sonner';
 

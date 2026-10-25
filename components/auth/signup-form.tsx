@@ -38,20 +38,6 @@ export function SignupForm({className, ...props}: React.ComponentProps<'div'>) {
     setError('');
 
     try {
-      // Attempt better-auth registration if local DB is active (non-blocking)
-      try {
-        await authClient.signUp.email({
-          email,
-          password,
-          name: fullname,
-          role,
-          hasPassword: true,
-          imageSource: 'NULL',
-        });
-      } catch {
-        // Handled by cloudSignUp below
-      }
-
       const res = await cloudSignUp({
         name: fullname,
         email,

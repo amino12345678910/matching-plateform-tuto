@@ -23,6 +23,30 @@ export type UserInfo = Pick<
   | 'imageSource'
 >;
 export async function getUserInfo(): Promise<UserInfo> {
+  // 1. Check fast HTTP session cookie first (works both locally and on Netlify in <1ms)
+  try {
+    const cloudSession = await getCloudSessionCookie();
+    if (cloudSession?.userId) {
+      return {
+        userId: cloudSession.userId,
+        name: cloudSession.name,
+        role:
+          cloudSession.role === 'FREELANCER' || cloudSession.role === 'SELLER'
+            ? 'SELLER'
+            : cloudSession.role || 'USER',
+        email: cloudSession.email,
+        image: cloudSession.image ?? null,
+        createdAt: cloudSession.createdAt ? new Date(cloudSession.createdAt) : new Date(),
+        emailVerified: cloudSession.emailVerified,
+        hasPassword: cloudSession.hasPassword,
+        imageSource: cloudSession.imageSource ?? 'NULL',
+      };
+    }
+  } catch {
+    // Fallback below
+  }
+
+  // 2. Check better-auth session if local DB is active
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -34,7 +58,7 @@ export async function getUserInfo(): Promise<UserInfo> {
       return {
         userId: id,
         name,
-        role: role === 'FREELANCER' ? 'SELLER' : role,
+        role: role === 'FREELANCER' || role === 'SELLER' ? 'SELLER' : role || 'USER',
         email,
         image,
         createdAt,
@@ -44,22 +68,7 @@ export async function getUserInfo(): Promise<UserInfo> {
       };
     }
   } catch {
-    // Fallback to cloud session cookie when local DB is not running
-  }
-
-  const cloudSession = await getCloudSessionCookie();
-  if (cloudSession?.userId) {
-    return {
-      userId: cloudSession.userId,
-      name: cloudSession.name,
-      role: cloudSession.role === 'FREELANCER' ? 'SELLER' : cloudSession.role,
-      email: cloudSession.email,
-      image: cloudSession.image ?? null,
-      createdAt: cloudSession.createdAt ? new Date(cloudSession.createdAt) : new Date(),
-      emailVerified: cloudSession.emailVerified,
-      hasPassword: cloudSession.hasPassword,
-      imageSource: cloudSession.imageSource ?? 'NULL',
-    };
+    // Ignore when running in serverless fallback mode
   }
 
   return {

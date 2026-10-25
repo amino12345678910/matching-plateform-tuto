@@ -115,19 +115,6 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
     const selectedRole = regForm.role || 'USER';
 
     try {
-      try {
-        await authClient.signUp.email({
-          email: regForm.email,
-          password: regForm.password,
-          name: regForm.username,
-          role: selectedRole,
-          hasPassword: true,
-          imageSource: 'NULL',
-        });
-      } catch {
-        // Cloud fallback handled by cloudSignUp below
-      }
-
       const res = await cloudSignUp({
         name: regForm.username,
         email: regForm.email,
@@ -167,16 +154,6 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
     setLoading(true);
 
     try {
-      try {
-        await authClient.signIn.email({
-          email: loginForm.email,
-          password: loginForm.password,
-          rememberMe: true,
-        });
-      } catch {
-        // Cloud fallback handled by cloudSignIn below
-      }
-
       const res = await cloudSignIn({
         email: loginForm.email,
         password: loginForm.password,
@@ -187,7 +164,7 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
         onClose();
         setLoginForm({email: '', password: ''});
         setLoading(false);
-        window.location.href = res.redirectTo || '/dashboard';
+        window.location.href = res.redirectTo || '/dashboard/client';
         return;
       } else {
         toast.error(res.error || 'Login failed');

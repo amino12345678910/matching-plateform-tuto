@@ -7,14 +7,19 @@ async function page() {
   const {userId} = await getUserInfo();
   if (!userId) redirect('/auth/login');
 
-  const isAlreadySeller = await prisma.seller.findUnique({
-    where: {userId: userId, isVerified: true},
-    select: {id: true},
-  });
+  try {
+    const isAlreadySeller = await prisma.seller.findUnique({
+      where: {userId: userId, isVerified: true},
+      select: {id: true},
+    });
 
-  if (isAlreadySeller) redirect('/dashboard/create-service');
+    if (isAlreadySeller) redirect('/dashboard/freelancer/create-service');
+  } catch {
+    // Cloud fallback
+  }
+
   return (
-    <main className="container min-h-svh max-w-screen mx-auto  flex flex-col w-full items-center justify-center">
+    <main className="container min-h-svh max-w-screen mx-auto flex flex-col w-full items-center justify-center">
       <BecomeSeller userId={userId} />
     </main>
   );

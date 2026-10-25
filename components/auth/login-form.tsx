@@ -35,21 +35,10 @@ export function LoginForm({className, ...props}: React.ComponentProps<'div'>) {
     setError('');
 
     try {
-      // Attempt better-auth sign-in if local DB is active (non-blocking)
-      try {
-        await authClient.signIn.email({
-          email,
-          password,
-          rememberMe: true,
-        });
-      } catch {
-        // Handled by cloudSignIn below
-      }
-
       const res = await cloudSignIn({email, password});
       if (res.success) {
         toast.success('Connexion réussie ! Mar7bé bik fi 9arrini');
-        window.location.href = res.redirectTo || '/dashboard';
+        window.location.href = res.redirectTo || '/dashboard/client';
         return;
       } else {
         setError(res.error || 'Impossible de se connecter.');

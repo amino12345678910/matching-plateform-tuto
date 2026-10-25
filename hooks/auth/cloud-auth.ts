@@ -2,9 +2,10 @@
 
 import {cookies} from 'next/headers';
 import {prisma} from '@/lib/prisma';
-import {readCloudStore, writeCloudStore, type CloudUser} from '@/lib/cloud-store';
+import {readCloudStore, writeCloudStore} from '@/lib/cloud-store';
 
 const SESSION_COOKIE_NAME = '9arrini_user_session';
+const ACCOUNT_BACKUP_COOKIE = '9arrini_account_backup';
 
 export interface SessionCookiePayload {
   userId: string;
@@ -40,40 +41,48 @@ export async function getCloudSessionCookie(): Promise<SessionCookiePayload | nu
     const session = decodeSession(raw);
     if (!session || !session.userId) return null;
 
+    const normalizedRole =
+      session.role === 'SELLER' || session.role === 'FREELANCER' ? 'SELLER' : session.role || 'USER';
+    session.role = normalizedRole;
+
     // Ensure user also exists in cloud store (in case of serverless cold start)
-    const store = readCloudStore();
-    const existing = store.users.find(
-      u => u.id === session.userId || u.email.toLowerCase() === session.email.toLowerCase()
-    );
-    if (!existing) {
-      store.users.push({
-        id: session.userId,
-        name: session.name,
-        email: session.email,
-        role: session.role,
-        points: session.points ?? 50,
-        image: session.image ?? null,
-        imageSource: session.imageSource || 'NULL',
-        hasPassword: true,
-        emailVerified: true,
-        createdAt: session.createdAt || new Date().toISOString(),
-      });
-      if (session.role === 'SELLER' || session.role === 'FREELANCER') {
-        const hasSeller = store.sellers.some(s => s.userId === session.userId);
-        if (!hasSeller) {
-          store.sellers.push({
-            id: `seller-${session.userId}`,
-            userId: session.userId,
-            bio: 'Professeur sur 9arrini',
-            isVerified: false,
-            verificationStatus: 'PENDING',
-            createdAt: new Date().toISOString(),
-          });
+    try {
+      const store = readCloudStore();
+      const existing = store.users.find(
+        u => u.id === session.userId || u.email.toLowerCase() === session.email.toLowerCase()
+      );
+      if (!existing) {
+        store.users.push({
+          id: session.userId,
+          name: session.name,
+          email: session.email,
+          role: normalizedRole,
+          points: session.points ?? 50,
+          image: session.image ?? null,
+          imageSource: session.imageSource || 'NULL',
+          hasPassword: true,
+          emailVerified: true,
+          createdAt: session.createdAt || new Date().toISOString(),
+        });
+        if (normalizedRole === 'SELLER') {
+          const hasSeller = store.sellers.some(s => s.userId === session.userId);
+          if (!hasSeller) {
+            store.sellers.push({
+              id: `seller_${session.userId}`,
+              userId: session.userId,
+              bio: `Professeur ${session.name} sur 9arrini`,
+              isVerified: false,
+              verificationStatus: 'PENDING',
+              createdAt: new Date().toISOString(),
+            });
+          }
         }
+        writeCloudStore(store);
+      } else if (typeof existing.points === 'number') {
+        session.points = existing.points;
       }
-      writeCloudStore(store);
-    } else if (typeof existing.points === 'number') {
-      session.points = existing.points;
+    } catch {
+      // Ignore fs/tmp errors on read-only edge environments
     }
 
     return session;
@@ -83,13 +92,20 @@ export async function getCloudSessionCookie(): Promise<SessionCookiePayload | nu
 }
 
 export async function setCloudSessionCookie(payload: SessionCookiePayload) {
-  const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, encodeSession(payload), {
-    httpOnly: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 60 * 24 * 30, // 30 days
-  });
+  try {
+    const cookieStore = await cookies();
+    const encoded = encodeSession(payload);
+    const cookieOpts = {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      path: '/',
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+    };
+    cookieStore.set(SESSION_COOKIE_NAME, encoded, cookieOpts);
+    cookieStore.set(ACCOUNT_BACKUP_COOKIE, encoded, cookieOpts);
+  } catch {
+    // Ignore if called inside a Server Component render rather than Server Action
+  }
 }
 
 export async function clearCloudSessionCookie() {
@@ -114,7 +130,7 @@ export async function cloudSignUp(input: {
 }> {
   const cleanEmail = (input.email || '').trim().toLowerCase();
   const cleanName = (input.name || '').trim() || cleanEmail.split('@')[0] || 'Utilisateur 9arrini';
-  const normalizedRole =
+  const normalizedRole: 'USER' | 'SELLER' =
     input.role === 'SELLER' || input.role === 'FREELANCER' ? 'SELLER' : 'USER';
 
   if (!cleanEmail || !input.password) {
@@ -158,7 +174,7 @@ export async function cloudSignUp(input: {
         },
       });
 
-      if (normalizedRole === 'FREELANCER') {
+      if (normalizedRole === 'SELLER') {
         await prisma.seller.upsert({
           where: {userId: created.id},
           update: {},
@@ -176,53 +192,57 @@ export async function cloudSignUp(input: {
   }
 
   // 2. Save in Cloud Store
-  const store = readCloudStore();
-  let cloudUser = store.users.find(u => u.email.toLowerCase() === cleanEmail);
-  if (!cloudUser) {
-    cloudUser = {
-      id: userId,
-      name: cleanName,
-      email: cleanEmail,
-      password: input.password,
-      role: normalizedRole,
-      points,
-      image: null,
-      imageSource: 'NULL',
-      hasPassword: true,
-      emailVerified: true,
-      createdAt: now,
-    };
-    store.users.unshift(cloudUser);
-    store.transactions.unshift({
-      id: `tx_${Date.now()}`,
-      userId: cloudUser.id,
-      amount: 50,
-      type: 'BONUS',
-      description: 'Solde de bienvenue 9arrini (50 Points = 50 DT)',
-      createdAt: now,
-    });
-  } else {
-    cloudUser.name = cleanName;
-    cloudUser.role = normalizedRole;
-    userId = cloudUser.id;
-    points = cloudUser.points;
-  }
-
-  if (normalizedRole === 'FREELANCER') {
-    const existingSeller = store.sellers.find(s => s.userId === userId);
-    if (!existingSeller) {
-      store.sellers.unshift({
-        id: `seller_${userId}`,
-        userId,
-        bio: `Professeur ${cleanName} sur 9arrini`,
-        isVerified: false,
-        verificationStatus: 'PENDING',
+  try {
+    const store = readCloudStore();
+    let cloudUser = store.users.find(u => u.email.toLowerCase() === cleanEmail);
+    if (!cloudUser) {
+      cloudUser = {
+        id: userId,
+        name: cleanName,
+        email: cleanEmail,
+        password: input.password,
+        role: normalizedRole,
+        points,
+        image: null,
+        imageSource: 'NULL',
+        hasPassword: true,
+        emailVerified: true,
+        createdAt: now,
+      };
+      store.users.unshift(cloudUser);
+      store.transactions.unshift({
+        id: `tx_${Date.now()}`,
+        userId: cloudUser.id,
+        amount: 50,
+        type: 'BONUS',
+        description: 'Solde de bienvenue 9arrini (50 Points = 50 DT)',
         createdAt: now,
       });
+    } else {
+      cloudUser.name = cleanName;
+      cloudUser.role = normalizedRole;
+      userId = cloudUser.id;
+      points = cloudUser.points;
     }
-  }
 
-  writeCloudStore(store);
+    if (normalizedRole === 'SELLER') {
+      const existingSeller = store.sellers.find(s => s.userId === userId);
+      if (!existingSeller) {
+        store.sellers.unshift({
+          id: `seller_${userId}`,
+          userId,
+          bio: `Professeur ${cleanName} sur 9arrini`,
+          isVerified: false,
+          verificationStatus: 'PENDING',
+          createdAt: now,
+        });
+      }
+    }
+
+    writeCloudStore(store);
+  } catch {
+    // Ignore fs errors
+  }
 
   const sessionPayload: SessionCookiePayload = {
     userId,
@@ -242,10 +262,7 @@ export async function cloudSignUp(input: {
   return {
     success: true,
     user: sessionPayload,
-    redirectTo:
-      normalizedRole === 'SELLER' || normalizedRole === 'FREELANCER'
-        ? '/dashboard/freelancer'
-        : '/dashboard/client',
+    redirectTo: normalizedRole === 'SELLER' ? '/dashboard/freelancer' : '/dashboard/client',
   };
 }
 
@@ -269,10 +286,8 @@ export async function cloudSignIn(input: {
   try {
     const dbUser = await prisma.user.findUnique({where: {email: cleanEmail}});
     if (dbUser) {
-      const normalizedRole =
-        dbUser.role === 'SELLER' || dbUser.role === 'FREELANCER'
-          ? 'SELLER'
-          : (dbUser.role as any) || 'USER';
+      const normalizedRole: 'USER' | 'SELLER' =
+        dbUser.role === 'SELLER' || dbUser.role === 'FREELANCER' ? 'SELLER' : 'USER';
       const sessionPayload: SessionCookiePayload = {
         userId: dbUser.id,
         name: dbUser.name,
@@ -289,15 +304,29 @@ export async function cloudSignIn(input: {
       return {
         success: true,
         user: sessionPayload,
-        redirectTo:
-          normalizedRole === 'SELLER' ? '/dashboard/freelancer' : '/dashboard/client',
+        redirectTo: normalizedRole === 'SELLER' ? '/dashboard/freelancer' : '/dashboard/client',
       };
     }
   } catch {
     // Cloud fallback
   }
 
-  // 2. Check Cloud Store (or auto-provision on Netlify so user can always connect!)
+  // 2. Check backup cookie if user previously registered on another serverless instance
+  let backupAccount: SessionCookiePayload | null = null;
+  try {
+    const cookieStore = await cookies();
+    const rawBackup = cookieStore.get(ACCOUNT_BACKUP_COOKIE)?.value;
+    if (rawBackup) {
+      const parsed = decodeSession(rawBackup);
+      if (parsed && parsed.email.toLowerCase() === cleanEmail) {
+        backupAccount = parsed;
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  // 3. Check Cloud Store (or auto-provision on Netlify so user can always connect)
   const store = readCloudStore();
   let cloudUser = store.users.find(u => u.email.toLowerCase() === cleanEmail);
 
@@ -306,37 +335,54 @@ export async function cloudSignIn(input: {
   }
 
   if (!cloudUser) {
-    const derivedName = cleanEmail
-      .split('@')[0]
-      .replace(/[._-]/g, ' ')
-      .replace(/\b\w/g, l => l.toUpperCase());
+    const derivedName =
+      backupAccount?.name ||
+      cleanEmail
+        .split('@')[0]
+        .replace(/[._-]/g, ' ')
+        .replace(/\b\w/g, l => l.toUpperCase()) ||
+      'Élève 9arrini';
+    const derivedRole: 'USER' | 'SELLER' =
+      backupAccount?.role === 'SELLER' || backupAccount?.role === 'FREELANCER' ? 'SELLER' : 'USER';
+    const derivedPoints = backupAccount?.points ?? 50;
+
     cloudUser = {
-      id: `usr_${Date.now().toString(36)}`,
-      name: derivedName || 'Élève 9arrini',
+      id: backupAccount?.userId || `usr_${Date.now().toString(36)}`,
+      name: derivedName,
       email: cleanEmail,
       password: input.password,
-      role: 'USER',
-      points: 50,
-      image: null,
-      imageSource: 'NULL',
+      role: derivedRole,
+      points: derivedPoints,
+      image: backupAccount?.image ?? null,
+      imageSource: backupAccount?.imageSource || 'NULL',
       hasPassword: true,
       emailVerified: true,
-      createdAt: now,
+      createdAt: backupAccount?.createdAt || now,
     };
     store.users.unshift(cloudUser);
     store.transactions.unshift({
       id: `tx_${Date.now()}`,
       userId: cloudUser.id,
-      amount: 50,
+      amount: derivedPoints,
       type: 'BONUS',
       description: 'Solde de bienvenue 9arrini (50 Points = 50 DT)',
       createdAt: now,
     });
+    if (derivedRole === 'SELLER') {
+      store.sellers.unshift({
+        id: `seller_${cloudUser.id}`,
+        userId: cloudUser.id,
+        bio: `Professeur ${derivedName} sur 9arrini`,
+        isVerified: false,
+        verificationStatus: 'PENDING',
+        createdAt: now,
+      });
+    }
     writeCloudStore(store);
   }
 
-  const normalizedRole =
-    cloudUser.role === 'SELLER' ? 'FREELANCER' : cloudUser.role || 'USER';
+  const normalizedRole: 'USER' | 'SELLER' =
+    cloudUser.role === 'SELLER' || cloudUser.role === 'FREELANCER' ? 'SELLER' : 'USER';
 
   const sessionPayload: SessionCookiePayload = {
     userId: cloudUser.id,
@@ -348,7 +394,7 @@ export async function cloudSignIn(input: {
     imageSource: cloudUser.imageSource || 'NULL',
     hasPassword: true,
     emailVerified: true,
-    createdAt: cloudUser.createdAt,
+    createdAt: cloudUser.createdAt || now,
   };
 
   await setCloudSessionCookie(sessionPayload);
@@ -356,9 +402,6 @@ export async function cloudSignIn(input: {
   return {
     success: true,
     user: sessionPayload,
-    redirectTo:
-      normalizedRole === 'SELLER' || normalizedRole === 'FREELANCER'
-        ? '/dashboard/freelancer'
-        : '/dashboard/client',
+    redirectTo: normalizedRole === 'SELLER' ? '/dashboard/freelancer' : '/dashboard/client',
   };
 }
