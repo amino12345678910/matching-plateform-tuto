@@ -55,6 +55,7 @@ import {
   formatScheduleLabel,
   buildGoogleCalendarMeetUrl,
 } from '@/lib/google-meet';
+import {escapeHtml, sanitizeRichHtml} from '@/lib/sanitize';
 
 const BOOKED_SERVICES_STORAGE_KEY = '9arrini_booked_services_v1';
 
@@ -331,12 +332,12 @@ export function ServiceDetailPage({
   const formattedDescriptionHtml = useMemo(() => {
     const raw = (service.description || '').trim();
     if (!raw) {
-      return `<p>Cours proposé par ${sellerName}.</p>`;
+      return `<p>Cours proposé par ${escapeHtml(sellerName)}.</p>`;
     }
     if (raw.includes('<p>') || raw.includes('<h3>') || raw.includes('<h2>') || raw.includes('<ul>')) {
-      return raw;
+      return sanitizeRichHtml(raw);
     }
-    return `<p>${raw}</p>`;
+    return `<p>${escapeHtml(raw)}</p>`;
   }, [service.description, sellerName]);
 
   return (

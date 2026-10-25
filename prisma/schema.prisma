@@ -25,6 +25,7 @@ model User {
   updatedAt     DateTime       @updatedAt
   role          String?
   hasPassword   Boolean        @default(true)
+  passwordHash  String?
   points        Int            @default(0)
   sessions      Session[]
   accounts      Account[]
@@ -211,6 +212,10 @@ model Service {
   reviews  Review[]
   bookings Booking[]
 
+  meetLink      String?
+  scheduledDate String?
+  scheduledTime String?
+
   status    ServiceStatus @default(DRAFT)
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
@@ -266,6 +271,9 @@ model Booking {
   status       BookingStatus @default(PENDING)
   totalPrice   Float
   acceptedAt   DateTime?
+  scheduledDate String?
+  scheduledTime String?
+  meetUrl       String?
 
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -287,7 +295,7 @@ model Message {
   senderId    String
   text        String
   read        Boolean     @default(false)
-  contentType MessageType
+  contentType MessageType @default(NORMAL)
   linkedUrls  String[]
   createdAt   DateTime    @default(now())
 
@@ -306,11 +314,11 @@ enum MessageType {
 model Conversation {
   id           String @id // roomId (sorted userId--sellerUserId)
   clientId     String
-  bookingId    String
+  bookingId    String?
   freelancerId String
 
   client     User    @relation("ClientConversations", fields: [clientId], references: [id])
-  booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  booking    Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   freelancer User    @relation("FreelancerConversations", fields: [freelancerId], references: [id])
 
   createdAt DateTime  @default(now())
@@ -338,7 +346,9 @@ model Notification {
   read      Boolean          @default(false)
   createdAt DateTime         @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
 }
 
 model PointTransaction {

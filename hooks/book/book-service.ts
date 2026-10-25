@@ -4,11 +4,12 @@ import {prisma as dbContext} from '@/lib/prisma';
 import type {ServicePackage} from '@/types/service';
 import {cookies} from 'next/headers';
 import {buildBookingMessage} from './build-booking-message';
-import {createNotifications} from '../notification';
 import {revalidatePath} from 'next/cache';
 import {readCloudStore, writeCloudStore} from '@/lib/cloud-store';
 import {getCloudSessionCookie, setCloudSessionCookie} from '@/hooks/auth/cloud-auth';
+import {getUserInfo} from '@/hooks/shared/get-user-info';
 import {
+  getAllRealServices,
   getClientBookingsCookie,
   saveClientBookingCookie,
   saveClientTransactionCookie,
@@ -53,12 +54,9 @@ export const bookService = async ({
   packagePrice,
   revisions,
   delivery,
-  role,
   serviceId,
   sellerId,
   serviceSlug,
-  clientId,
-  clientName,
   freelancerId,
   freelancerName,
   scheduledDate,
@@ -66,6 +64,19 @@ export const bookService = async ({
   meetUrl,
   tutorPhone,
 }: BookServiceProps): Promise<BookServiceReturnType> => {
+  // 1. Verify authenticated user on the server (never trust client-supplied clientId or role)
+  const sessionUser = await getUserInfo();
+  if (!sessionUser?.userId) {
+    return {
+      success: false,
+      error: 'Veuillez vous connecter pour réserver ce cours.',
+    };
+  }
+
+  const clientId = sessionUser.userId;
+  const clientName = sessionUser.name || 'Élève 9arrini';
+  const role = sessionUser.role;
+
   if (role !== 'USER' && role !== 'ADMIN') {
     return {
       success: false,
@@ -74,7 +85,46 @@ export const bookService = async ({
     };
   }
 
-  const priceInPoints = Math.ceil(Number(packagePrice || 0));
+  // 2. Resolve authoritative package price on the server (never trust client-passed packagePrice)
+  let serverPackagePrice: number | null = null;
+  try {
+    const dbService = await dbContext.service.findFirst({
+      where: {
+        OR: [{id: serviceId}, ...(serviceSlug ? [{slug: serviceSlug}] : [])],
+      },
+      include: {packages: true},
+    });
+    const matchedPkg =
+      dbService?.packages.find(p => p.name === packageName) || dbService?.packages[0];
+    if (matchedPkg && typeof matchedPkg.price === 'number') {
+      serverPackagePrice = matchedPkg.price;
+    }
+  } catch {
+    // Cloud fallback
+  }
+
+  if (serverPackagePrice === null) {
+    try {
+      const realServices = await getAllRealServices();
+      const matchedService = realServices.find(
+        s => s.id === serviceId || (serviceSlug && s.slug === serviceSlug)
+      );
+      const matchedPkg =
+        matchedService?.packages?.find((p: {name: string; price: number}) => p.name === packageName) ||
+        matchedService?.packages?.[0];
+      if (matchedPkg && typeof matchedPkg.price === 'number') {
+        serverPackagePrice = matchedPkg.price;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const priceInPoints = Math.max(
+    1,
+    Math.ceil(Number(serverPackagePrice ?? packagePrice ?? 15))
+  );
+
   const cloudSession = await getCloudSessionCookie();
   const store = readCloudStore();
   let cloudStudent = store.users.find(u => u.id === clientId);
@@ -147,78 +197,95 @@ export const bookService = async ({
     };
     (await cookies()).set('X-booked-service', JSON.stringify(cookiesdata));
 
-    await dbContext.user.update({
-      where: {id: clientId},
-      data: {
-        points: {decrement: priceInPoints},
-        pointTransactions: {
-          create: {
-            amount: -priceInPoints,
-            type: 'BOOKING',
-            description: `Réservation cours : "${serviceName}" (Pack ${packageName} — ${priceInPoints} DT)`,
-          },
-        },
-      },
-    });
-
-    await dbContext.user.update({
-      where: {id: freelancerId},
-      data: {
-        points: {increment: priceInPoints},
-        pointTransactions: {
-          create: {
-            amount: priceInPoints,
-            type: 'EARNING',
-            description: `Revenu cours réservé par ${clientName} : "${serviceName}" (${priceInPoints} DT)`,
-          },
-        },
-      },
-    });
-
-    const booking = await dbContext.booking.create({
-      data: {
-        servicePackageTier: packageName,
-        status: 'CONFIRMED',
-        revisions,
-        delivery,
-        totalPrice: priceInPoints,
-        clientId,
-        sellerId,
-        serviceId,
-        freelancerId,
-      },
-    });
-
     const getRoom = (a: string, b: string) => [a, b].sort().join('--');
     const roomId = getRoom(clientId, freelancerId);
 
-    await dbContext.conversation.upsert({
-      where: {id: roomId},
-      update: {
-        bookingId: booking.id,
-        messages: {
-          create: {
-            senderId: clientId,
-            text: buildBookingMessage({clientName, delivery, packageName, revisions, serviceName}),
-            contentType: 'AUTOMATED',
-            createdAt: new Date(),
+    await dbContext.$transaction(async tx => {
+      await tx.user.update({
+        where: {id: clientId},
+        data: {
+          points: {decrement: priceInPoints},
+          pointTransactions: {
+            create: {
+              amount: -priceInPoints,
+              type: 'BOOKING',
+              description: `Réservation cours : "${serviceName}" (Pack ${packageName} — ${priceInPoints} DT)`,
+            },
           },
         },
-      },
-      create: {
-        id: roomId,
-        bookingId: booking.id,
-        clientId: clientId,
-        freelancerId,
-        messages: {
-          create: {
-            senderId: clientId,
-            text: buildBookingMessage({clientName, delivery, packageName, revisions, serviceName}),
-            contentType: 'AUTOMATED',
-            createdAt: new Date(),
+      });
+
+      await tx.user.update({
+        where: {id: freelancerId},
+        data: {
+          points: {increment: priceInPoints},
+          pointTransactions: {
+            create: {
+              amount: priceInPoints,
+              type: 'EARNING',
+              description: `Revenu cours réservé par ${clientName} : "${serviceName}" (${priceInPoints} DT)`,
+            },
           },
         },
-      },
+      });
+
+      const booking = await tx.booking.create({
+        data: {
+          servicePackageTier: packageName,
+          status: 'CONFIRMED',
+          revisions,
+          delivery,
+          totalPrice: priceInPoints,
+          clientId,
+          sellerId,
+          serviceId,
+          freelancerId,
+          scheduledDate: finalDate,
+          scheduledTime: finalTime,
+          meetUrl: finalMeetUrl,
+        },
+      });
+
+      await tx.conversation.upsert({
+        where: {id: roomId},
+        update: {
+          bookingId: booking.id,
+          messages: {
+            create: {
+              senderId: clientId,
+              text: buildBookingMessage({
+                clientName,
+                delivery,
+                packageName,
+                revisions,
+                serviceName,
+              }),
+              contentType: 'AUTOMATED',
+              createdAt: new Date(),
+            },
+          },
+        },
+        create: {
+          id: roomId,
+          bookingId: booking.id,
+          clientId: clientId,
+          freelancerId,
+          messages: {
+            create: {
+              senderId: clientId,
+              text: buildBookingMessage({
+                clientName,
+                delivery,
+                packageName,
+                revisions,
+                serviceName,
+              }),
+              contentType: 'AUTOMATED',
+              createdAt: new Date(),
+            },
+          },
+        },
+      });
     });
   } catch {
     // Cloud fallback
@@ -268,7 +335,7 @@ export const bookService = async ({
     serviceSlug,
     clientId,
     clientName,
-    clientEmail: cloudStudent?.email || cloudSession?.email || 'eleve@9arrini.tn',
+    clientEmail: cloudStudent?.email || cloudSession?.email || sessionUser.email || 'eleve@9arrini.tn',
     freelancerId,
     freelancerName: displayTutorName,
     sellerId,

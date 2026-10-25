@@ -4,6 +4,7 @@ import {prisma} from '@/lib/prisma';
 import {revalidatePath} from 'next/cache';
 import type {BookingStatus, ServiceStatus} from '@/generated/prisma';
 import {readCloudStore, writeCloudStore} from '@/lib/cloud-store';
+import {getUserInfo} from '@/hooks/shared/get-user-info';
 import {
   getAllRealServices,
   deleteCustomServiceCookie,
@@ -12,7 +13,28 @@ import {
   saveClientNotificationCookie,
 } from '@/hooks/book/bookings-store';
 
+async function requireAdminSession() {
+  const user = await getUserInfo();
+  if (!user?.userId) {
+    throw new Error('Accès refusé : veuillez vous connecter.');
+  }
+  const configuredAdmins = (process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || '')
+    .split(',')
+    .map(e => e.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (
+    configuredAdmins.length > 0 &&
+    user.role !== 'ADMIN' &&
+    !configuredAdmins.includes((user.email || '').toLowerCase())
+  ) {
+    throw new Error('Accès refusé : droits administrateur requis.');
+  }
+  return user;
+}
+
 export async function getAdminDashboardData() {
+  await requireAdminSession();
   try {
     const [tutors, students, bookings, services, transactions] = await Promise.all([
       prisma.seller.findMany({
@@ -270,6 +292,11 @@ export async function getAdminDashboardData() {
 
 export async function adminVerifyTutor(sellerId: string, verify: boolean) {
   try {
+    await requireAdminSession();
+  } catch (err: any) {
+    return {success: false, error: err?.message || 'Accès refusé.'};
+  }
+  try {
     const seller = await prisma.seller.update({
       where: {id: sellerId},
       data: {
@@ -343,6 +370,11 @@ export async function adminAdjustStudentPoints(
   amount: number,
   reason?: string
 ) {
+  try {
+    await requireAdminSession();
+  } catch (err: any) {
+    return {success: false, error: err?.message || 'Accès refusé.'};
+  }
   const cleanAmount = Math.floor(Number(amount));
   if (!cleanAmount || cleanAmount === 0) {
     return {success: false, error: 'Veuillez indiquer un nombre de points non nul.'};
@@ -408,6 +440,11 @@ export async function adminAdjustStudentPoints(
 
 export async function adminUpdateBookingStatus(bookingId: string, status: BookingStatus) {
   try {
+    await requireAdminSession();
+  } catch (err: any) {
+    return {success: false, error: err?.message || 'Accès refusé.'};
+  }
+  try {
     await prisma.booking.update({
       where: {id: bookingId},
       data: {
@@ -440,6 +477,11 @@ export async function adminUpdateBookingStatus(bookingId: string, status: Bookin
 
 export async function adminUpdateServiceStatus(serviceId: string, status: ServiceStatus) {
   try {
+    await requireAdminSession();
+  } catch (err: any) {
+    return {success: false, error: err?.message || 'Accès refusé.'};
+  }
+  try {
     await prisma.service.update({
       where: {id: serviceId},
       data: {status},
@@ -468,6 +510,11 @@ export async function adminUpdateServiceStatus(serviceId: string, status: Servic
 }
 
 export async function adminDeleteService(serviceId: string) {
+  try {
+    await requireAdminSession();
+  } catch (err: any) {
+    return {success: false, error: err?.message || 'Accès refusé.'};
+  }
   try {
     await prisma.service.delete({
       where: {id: serviceId},

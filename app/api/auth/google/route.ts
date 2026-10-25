@@ -1,4 +1,5 @@
 import {NextRequest, NextResponse} from 'next/server';
+import {createOAuthState} from '@/lib/session';
 
 export async function GET(request: NextRequest) {
   const clientId =
@@ -11,7 +12,9 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const role = request.nextUrl.searchParams.get('role') || 'USER';
+  const rawRole = request.nextUrl.searchParams.get('role') || 'USER';
+  const role: 'USER' | 'SELLER' =
+    rawRole === 'SELLER' || rawRole === 'FREELANCER' ? 'SELLER' : 'USER';
 
   if (!clientId) {
     return NextResponse.redirect(
@@ -25,6 +28,8 @@ export async function GET(request: NextRequest) {
   const redirectUri =
     process.env.GOOGLE_REDIRECT_URI || `${origin}/api/auth/google/callback`;
 
+  const stateNonce = await createOAuthState(role);
+
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
@@ -32,7 +37,7 @@ export async function GET(request: NextRequest) {
     scope: 'openid email profile',
     prompt: 'select_account',
     access_type: 'online',
-    state: role,
+    state: stateNonce,
   });
 
   return NextResponse.redirect(

@@ -861,7 +861,8 @@ export function AdminDashboardClient({initialData}: AdminDashboardProps) {
                     </thead>
                     <tbody className="divide-y">
                       {filteredServices.map(srv => {
-                        const minPrice = Math.min(...srv.packages.map(p => p.price)) || 0;
+                        const minPrice =
+                          Math.min(...srv.packages.map((p: {price: number}) => p.price)) || 0;
                         const isShortSpam = srv.title.trim().split(/\s+/).length < 3;
                         return (
                           <tr key={srv.id} className="hover:bg-muted/30">

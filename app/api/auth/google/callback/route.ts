@@ -1,14 +1,20 @@
 import {NextRequest, NextResponse} from 'next/server';
 import {cloudGoogleSignIn} from '@/hooks/auth/cloud-auth';
+import {consumeOAuthState} from '@/lib/session';
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code');
-  const stateRole = request.nextUrl.searchParams.get('state') || 'USER';
-  const role: 'USER' | 'SELLER' = stateRole === 'SELLER' ? 'SELLER' : 'USER';
+  const returnedState = request.nextUrl.searchParams.get('state');
 
   if (!code) {
     return NextResponse.redirect(new URL('/auth/login', request.url));
   }
+
+  const verifiedRole = await consumeOAuthState(returnedState);
+  if (!verifiedRole) {
+    return NextResponse.redirect(new URL('/auth/login?error=invalid_oauth_state', request.url));
+  }
+  const role: 'USER' | 'SELLER' = verifiedRole;
 
   const clientId =
     process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';

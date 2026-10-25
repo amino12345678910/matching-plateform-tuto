@@ -179,7 +179,7 @@ export function Inbox({
 
         <BookingActionCard
           status={booking.status}
-          role={currentUser.role}
+          role={currentUser.role === 'SELLER' ? 'SELLER' : 'USER'}
           onAction={handleBookingAction}
         />
       </div>
