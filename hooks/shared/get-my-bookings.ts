@@ -100,13 +100,18 @@ async function getMyBookings({
   return userBookings.map(b => {
     const matchedService = allServices.find(s => s.id === b.serviceId || s.slug === b.serviceSlug);
     return {
-      id: b.serviceId,
+      id: b.id || b.serviceId,
+      serviceId: b.serviceId,
       title: b.serviceTitle,
       slug: b.serviceSlug,
       images: matchedService?.images || ['/assets/seo.webp'],
       status: 'ACTIVE' as const,
       updatedAt: new Date(b.createdAt),
-      packages: matchedService?.packages || [
+      scheduledDate: b.scheduledDate,
+      scheduledTime: b.scheduledTime,
+      meetLink: b.meetUrl,
+      tutorPhone: b.tutorPhone || '+216 22 410 112',
+      packages: [
         {name: b.servicePackageTier, price: b.totalPrice, delivery: b.delivery},
       ],
       counterparty: isClient

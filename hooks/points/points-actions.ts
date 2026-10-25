@@ -4,7 +4,12 @@ import {prisma} from '@/lib/prisma';
 import {getUserInfo} from '@/hooks/shared/get-user-info';
 import {getCloudSessionCookie, setCloudSessionCookie} from '@/hooks/auth/cloud-auth';
 import {readCloudStore, writeCloudStore} from '@/lib/cloud-store';
-import {getClientBookingsCookie} from '@/hooks/book/bookings-store';
+import {
+  getClientBookingsCookie,
+  getClientTransactionsCookie,
+  saveClientTransactionCookie,
+  saveClientNotificationCookie,
+} from '@/hooks/book/bookings-store';
 import {revalidatePath} from 'next/cache';
 
 export async function getStudentPointsData() {
@@ -45,24 +50,45 @@ export async function getStudentPointsData() {
       };
     }
   } catch {
-    // Cloud fallback on Netlify
+    // Cloud fallback
   }
 
   const store = readCloudStore();
   const cloudSession = await getCloudSessionCookie();
   const cloudUser = store.users.find(u => u.id === userId);
   const points = cloudSession?.points ?? cloudUser?.points ?? 50;
-  const userTx = store.transactions
-    .filter(t => t.userId === userId)
-    .map(t => ({
-      ...t,
-      createdAt: new Date(t.createdAt),
-    }));
+
+  const cookieTx = await getClientTransactionsCookie(userId);
+  const cookieBookings = await getClientBookingsCookie(userId);
+  const bookingTx = cookieBookings.map(b => ({
+    id: `tx_bk_${b.id}`,
+    userId,
+    amount: -b.totalPrice,
+    type: 'BOOKING_PAYMENT' as const,
+    description: `Réservation cours : "${b.serviceTitle}" (Pack ${b.servicePackageTier} — ${b.totalPrice} DT)`,
+    createdAt: b.createdAt,
+  }));
+
+  const storeTx = store.transactions.filter(t => t.userId === userId);
+  const welcomeTx = {
+    id: `tx_welcome_${userId}`,
+    userId,
+    amount: 50,
+    type: 'BONUS' as const,
+    description: 'Solde de bienvenue 9arrini (50 Points = 50 DT offerts)',
+    createdAt: cloudSession?.createdAt || new Date().toISOString(),
+  };
+
+  const mergedRaw = [...cookieTx, ...bookingTx, ...storeTx, welcomeTx];
+  const uniqueTx = Array.from(new Map(mergedRaw.map(t => [t.id, t])).values()).map(t => ({
+    ...t,
+    createdAt: new Date(t.createdAt),
+  }));
 
   return {
     success: true,
     points,
-    transactions: userTx,
+    transactions: uniqueTx,
     userId,
     user: {
       id: userId,
@@ -117,10 +143,14 @@ export async function buyStudentPoints(amount: number, packLabel?: string) {
     // Cloud fallback
   }
 
-  // Always update Cloud Store & Cookie so Netlify persists the new balance
   const store = readCloudStore();
   let cloudUser = store.users.find(u => u.id === userId);
   const currentCookie = await getCloudSessionCookie();
+  const basePoints = currentCookie?.points ?? cloudUser?.points ?? 50;
+
+  if (updatedPoints === null) {
+    updatedPoints = basePoints + cleanAmount;
+  }
 
   if (!cloudUser && currentCookie) {
     cloudUser = {
@@ -128,7 +158,7 @@ export async function buyStudentPoints(amount: number, packLabel?: string) {
       name: currentCookie.name,
       email: currentCookie.email,
       role: currentCookie.role,
-      points: currentCookie.points ?? 50,
+      points: updatedPoints,
       image: currentCookie.image ?? null,
       imageSource: currentCookie.imageSource || 'NULL',
       hasPassword: true,
@@ -136,24 +166,35 @@ export async function buyStudentPoints(amount: number, packLabel?: string) {
       createdAt: currentCookie.createdAt || new Date().toISOString(),
     };
     store.users.unshift(cloudUser);
+  } else if (cloudUser) {
+    cloudUser.points = updatedPoints;
   }
 
-  if (cloudUser) {
-    cloudUser.points =
-      updatedPoints !== null ? updatedPoints : (cloudUser.points || 0) + cleanAmount;
-    updatedPoints = cloudUser.points;
-    store.transactions.unshift({
-      id: `tx_${Date.now()}`,
-      userId,
-      amount: cleanAmount,
-      type: 'PURCHASE',
-      description,
-      createdAt: new Date().toISOString(),
-    });
-    writeCloudStore(store);
-  }
+  const now = new Date().toISOString();
+  const txRecord = {
+    id: `tx_${Date.now()}`,
+    userId,
+    amount: cleanAmount,
+    type: 'PURCHASE' as const,
+    description,
+    createdAt: now,
+  };
 
-  if (currentCookie && updatedPoints !== null) {
+  await saveClientTransactionCookie(txRecord);
+  await saveClientNotificationCookie({
+    id: `notif_topup_${Date.now()}`,
+    userId,
+    title: `💳 Recharge confirmée : +${cleanAmount} Points (${cleanAmount} DT) ajoutés. Nouveau solde : ${updatedPoints} Pts.`,
+    type: 'AUTOMATED',
+    link: '/dashboard/client/points',
+    read: false,
+    createdAt: now,
+  });
+
+  store.transactions.unshift(txRecord);
+  writeCloudStore(store);
+
+  if (currentCookie) {
     await setCloudSessionCookie({
       ...currentCookie,
       points: updatedPoints,
@@ -162,12 +203,13 @@ export async function buyStudentPoints(amount: number, packLabel?: string) {
 
   revalidatePath('/dashboard/client');
   revalidatePath('/dashboard/client/points');
+  revalidatePath('/notification');
   revalidatePath('/explore');
 
   return {
     success: true,
-    points: updatedPoints ?? cleanAmount,
-    newBalance: updatedPoints ?? cleanAmount,
+    points: updatedPoints,
+    newBalance: updatedPoints,
     message: `Mabrouk ! +${cleanAmount} Points (${cleanAmount} DT) ajoutés à votre compte.`,
   };
 }

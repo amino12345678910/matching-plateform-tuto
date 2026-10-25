@@ -28,6 +28,9 @@ import {
   ExternalLink,
   Lock,
   UserCheck,
+  MessageCircle,
+  MessageSquare,
+  BellRing,
 } from 'lucide-react';
 import type {Service, ServicePackage} from '@/types/service';
 import {allowClientOnly} from './validate/allow-user-only';
@@ -174,6 +177,21 @@ export function ServiceDetailPage({service}: {service: Service}) {
       ? Math.max(0, currentPackage.price - studentPoints)
       : 0;
 
+  const tutorPhone = ((seller as any)?.phone || '+216 22 410 112').replace(/[^0-9]/g, '');
+  const whatsappUrl = useMemo(() => {
+    const msg = encodeURIComponent(
+      `Bonjour Professeur ${sellerName}, je vous contacte depuis 9arrini.me concernant le cours "${displayTitle}" prévu le ${formatScheduleLabel(
+        sessionDate,
+        sessionTime
+      )}.`
+    );
+    return `https://wa.me/${tutorPhone || '21622410112'}?text=${msg}`;
+  }, [sellerName, displayTitle, sessionDate, sessionTime, tutorPhone]);
+
+  const internalChatUrl = `/dashboard/messages?tutorId=${encodeURIComponent(
+    service.freelancerId || service.seller?.userId || 'tutor_1'
+  )}&tutorName=${encodeURIComponent(sellerName)}&course=${encodeURIComponent(displayTitle)}`;
+
   const handleQuickRecharge = async (amountToRecharge: number) => {
     setIsRecharging(true);
     try {
@@ -182,8 +200,12 @@ export function ServiceDetailPage({service}: {service: Service}) {
         `Recharge rapide cours (${amountToRecharge} Pts = ${amountToRecharge} DT)`
       );
       if (res.success) {
+        const updatedPts = res.newBalance ?? (studentPoints || 0) + amountToRecharge;
         toast.success(res.message || `+${amountToRecharge} Points ajoutés !`);
-        setStudentPoints(res.newBalance ?? (studentPoints || 0) + amountToRecharge);
+        setStudentPoints(updatedPts);
+        window.dispatchEvent(
+          new CustomEvent('9arrini-points-updated', {detail: {points: updatedPts}})
+        );
       } else {
         toast.error(res.error || 'Veuillez vous connecter pour recharger vos points.');
       }
@@ -202,6 +224,7 @@ export function ServiceDetailPage({service}: {service: Service}) {
 
       if (!role) {
         toast.info('Connectez-vous à votre compte élève pour réserver ce cours.');
+        window.location.href = '/auth/login';
         return;
       }
 
@@ -236,19 +259,26 @@ export function ServiceDetailPage({service}: {service: Service}) {
           clientId,
           clientName,
           freelancerId: service.freelancerId,
+          freelancerName: sellerName,
+          scheduledDate: sessionDate,
+          scheduledTime: sessionTime,
+          meetUrl: initialMeet.meetUrl,
         });
 
         if (success) {
           setHasBooked(true);
+          const computedBalance =
+            typeof newBalance === 'number'
+              ? newBalance
+              : Math.max(0, (studentPoints ?? 50) - currentPackage.price);
+          setStudentPoints(computedBalance);
+          window.dispatchEvent(
+            new CustomEvent('9arrini-points-updated', {detail: {points: computedBalance}})
+          );
           toast.success(
             message ||
-              `Séance réservée avec succès ! (-${currentPackage.price} Points / ${currentPackage.price} DT) • Le lien Google Meet est maintenant débloqué !`
+              `Séance réservée avec succès ! (-${currentPackage.price} Points / ${currentPackage.price} DT) • Le lien Google Meet est débloqué !`
           );
-          if (typeof newBalance === 'number') {
-            setStudentPoints(newBalance);
-          } else if (studentPoints !== null) {
-            setStudentPoints(Math.max(0, studentPoints - currentPackage.price));
-          }
         } else if (error) {
           toast.error(error);
           if (insufficientPoints) {
@@ -431,12 +461,30 @@ export function ServiceDetailPage({service}: {service: Service}) {
                     </div>
                   </div>
 
-                  <Button variant="outline" size="sm" className="sm:self-start shrink-0" asChild>
-                    <Link href={`/freelancer/${service.freelancerId}`}>
-                      Voir Profil Prof
-                      <ChevronRight className="ml-1 h-3 w-3" />
-                    </Link>
-                  </Button>
+                  <div className="flex flex-wrap sm:flex-col gap-2 sm:self-start shrink-0">
+                    <Button
+                      size="sm"
+                      className="bg-[#25D366] hover:bg-[#1ebe5d] text-white font-semibold text-xs"
+                      asChild
+                    >
+                      <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+                        <MessageCircle className="mr-1.5 h-3.5 w-3.5" />
+                        WhatsApp Prof
+                      </a>
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-xs font-semibold" asChild>
+                      <Link href={internalChatUrl}>
+                        <MessageSquare className="mr-1.5 h-3.5 w-3.5 text-emerald-600" />
+                        Message 9arrini
+                      </Link>
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-xs" asChild>
+                      <Link href={`/freelancer/${service.freelancerId}`}>
+                        Voir Profil Prof
+                        <ChevronRight className="ml-1 h-3 w-3" />
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
 
                 {service.seller.bio && (
@@ -657,6 +705,25 @@ export function ServiceDetailPage({service}: {service: Service}) {
                                 <ExternalLink className="h-3 w-3" />
                                 Agenda ({formatScheduleLabel(sessionDate, sessionTime).split(' ')[0]})
                               </a>
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-1 border-t border-emerald-100 dark:border-emerald-900">
+                              <a
+                                href={whatsappUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 inline-flex items-center justify-center gap-1 rounded-md bg-[#25D366] hover:bg-[#1ebe5d] text-white py-1 px-2 text-[11px] font-semibold transition"
+                              >
+                                <MessageCircle className="h-3 w-3" />
+                                WhatsApp Prof
+                              </a>
+                              <Link
+                                href="/dashboard/client/bookings"
+                                className="flex-1 inline-flex items-center justify-center gap-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-800 py-1 px-2 text-[11px] font-semibold transition"
+                              >
+                                <BellRing className="h-3 w-3 text-emerald-600" />
+                                Mes Cours Réservés
+                              </Link>
                             </div>
                           </div>
                         </div>

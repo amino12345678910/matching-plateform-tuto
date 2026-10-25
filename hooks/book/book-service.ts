@@ -8,7 +8,12 @@ import {createNotifications} from '../notification';
 import {revalidatePath} from 'next/cache';
 import {readCloudStore, writeCloudStore} from '@/lib/cloud-store';
 import {getCloudSessionCookie, setCloudSessionCookie} from '@/hooks/auth/cloud-auth';
-import {saveClientBookingCookie} from '@/hooks/book/bookings-store';
+import {
+  saveClientBookingCookie,
+  saveClientTransactionCookie,
+  saveClientNotificationCookie,
+} from '@/hooks/book/bookings-store';
+import {formatScheduleLabel, getServiceMeetInfo} from '@/lib/google-meet';
 
 export type BookServiceProps = {
   serviceName: string;
@@ -23,6 +28,11 @@ export type BookServiceProps = {
   clientId: string;
   clientName: string;
   freelancerId: string;
+  freelancerName?: string;
+  scheduledDate?: string;
+  scheduledTime?: string;
+  meetUrl?: string;
+  tutorPhone?: string;
 };
 
 type BookServiceReturnType = {
@@ -33,6 +43,7 @@ type BookServiceReturnType = {
   requiredPoints?: number;
   currentPoints?: number;
   newBalance?: number;
+  bookingId?: string;
 };
 
 export const bookService = async ({
@@ -48,6 +59,11 @@ export const bookService = async ({
   clientId,
   clientName,
   freelancerId,
+  freelancerName,
+  scheduledDate,
+  scheduledTime,
+  meetUrl,
+  tutorPhone,
 }: BookServiceProps): Promise<BookServiceReturnType> => {
   if (role !== 'USER' && role !== 'ADMIN') {
     return {
@@ -69,8 +85,8 @@ export const bookService = async ({
       where: {id: clientId},
       select: {points: true},
     });
-    if (student) {
-      currentPoints = student.points ?? 0;
+    if (student && typeof student.points === 'number') {
+      currentPoints = student.points;
     }
   } catch {
     // Cloud fallback
@@ -87,6 +103,17 @@ export const bookService = async ({
   }
 
   const newBalance = currentPoints - priceInPoints;
+  const meetInfo = getServiceMeetInfo({
+    slug: serviceSlug,
+    title: serviceName,
+    scheduledDate,
+    scheduledTime,
+    meetLink: meetUrl,
+  });
+  const finalDate = scheduledDate || meetInfo.scheduledDate;
+  const finalTime = scheduledTime || meetInfo.scheduledTime;
+  const finalMeetUrl = meetUrl || meetInfo.meetUrl;
+  const scheduleLabel = formatScheduleLabel(finalDate, finalTime);
 
   try {
     const cookiesdata = {
@@ -126,7 +153,7 @@ export const bookService = async ({
     const booking = await dbContext.booking.create({
       data: {
         servicePackageTier: packageName,
-        status: 'PENDING',
+        status: 'CONFIRMED',
         revisions,
         delivery,
         totalPrice: priceInPoints,
@@ -168,26 +195,11 @@ export const bookService = async ({
         },
       },
     });
-
-    await createNotifications([
-      {
-        userId: clientId,
-        title: `Cours réservé : "${serviceName}" (-${priceInPoints} Points / ${priceInPoints} DT).`,
-        type: 'ORDER',
-        link: `/dashboard/client/bookings`,
-      },
-      {
-        userId: freelancerId,
-        title: `Nouvelle réservation de ${clientName} (+${priceInPoints} Pts / ${priceInPoints} DT).`,
-        type: 'ORDER',
-        link: `/dashboard/freelancer/bookings`,
-      },
-    ]);
   } catch {
-    // Cloud fallback when running on Netlify
+    // Cloud fallback
   }
 
-  // Always update Cloud Store & Cookie so Netlify persists the booking and updated points
+  // Always update Cloud Store & Cookies so Vercel serverless persists booking, points, transactions & notifications
   const now = new Date().toISOString();
   if (!cloudStudent && cloudSession) {
     cloudStudent = {
@@ -195,7 +207,7 @@ export const bookService = async ({
       name: cloudSession.name,
       email: cloudSession.email,
       role: cloudSession.role,
-      points: currentPoints,
+      points: newBalance,
       image: cloudSession.image ?? null,
       imageSource: cloudSession.imageSource || 'NULL',
       hasPassword: true,
@@ -203,9 +215,7 @@ export const bookService = async ({
       createdAt: cloudSession.createdAt || now,
     };
     store.users.unshift(cloudStudent);
-  }
-
-  if (cloudStudent) {
+  } else if (cloudStudent) {
     cloudStudent.points = newBalance;
   }
 
@@ -214,17 +224,20 @@ export const bookService = async ({
     cloudTutor.points = (cloudTutor.points || 0) + priceInPoints;
   }
 
-  store.transactions.unshift({
+  const displayTutorName = freelancerName || cloudTutor?.name || 'Professeur 9arrini';
+  const bookingId = `bk_${Date.now()}`;
+
+  const txRecord = {
     id: `tx_book_${Date.now()}`,
     userId: clientId,
     amount: -priceInPoints,
-    type: 'BOOKING_PAYMENT',
+    type: 'BOOKING_PAYMENT' as const,
     description: `Réservation cours : "${serviceName}" (Pack ${packageName} — ${priceInPoints} DT)`,
     createdAt: now,
-  });
+  };
 
   const newBooking = {
-    id: `bk_${Date.now()}`,
+    id: bookingId,
     serviceId,
     serviceTitle: serviceName,
     serviceSlug,
@@ -232,17 +245,44 @@ export const bookService = async ({
     clientName,
     clientEmail: cloudStudent?.email || cloudSession?.email || 'eleve@9arrini.tn',
     freelancerId,
-    freelancerName: cloudTutor?.name || 'Professeur 9arrini',
+    freelancerName: displayTutorName,
     sellerId,
     servicePackageTier: packageName,
     totalPrice: priceInPoints,
     delivery,
     revisions,
     status: 'CONFIRMED' as const,
+    scheduledDate: finalDate,
+    scheduledTime: finalTime,
+    meetUrl: finalMeetUrl,
+    tutorPhone: tutorPhone || '+216 22 410 112',
     createdAt: now,
   };
 
   await saveClientBookingCookie(newBooking);
+  await saveClientTransactionCookie(txRecord);
+  await saveClientNotificationCookie([
+    {
+      id: `notif_bk_${Date.now()}_1`,
+      userId: clientId,
+      title: `✅ Séance réservée & payée : "${serviceName}" (-${priceInPoints} Points / ${priceInPoints} DT). Nouveau solde : ${newBalance} Pts.`,
+      type: 'ORDER',
+      link: '/dashboard/client/bookings',
+      read: false,
+      createdAt: now,
+    },
+    {
+      id: `rem_${bookingId}`,
+      userId: clientId,
+      title: `⏰ Rappel de cours : "${serviceName}" avec ${displayTutorName} — Prévu le ${scheduleLabel}. Lien Google Meet : ${finalMeetUrl}`,
+      type: 'ORDER',
+      link: '/dashboard/client/bookings',
+      read: false,
+      createdAt: now,
+    },
+  ]);
+
+  store.transactions.unshift(txRecord);
   store.bookings.unshift(newBooking);
   writeCloudStore(store);
 
@@ -257,12 +297,14 @@ export const bookService = async ({
   revalidatePath('/dashboard/client/bookings');
   revalidatePath('/dashboard/client/points');
   revalidatePath('/dashboard/freelancer');
-  revalidatePath('/admin');
+  revalidatePath('/notification');
+  revalidatePath(`/service/${serviceSlug}`);
 
   return {
     success: true,
     newBalance,
-    message: `Mabrouk ! Cours réservé avec ${priceInPoints} Points (${priceInPoints} DT). Le professeur vous répondra très vite !`,
+    bookingId,
+    message: `Mabrouk ! Séance réservée (${scheduleLabel}) avec ${priceInPoints} Points (${priceInPoints} DT). Retrouvez-la dans vos Cours Réservés et vos Notifications !`,
     error: undefined,
   };
 };

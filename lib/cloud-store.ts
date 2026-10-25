@@ -56,6 +56,29 @@ export interface CloudBooking {
   delivery: number;
   revisions: number;
   status: 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED';
+  scheduledDate?: string;
+  scheduledTime?: string;
+  meetUrl?: string;
+  tutorPhone?: string;
+  createdAt: string;
+}
+
+export interface CloudNotification {
+  id: string;
+  userId: string;
+  title: string;
+  type: 'ORDER' | 'MESSAGE' | 'AUTOMATED' | 'SYSTEM';
+  link?: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface CloudChatMessage {
+  id: string;
+  roomId: string;
+  senderId: string;
+  senderName: string;
+  text: string;
   createdAt: string;
 }
 
@@ -82,6 +105,8 @@ export interface CloudStoreData {
   bookings: CloudBooking[];
   customServices: any[];
   reviews: CloudReview[];
+  notifications?: CloudNotification[];
+  messages?: CloudChatMessage[];
 }
 
 const STORE_FILE = path.join(os.tmpdir(), '9arrini-cloud-store-v1.json');

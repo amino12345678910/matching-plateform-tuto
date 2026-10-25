@@ -54,7 +54,7 @@ export const Navbar = () => {
           ]);
           setPoints(ptsData.points ?? 0);
           if (success && localNotification) {
-            setNotifications(prev => [...prev, ...localNotification]);
+            setNotifications(localNotification);
           }
         }
       } catch (e) {
@@ -65,6 +65,27 @@ export const Navbar = () => {
     };
 
     getAuthAndNotifications();
+
+    const handlePointsUpdated = async (e: any) => {
+      if (typeof e?.detail?.points === 'number') {
+        setPoints(e.detail.points);
+      } else {
+        const ptsData = await getStudentPointsData();
+        setPoints(ptsData.points ?? 0);
+      }
+      const {userId} = await getUserInfo();
+      if (userId) {
+        const {success, notifications: freshNotifs} = await getNotifications({userId});
+        if (success && freshNotifs) {
+          setNotifications(freshNotifs);
+        }
+      }
+    };
+
+    window.addEventListener('9arrini-points-updated', handlePointsUpdated);
+    return () => {
+      window.removeEventListener('9arrini-points-updated', handlePointsUpdated);
+    };
   }, []);
 
   useEffect(() => {
@@ -154,22 +175,60 @@ export const Navbar = () => {
                     </span>
                   </Link>
 
-                  <Button variant="ghost" size="icon" className="relative" asChild>
-                    <Link href="/notification">
-                      <Bell className="h-5 w-5" />
-                      {notifications.length > 0 && (
-                        <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center">
-                          {notifications.length}
-                        </Badge>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="relative">
+                        <Bell className="h-5 w-5" />
+                        {notifications.length > 0 && (
+                          <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-emerald-600 text-white text-[10px]">
+                            {notifications.length}
+                          </Badge>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-80 p-2 space-y-1">
+                      <div className="flex items-center justify-between px-2 py-1.5 border-b">
+                        <span className="text-xs font-bold">Notifications & Rappels de cours</span>
+                        <Link
+                          href="/notification"
+                          className="text-[11px] font-semibold text-emerald-600 hover:underline"
+                        >
+                          Tout voir
+                        </Link>
+                      </div>
+                      {notifications.length === 0 ? (
+                        <div className="py-6 text-center text-xs text-muted-foreground">
+                          Aucune nouvelle notification
+                        </div>
+                      ) : (
+                        notifications.slice(0, 5).map((n: any, idx: number) => (
+                          <DropdownMenuItem
+                            key={n.id || idx}
+                            onClick={() => router.push(n.link || '/dashboard/client/bookings')}
+                            className="cursor-pointer flex flex-col items-start gap-1 py-2 px-2.5 rounded-lg"
+                          >
+                            <span className="text-xs font-medium leading-snug line-clamp-3">
+                              {n.title}
+                            </span>
+                          </DropdownMenuItem>
+                        ))
                       )}
-                    </Link>
-                  </Button>
+                      <div className="pt-1 border-t">
+                        <DropdownMenuItem
+                          onClick={() => router.push('/dashboard/client/bookings')}
+                          className="cursor-pointer justify-center text-xs font-semibold text-emerald-700"
+                        >
+                          Voir mes séances réservées →
+                        </DropdownMenuItem>
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Badge
                         variant="secondary"
-                        className="border-none py-1 bg-background gap-2 hover:opacity-95"
+                        className="border-none py-1 bg-background gap-2 hover:opacity-95 cursor-pointer"
                       >
                         <Avatar className="h-8 w-8">
                           <AvatarImage
@@ -187,14 +246,26 @@ export const Navbar = () => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56 py-2 px-1.5 ">
                       {role === 'USER' && (
-                        <DropdownMenuItem onClick={() => router.push('/dashboard/client/points')}>
-                          <Coins className="h-4 w-4 mr-2 text-amber-500" />
-                          Points Account ({points} Pts = {points} DT)
-                        </DropdownMenuItem>
+                        <>
+                          <DropdownMenuItem onClick={() => router.push('/dashboard/client/points')}>
+                            <Coins className="h-4 w-4 mr-2 text-amber-500" />
+                            Solde Points ({points} Pts = {points} DT)
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => router.push('/dashboard/client/bookings')}
+                          >
+                            <Briefcase className="h-4 w-4 mr-2 text-emerald-600" />
+                            Mes Cours Réservés
+                          </DropdownMenuItem>
+                        </>
                       )}
+                      <DropdownMenuItem onClick={() => router.push('/dashboard/messages')}>
+                        <MessageSquare className="h-4 w-4 mr-2 text-emerald-600" />
+                        Messagerie
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
                         <User className="h-4 w-4 mr-2" />
-                        Profile
+                        Mon Profil
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() =>
@@ -204,10 +275,10 @@ export const Navbar = () => {
                         }
                       >
                         <BarChart3 className="h-4 w-4 mr-2" />
-                        Dashboard
+                        Tableau de bord
                       </DropdownMenuItem>
                       <DropdownMenuItem className="text-red-600" onClick={handleLogout}>
-                        Logout
+                        Déconnexion
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
