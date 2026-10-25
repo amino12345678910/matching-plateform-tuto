@@ -1,6 +1,16 @@
+import {createHmac, timingSafeEqual} from 'crypto';
 import {NextRequest, NextResponse} from 'next/server';
 
 const SESSION_COOKIE_NAME = '9arrini_user_session';
+
+function getSessionSecret(): string {
+  return (
+    process.env.BETTER_AUTH_SECRET ||
+    process.env.AUTH_SECRET ||
+    process.env.NEXTAUTH_SECRET ||
+    '9arrini-default-hmac-secret-change-in-production-2026'
+  );
+}
 
 function parseSessionCookie(raw?: string): {
   userId?: string;
@@ -9,10 +19,21 @@ function parseSessionCookie(raw?: string): {
 } | null {
   if (!raw) return null;
   try {
-    const normalized = raw.replace(/-/g, '+').replace(/_/g, '/');
-    const pad = normalized.length % 4;
-    const padded = pad ? normalized + '='.repeat(4 - pad) : normalized;
-    const json = atob(padded);
+    const parts = raw.split('.');
+    if (parts.length !== 2) return null;
+    const [body, sig] = parts;
+    if (!body || !sig) return null;
+
+    const expectedSig = createHmac('sha256', getSessionSecret())
+      .update(body)
+      .digest('base64url');
+    const sigBuf = Buffer.from(sig);
+    const expectedBuf = Buffer.from(expectedSig);
+    if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)) {
+      return null;
+    }
+
+    const json = Buffer.from(body, 'base64url').toString('utf-8');
     return JSON.parse(json);
   } catch {
     return null;
@@ -36,7 +57,12 @@ export async function proxy(request: NextRequest) {
 
     if (role && email && ['/auth/login', '/auth/signup'].includes(pathname)) {
       return NextResponse.redirect(
-        new URL(`/dashboard/${role === 'SELLER' ? 'freelancer' : 'client'}`, request.url)
+        new URL(
+          role === 'ADMIN'
+            ? '/admin'
+            : `/dashboard/${role === 'SELLER' ? 'freelancer' : 'client'}`,
+          request.url
+        )
       );
     }
 
