@@ -34,6 +34,9 @@ type ServiceForm = {
   description: string;
   tags: string;
   images: File[];
+  scheduledDate?: string;
+  scheduledTime?: string;
+  meetLink?: string;
   basicPackage: PackageForm;
   standardPackage: PackageForm;
   premiumPackage: PackageForm;
@@ -184,6 +187,9 @@ function CreationSteps() {
         slug: slug,
         title: data.title.trim(),
         description: data.description.trim(),
+        scheduledDate: data.scheduledDate,
+        scheduledTime: data.scheduledTime,
+        meetLink: data.meetLink,
         categorySlug: selectedCategory || null,
         status: 'ACTIVE',
         sellerId: sellerId,

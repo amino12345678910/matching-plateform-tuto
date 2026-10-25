@@ -22,6 +22,10 @@ import {
   GraduationCap,
   BookOpen,
   Award,
+  Video,
+  Calendar,
+  Copy,
+  ExternalLink,
 } from 'lucide-react';
 import type {Service, ServicePackage} from '@/types/service';
 import {allowClientOnly} from './validate/allow-user-only';
@@ -37,6 +41,11 @@ import '@/components/editor/styles/utils.css';
 import {ReviewDisplay} from './review-display';
 import {ReviewForm} from './review-form';
 import type {Review} from '@/types/review';
+import {
+  getServiceMeetInfo,
+  formatScheduleLabel,
+  buildGoogleCalendarMeetUrl,
+} from '@/lib/google-meet';
 
 function formatCleanCourseTitle(title: string, sellerName?: string): string {
   const cleaned = (title || '').trim();
@@ -78,6 +87,27 @@ export function ServiceDetailPage({service}: {service: Service}) {
   const sellerExperience = (seller as any)?.experience;
 
   const displayTitle = formatCleanCourseTitle(service.title, sellerName);
+  const initialMeet = useMemo(() => getServiceMeetInfo(service as any), [service]);
+  const [sessionDate, setSessionDate] = useState(initialMeet.scheduledDate);
+  const [sessionTime, setSessionTime] = useState(initialMeet.scheduledTime);
+
+  const liveCalendarUrl = useMemo(
+    () =>
+      buildGoogleCalendarMeetUrl({
+        title: displayTitle,
+        meetUrl: initialMeet.meetUrl,
+        dateStr: sessionDate,
+        timeStr: sessionTime,
+        durationMinutes: 60,
+        tutorName: sellerName,
+      }),
+    [displayTitle, initialMeet.meetUrl, sessionDate, sessionTime, sellerName]
+  );
+
+  const copyMeetUrl = () => {
+    navigator.clipboard.writeText(initialMeet.meetUrl);
+    toast.success('Lien Google Meet copié !');
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -531,6 +561,82 @@ export function ServiceDetailPage({service}: {service: Service}) {
                           <span className="font-semibold text-sm">
                             {currentPackage.revisions} séance{currentPackage.revisions !== 1 ? 's' : ''}
                           </span>
+                        </div>
+                      </div>
+
+                      {/* Scheduled Google Meet Session Box */}
+                      <div className="rounded-xl border border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-950/30 p-3.5 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                            <Video className="h-4 w-4 text-emerald-600" />
+                            <span>Séance Google Meet Planifiée</span>
+                          </div>
+                          <Badge className="bg-emerald-600 text-white text-[10px]">Auto-Ready</Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                              <Calendar className="h-3 w-3 text-emerald-600" />
+                              Date du cours
+                            </label>
+                            <input
+                              type="date"
+                              value={sessionDate}
+                              min={new Date().toISOString().split('T')[0]}
+                              onChange={e => setSessionDate(e.target.value)}
+                              className="w-full rounded-lg border border-emerald-300 bg-white px-2 py-1 text-xs font-medium text-slate-900"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                              <Clock className="h-3 w-3 text-emerald-600" />
+                              Heure prévue
+                            </label>
+                            <input
+                              type="time"
+                              value={sessionTime}
+                              onChange={e => setSessionTime(e.target.value)}
+                              className="w-full rounded-lg border border-emerald-300 bg-white px-2 py-1 text-xs font-medium text-slate-900"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="rounded-lg bg-white border border-emerald-200 p-2.5 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-mono font-bold text-emerald-700 truncate">
+                              {initialMeet.meetUrl}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={copyMeetUrl}
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:underline shrink-0 cursor-pointer"
+                            >
+                              <Copy className="h-3 w-3" />
+                              Copier
+                            </button>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-1">
+                            <a
+                              href={initialMeet.meetUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 px-2 text-xs font-semibold transition"
+                            >
+                              <Video className="h-3.5 w-3.5" />
+                              Rejoindre Meet
+                            </a>
+                            <a
+                              href={liveCalendarUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 py-1.5 px-2 text-xs font-semibold transition"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              Agenda ({formatScheduleLabel(sessionDate, sessionTime).split(' ')[0]})
+                            </a>
+                          </div>
                         </div>
                       </div>
                     </div>

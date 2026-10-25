@@ -31,6 +31,7 @@ const girlImage = '/assets/standard.0638957.png';
 import freelancerVector from '@/public/assets/freelancerVector.svg';
 import userVector from '@/public/assets/userVector.svg';
 import {RoleDialog} from '@/components/auth/role-dialog';
+import {GoogleAuthModal} from '@/components/auth/google-auth-modal';
 import {clearPendingRole, setPendingRole} from '@/lib/sessions';
 
 interface AuthModalProps {
@@ -57,6 +58,7 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
   >('null');
 
   const [showRoleDialog, setShowRoleDialog] = useState(false);
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [pendingAuthType, setPendingAuthType] = useState<'google' | 'email' | null>(null);
 
   const [regForm, setRegForm] = useState<RegForm>({
@@ -100,8 +102,7 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
   };
 
   const handleGoogleAuth = () => {
-    setPendingAuthType('google');
-    setShowRoleDialog(true);
+    setShowGoogleModal(true);
   };
 
   const handleEmailSignupStart = () => {
@@ -197,29 +198,19 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
     onClose();
   };
 
-  const handleGoogleSignIn = async (isSignIn: boolean) => {
-    try {
-      const {data: _, error} = await authClient.signIn.social({
-        provider: 'google',
-        callbackURL: isSignIn ? '/explore' : '/auth/complete-registration',
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      setShowRoleDialog(false);
-      setPendingAuthType(null);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to sign in with Google');
-      clearPendingRole();
-      setShowRoleDialog(false);
-      setPendingAuthType(null);
-    }
+  const handleGoogleSignIn = async (_isSignIn: boolean) => {
+    setShowRoleDialog(false);
+    setPendingAuthType(null);
+    setShowGoogleModal(true);
   };
 
   return (
     <>
+      <GoogleAuthModal
+        isOpen={showGoogleModal}
+        onClose={() => setShowGoogleModal(false)}
+        defaultRole={regForm.role === 'SELLER' ? 'SELLER' : 'USER'}
+      />
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-4xl p-0 h-[85vh] overflow-hidden">
           <div className="grid lg:grid-cols-2 h-full">

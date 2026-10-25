@@ -74,9 +74,11 @@ export default function HomePage() {
 
         {/* AI Section */}
         <div className="relative flex flex-col lg:flex-row-reverse gap-4 rounded-lg bg-black p-8">
-          <div className="flex-1 overflow-hidden rounded-xl">
+          <div className="flex-1 overflow-hidden rounded-xl bg-emerald-950/40 min-h-[260px]">
             <video
               src="/assets/gemini_generated_video_f053b079.mp4"
+              poster="/assets/tutoring-academy.jpg"
+              preload="metadata"
               autoPlay
               loop
               muted
@@ -182,12 +184,14 @@ export default function HomePage() {
           </p>
           <video
             src="/assets/gemini_generated_video_68919dca.mp4"
+            poster="/assets/tutoring-academy.jpg"
+            preload="metadata"
             muted
             autoPlay
             loop
             controls
             playsInline
-            className="w-full h-full max-h-[600px] object-cover rounded-2xl shadow-xl"
+            className="w-full h-full max-h-[600px] min-h-[300px] bg-slate-900 object-cover rounded-2xl shadow-xl"
           ></video>
         </div>
 

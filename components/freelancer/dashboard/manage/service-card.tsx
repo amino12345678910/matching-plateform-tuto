@@ -22,6 +22,8 @@ import {
   IconCalendar,
   IconPackage,
   IconExternalLink,
+  IconVideo,
+  IconCopy,
 } from '@tabler/icons-react';
 import {updateServiceStatus} from '@/hooks/service/update-status';
 import {toast} from 'sonner';
@@ -29,6 +31,7 @@ import {cn} from '@/lib/utils';
 import {Skeleton} from '../../../ui/skeleton';
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from '@/components/ui/tooltip';
 import {defaultRoute} from '@/app/(freelancer-client)/dashboard/freelancer/config';
+import {getServiceMeetInfo} from '@/lib/google-meet';
 
 interface ManageServiceCardProps {
   service: ServiceCardLite;
@@ -52,6 +55,7 @@ export function ManageServiceCardComponent({service}: ManageServiceCardProps) {
   };
 
   const status = statusConfig[service.status] || statusConfig.PAUSED;
+  const meetInfo = getServiceMeetInfo(service as any);
 
   // const updatedDate = new Date(service.updatedAt).toLocaleDateString('en-US', {
   //   month: 'short',
@@ -100,7 +104,44 @@ export function ManageServiceCardComponent({service}: ManageServiceCardProps) {
               </span>
             </div>
 
-            <span>From ${minPrice}</span>
+            <span>From {minPrice} Pts ({minPrice} DT)</span>
+          </div>
+
+          {/* Automatic Google Meet & Schedule Box */}
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2.5 space-y-1.5 text-xs">
+            <div className="flex items-center justify-between text-emerald-900 font-semibold">
+              <span className="flex items-center gap-1">
+                <IconVideo className="h-3.5 w-3.5 text-emerald-600" />
+                Google Meet prêt
+              </span>
+              <span className="text-[11px] text-emerald-700">{meetInfo.formattedDateLabel}</span>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-mono text-[11px] font-bold text-emerald-700 truncate">
+                {meetInfo.meetUrl}
+              </span>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(meetInfo.meetUrl);
+                    toast.success('Lien Google Meet copié !');
+                  }}
+                  className="p-1 rounded hover:bg-emerald-100 text-emerald-700 cursor-pointer"
+                  title="Copier le lien Meet"
+                >
+                  <IconCopy className="h-3.5 w-3.5" />
+                </button>
+                <a
+                  href={meetInfo.meetUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold"
+                >
+                  Ouvrir Meet
+                </a>
+              </div>
+            </div>
           </div>
 
           <div className="h-px bg-border" />

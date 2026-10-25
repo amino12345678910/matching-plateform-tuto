@@ -6,6 +6,11 @@ import {generateSlug} from '../use-slug';
 import {revalidatePath} from 'next/cache';
 import {readCloudStore, writeCloudStore} from '@/lib/cloud-store';
 import {getUserInfo} from '@/hooks/shared/get-user-info';
+import {
+  generateMeetCode,
+  getDefaultSessionDate,
+  formatScheduleLabel,
+} from '@/lib/google-meet';
 
 const CATEGORY_DEFAULT_IMAGES: Record<string, string> = {
   mathematics: '/assets/seo.webp',
@@ -32,10 +37,23 @@ function formatProfessionalTitle(rawTitle: string, categorySlug?: string | null)
   return capitalized;
 }
 
-function formatStructuredDescription(rawDesc: string, title: string): string {
+function formatStructuredDescription(
+  rawDesc: string,
+  title: string,
+  meetUrl: string,
+  scheduledDate: string,
+  scheduledTime: string
+): string {
   const plain = rawDesc.replace(/<[^>]*>/g, '').trim();
+  const scheduleBanner = `
+    <div data-session-date="${scheduledDate}" data-session-time="${scheduledTime}">
+      <h3>📹 Séance Live Google Meet & Horaire Planifié</h3>
+      <p><strong>Date & Heure prévues :</strong> ${formatScheduleLabel(scheduledDate, scheduledTime)} • <strong>Lien Google Meet direct :</strong> <a href="${meetUrl}" target="_blank" rel="noopener noreferrer">${meetUrl}</a></p>
+    </div>
+  `.trim();
+
   if (rawDesc.includes('<h3>') && plain.length >= 100) {
-    return rawDesc;
+    return `${rawDesc}\n${scheduleBanner}`;
   }
 
   return `
@@ -47,15 +65,22 @@ function formatStructuredDescription(rawDesc: string, title: string): string {
       <li><strong>Pratique intensive :</strong> Résolution guidée de séries d'exercices et d'anciens sujets de devoirs/examens.</li>
       <li><strong>Supports inclus :</strong> Fiches de révision PDF, exercices corrigés et suivi personnalisé des progrès.</li>
     </ul>
+    ${scheduleBanner}
     <h3>✅ Engagement Qualité 9arrini</h3>
-    <p>Séances interactives en direct, adaptées au rythme et au niveau de chaque élève, payables directement via votre Portefeuille Points (1 Point = 1 DT).</p>
+    <p>Séances interactives en direct sur Google Meet, adaptées au rythme et au niveau de chaque élève, payables directement via votre Portefeuille Points (1 Point = 1 DT).</p>
   `.trim();
 }
 
 export const storeService = async (
   service: any,
   cloudinaryImageUrls: string[]
-): Promise<{message?: string; error?: string; success: boolean; serviceSlug?: string}> => {
+): Promise<{
+  message?: string;
+  error?: string;
+  success: boolean;
+  serviceSlug?: string;
+  meetLink?: string;
+}> => {
   try {
     const rawTitle = (service.title || '').trim();
     const words = rawTitle.split(/\s+/).filter(Boolean);
@@ -68,9 +93,22 @@ export const storeService = async (
     }
 
     const formattedTitle = formatProfessionalTitle(rawTitle, service.categorySlug);
+    let createdSlug =
+      service.slug || generateSlug(formattedTitle, {lowercase: true, randNum: true});
+
+    const scheduledDate = service.scheduledDate || getDefaultSessionDate(2);
+    const scheduledTime = service.scheduledTime || '18:00';
+    const meetLink =
+      service.meetLink && service.meetLink.startsWith('https://meet.google.com/')
+        ? service.meetLink
+        : `https://meet.google.com/${generateMeetCode(createdSlug)}`;
+
     const formattedDescription = formatStructuredDescription(
       service.description || '',
-      formattedTitle
+      formattedTitle,
+      meetLink,
+      scheduledDate,
+      scheduledTime
     );
 
     const catSlug = service.categorySlug || 'mathematics';
@@ -84,11 +122,11 @@ export const storeService = async (
 
     const defaultPkgDescriptions: Record<string, string> = {
       BASIC:
-        '1 séance de cours particulier 1-on-1 (60 min) + explication du chapitre + série d’exercices PDF',
+        '1 séance de cours particulier 1-on-1 sur Google Meet (60 min) + explication du chapitre + série d’exercices PDF',
       STANDARD:
-        'Pack 3 séances de cours particuliers + correction de devoirs + fiches résumé de révision',
+        'Pack 3 séances de cours particuliers sur Google Meet + correction de devoirs + fiches résumé de révision',
       PREMIUM:
-        'Pack intensif 6 séances (Préparation Examen / Bac) + suivi complet + Q&A illimité avec le professeur',
+        'Pack intensif 6 séances sur Google Meet (Préparation Examen / Bac) + suivi complet + Q&A illimité avec le professeur',
     };
 
     const defaultFaqs =
@@ -97,9 +135,8 @@ export const storeService = async (
         : [
             {
               id: `faq-default-1-${Date.now()}`,
-              question: 'Comment se déroule la séance de cours sur 9arrini ?',
-              answer:
-                'Chaque séance se fait en direct 1-on-1 avec explication du cours, exercices d’application et remise d’un support PDF récapitulatif.',
+              question: 'Comment rejoindre la séance sur Google Meet ?',
+              answer: `Le lien Google Meet (${meetLink}) est généré automatiquement et planifié pour le ${formatScheduleLabel(scheduledDate, scheduledTime)}. Vous pouvez cliquer dessus directement depuis votre tableau de bord ou l'ajouter à Google Agenda.`,
             },
             {
               id: `faq-default-2-${Date.now()}`,
@@ -108,8 +145,6 @@ export const storeService = async (
                 '1 Point = 1 Dinar (DT). Il vous suffit de recharger votre Portefeuille Points depuis votre espace élève et de réserver en 1 clic.',
             },
           ];
-
-    let createdSlug = service.slug || generateSlug(formattedTitle, {lowercase: true, randNum: true});
 
     try {
       const data = await prisma.service.create({
@@ -163,10 +198,10 @@ export const storeService = async (
       });
       createdSlug = data?.slug || createdSlug;
     } catch {
-      // Cloud fallback when running on Netlify
+      // Cloud fallback when running on Netlify/Vercel
     }
 
-    // Also store in Cloud Store so newly created courses appear live on Netlify
+    // Also store in Cloud Store so newly created courses appear live on Netlify/Vercel
     const {name, email} = await getUserInfo();
     const store = readCloudStore();
     const cloudSeller = store.sellers.find(s => s.userId === service.sellerId);
@@ -177,6 +212,9 @@ export const storeService = async (
       slug: createdSlug,
       title: formattedTitle,
       description: formattedDescription,
+      meetLink,
+      scheduledDate,
+      scheduledTime,
       images: validImages,
       status: 'ACTIVE',
       createdAt: now,
@@ -238,10 +276,11 @@ export const storeService = async (
     revalidatePath('/admin');
 
     return {
-      message: 'Votre cours a été formaté et publié avec succès !',
+      message: `Votre cours et le lien Google Meet (${meetLink}) ont été publiés avec succès !`,
       success: true,
       error: undefined,
       serviceSlug: createdSlug,
+      meetLink,
     };
   } catch (error) {
     console.error('Error storing service data:', error);

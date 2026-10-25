@@ -1,13 +1,32 @@
 'use client';
-import {useState} from 'react';
+import {useState, useEffect} from 'react';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card';
 import {Input} from '@/components/ui/input';
 import {Label} from '@/components/ui/label';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
-import {AlertCircle, CheckCircle2, Sparkles, ShieldCheck, BookOpen} from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Sparkles,
+  ShieldCheck,
+  BookOpen,
+  Video,
+  Calendar,
+  Clock,
+  Copy,
+  RefreshCw,
+  ExternalLink,
+} from 'lucide-react';
 import {cn} from '@/lib/utils';
 import {RichEditor} from '@/components/editor/rich-editor';
+import {
+  generateMeetCode,
+  getDefaultSessionDate,
+  formatScheduleLabel,
+  buildGoogleCalendarMeetUrl,
+} from '@/lib/google-meet';
+import {toast} from 'sonner';
 
 const ACADEMIC_TEMPLATES = [
   {
@@ -41,10 +60,51 @@ export function OverviewStep({
 }: any) {
   const watchedTitle = watch ? watch('title') || '' : '';
   const watchedDescription = watch ? watch('description') || '' : '';
+  const watchedDate = watch ? watch('scheduledDate') || getDefaultSessionDate(2) : getDefaultSessionDate(2);
+  const watchedTime = watch ? watch('scheduledTime') || '18:00' : '18:00';
+  const watchedMeetLink = watch ? watch('meetLink') || '' : '';
+
   const titleLength = watchedTitle.length;
   const wordCount = watchedTitle.trim().split(/\s+/).filter(Boolean).length;
   const descriptionLength = watchedDescription.replace(/<[^>]*>/g, '').trim().length;
   const [selectedLevel, setSelectedLevel] = useState('Bac & Lycée');
+
+  // Initialize automatic Google Meet link and date on first mount
+  useEffect(() => {
+    if (setValue && !watchedMeetLink) {
+      const code = generateMeetCode(watchedTitle || `9arrini-${Date.now()}`);
+      setValue('meetLink', `https://meet.google.com/${code}`, {shouldDirty: true});
+    }
+    if (setValue && !watch?.('scheduledDate')) {
+      setValue('scheduledDate', getDefaultSessionDate(2), {shouldDirty: true});
+    }
+    if (setValue && !watch?.('scheduledTime')) {
+      setValue('scheduledTime', '18:00', {shouldDirty: true});
+    }
+  }, [setValue, watchedMeetLink, watchedTitle, watch]);
+
+  const regenerateMeet = () => {
+    const newCode = generateMeetCode();
+    const url = `https://meet.google.com/${newCode}`;
+    if (setValue) {
+      setValue('meetLink', url, {shouldDirty: true});
+    }
+    toast.success('Nouveau lien Google Meet généré !');
+  };
+
+  const copyMeetLink = () => {
+    if (!watchedMeetLink) return;
+    navigator.clipboard.writeText(watchedMeetLink);
+    toast.success('Lien Google Meet copié dans le presse-papiers !');
+  };
+
+  const calendarUrl = buildGoogleCalendarMeetUrl({
+    title: watchedTitle || 'Séance de cours particulier 9arrini',
+    meetUrl: watchedMeetLink || 'https://meet.google.com/new',
+    dateStr: watchedDate,
+    timeStr: watchedTime,
+    durationMinutes: 60,
+  });
 
   const handleDesValueChange = (description: string) => {
     updateDescriptionValue(description);
@@ -64,21 +124,127 @@ export function OverviewStep({
           <div>
             <CardTitle className="flex items-center gap-2">
               <BookOpen className="h-5 w-5 text-emerald-600" />
-              Présentation Structurée du Cours (Norme Qualité 9arrini)
+              Présentation Structurée du Cours & Lien Google Meet
             </CardTitle>
             <CardDescription>
-              Pour inspirer confiance aux élèves, votre annonce doit être claire, détaillée et
-              structurée (pas de titre d’un seul mot).
+              Votre annonce inclut automatiquement un lien Google Meet prêt et planifié à la date de
+              votre séance.
             </CardDescription>
           </div>
           <Badge variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 w-fit">
             <ShieldCheck className="h-3.5 w-3.5 mr-1" />
-            Anti-Spam Actif
+            Google Meet Auto-Généré
           </Badge>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-6">
+        {/* AUTOMATIC GOOGLE MEET GENERATOR & SCHEDULE BOX */}
+        <div className="p-5 rounded-2xl bg-gradient-to-r from-blue-50/90 via-emerald-50/70 to-teal-50/80 border-2 border-emerald-300/70 space-y-4 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                <Video className="h-5 w-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  Générateur Automatique Google Meet & Planification
+                  <Badge className="bg-emerald-600 text-white text-[10px]">Prêt automatiquement</Badge>
+                </h4>
+                <p className="text-xs text-slate-600">
+                  Choisissez la date et l’heure de la séance : le lien Google Meet est généré et
+                  synchronisé automatiquement.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold flex items-center gap-1.5 text-slate-800">
+                <Calendar className="h-3.5 w-3.5 text-emerald-600" />
+                Date prévue de la séance *
+              </Label>
+              <Input
+                type="date"
+                min={new Date().toISOString().split('T')[0]}
+                value={watchedDate}
+                onChange={e =>
+                  setValue && setValue('scheduledDate', e.target.value, {shouldDirty: true})
+                }
+                className="bg-white border-emerald-200 font-medium"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold flex items-center gap-1.5 text-slate-800">
+                <Clock className="h-3.5 w-3.5 text-emerald-600" />
+                Heure de la séance (Tunisie) *
+              </Label>
+              <Input
+                type="time"
+                value={watchedTime}
+                onChange={e =>
+                  setValue && setValue('scheduledTime', e.target.value, {shouldDirty: true})
+                }
+                className="bg-white border-emerald-200 font-medium"
+              />
+            </div>
+          </div>
+
+          {/* Generated Google Meet Link Bar */}
+          <div className="rounded-xl bg-white border border-emerald-200 p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="space-y-0.5 min-w-0">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>
+                  Planifié pour :{' '}
+                  <strong className="text-slate-900">
+                    {formatScheduleLabel(watchedDate, watchedTime)}
+                  </strong>
+                </span>
+              </div>
+              <p className="text-sm font-mono font-bold text-emerald-700 truncate">
+                {watchedMeetLink || 'https://meet.google.com/...'}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={copyMeetLink}
+                className="h-8 text-xs border-emerald-200 hover:bg-emerald-50 cursor-pointer"
+              >
+                <Copy className="h-3.5 w-3.5 mr-1" />
+                Copier
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={regenerateMeet}
+                className="h-8 text-xs border-emerald-200 hover:bg-emerald-50 cursor-pointer"
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                Nouveau lien
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                asChild
+                className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                <a href={calendarUrl} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                  Google Agenda
+                </a>
+              </Button>
+            </div>
+          </div>
+        </div>
+
         {/* Quick Academic Templates */}
         <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-2.5">
           <div className="flex items-center gap-2 text-xs font-bold text-emerald-900 uppercase tracking-wider">
@@ -233,7 +399,7 @@ export function OverviewStep({
                 Votre description sera automatiquement mise en page selon le standard académique 9arrini :
               </p>
               <p>
-                ✓ Objectifs du cours • ✓ Déroulement de la séance 1-on-1 • ✓ Supports PDF & Séries d’exercices inclus.
+                ✓ Objectifs du cours • ✓ Lien Google Meet automatique & Date • ✓ Supports PDF inclus.
               </p>
             </div>
           )}

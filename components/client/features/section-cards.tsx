@@ -1,8 +1,9 @@
 'use client';
 
-import {IconMessage2, IconTrendingUp, IconClock, IconCheck} from '@tabler/icons-react';
+import {IconMessage2, IconTrendingUp, IconClock, IconCheck, IconVideo} from '@tabler/icons-react';
 import moment from 'moment';
 import Link from 'next/link';
+import {getServiceMeetInfo} from '@/lib/google-meet';
 
 import {Badge} from '@/components/ui/badge';
 import {
@@ -50,6 +51,10 @@ export function ClientSectionCards({activeOrder}: {activeOrder: ClientActiveOrde
   }
 
   const {service, freelancer, totalPrice, acceptedAt, delivery, status} = activeOrder;
+  const meetInfo = getServiceMeetInfo({
+    title: service.title,
+    seller: {user: {name: freelancer.name}},
+  });
 
   const deliveryAt = acceptedAt && new Date(acceptedAt).getTime() + delivery * 24 * 60 * 60 * 1000;
 
@@ -105,7 +110,14 @@ export function ClientSectionCards({activeOrder}: {activeOrder: ClientActiveOrde
               {totalPrice} Pts ({totalPrice} DT)
             </span>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Badge asChild className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer">
+                <a href={meetInfo.meetUrl} target="_blank" rel="noopener noreferrer">
+                  <IconVideo className="mr-1 h-4 w-4" />
+                  Google Meet
+                </a>
+              </Badge>
+
               <Badge asChild variant="outline" className="cursor-pointer">
                 <Link href={`/dashboard/messages/${freelancer.conversations[0]?.id ?? ''}`}>
                   <IconMessage2 className="mr-1 h-4 w-4" />

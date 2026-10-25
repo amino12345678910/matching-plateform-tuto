@@ -6,12 +6,15 @@ import moment from 'moment';
 import type {ServiceCardLite} from '@/types/service-lite';
 import type {ServiceNavLite} from '@/hooks/freelancers/dashboard/get-my-services-lite';
 import {defaultRoute} from '@/app/(freelancer-client)/dashboard/freelancer/config';
+import {getServiceMeetInfo} from '@/lib/google-meet';
+import {Video, Calendar, Copy} from 'lucide-react';
+import {toast} from 'sonner';
 
 export function ServiceNav({services}: {services: ServiceNavLite[]}) {
   if (!services.length) {
     return (
       <div className="rounded-xl border bg-muted/40 p-6 text-sm text-muted-foreground">
-        You haven’t created any services yet.
+        You haven’t created any tutoring sessions yet.
       </div>
     );
   }
@@ -19,12 +22,12 @@ export function ServiceNav({services}: {services: ServiceNavLite[]}) {
   return (
     <div className="rounded-xl border bg-background overflow-hidden">
       <header className="flex items-center justify-between px-4 py-3 border-b">
-        <h3 className="text-sm font-semibold">Your Services</h3>
+        <h3 className="text-sm font-semibold">Vos Séances & Liens Google Meet</h3>
         <Link
           href={`${defaultRoute}/manage`}
           className="text-xs font-medium text-muted-foreground hover:underline"
         >
-          View all
+          Voir tout
         </Link>
       </header>
 
@@ -32,16 +35,17 @@ export function ServiceNav({services}: {services: ServiceNavLite[]}) {
         {services.map(service => {
           const minPrice = Math.min(...service.packages.map(p => p.price));
           const lastUpdated = moment(service.updatedAt).fromNow();
+          const meetInfo = getServiceMeetInfo(service as any);
 
           return (
             <li
               key={service.id}
-              className="group flex items-center gap-4 px-4 py-3 hover:bg-muted/40 transition"
+              className="group flex flex-wrap items-center gap-4 px-4 py-3 hover:bg-muted/40 transition"
             >
               {/* STATUS */}
               <StatusDot status={service.status} />
 
-              {/* TITLE */}
+              {/* TITLE + MEET SCHEDULE */}
               <div className="flex-1 min-w-0">
                 <Link
                   href={`${defaultRoute}/service/${service.slug}`}
@@ -49,19 +53,50 @@ export function ServiceNav({services}: {services: ServiceNavLite[]}) {
                 >
                   {service.title}
                 </Link>
-                <div className="text-xs text-muted-foreground">
-                  {service._count.bookings} bookings · {service._count.reviews} reviews
+                <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                  <span>
+                    {service._count.bookings} réservations · {service._count.reviews} avis
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
+                    <Calendar className="h-3 w-3" />
+                    {meetInfo.formattedDateLabel}
+                  </span>
                 </div>
+              </div>
+
+              {/* GOOGLE MEET QUICK LAUNCH */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(meetInfo.meetUrl);
+                    toast.success('Lien Google Meet copié !');
+                  }}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-medium cursor-pointer"
+                  title={meetInfo.meetUrl}
+                >
+                  <Copy className="h-3 w-3" />
+                  <span className="hidden sm:inline font-mono">{meetInfo.meetCode}</span>
+                </button>
+                <a
+                  href={meetInfo.meetUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold"
+                >
+                  <Video className="h-3.5 w-3.5" />
+                  <span>Google Meet</span>
+                </a>
               </div>
 
               {/* PRICE */}
               <div className="hidden sm:block text-xs text-muted-foreground">
-                From <span className="font-medium text-foreground">${minPrice}</span>
+                Dès <span className="font-semibold text-emerald-700">{minPrice} Pts ({minPrice} DT)</span>
               </div>
 
               {/* UPDATED */}
-              <div className="hidden md:block text-xs text-muted-foreground">
-                Updated {lastUpdated}
+              <div className="hidden lg:block text-xs text-muted-foreground">
+                Mis à jour {lastUpdated}
               </div>
 
               {/* ACTION */}
@@ -69,7 +104,7 @@ export function ServiceNav({services}: {services: ServiceNavLite[]}) {
                 href={`${defaultRoute}/service/${service.slug}`}
                 className="text-xs font-medium opacity-0 group-hover:opacity-100 transition"
               >
-                Manage →
+                Gérer →
               </Link>
             </li>
           );

@@ -405,3 +405,113 @@ export async function cloudSignIn(input: {
     redirectTo: normalizedRole === 'SELLER' ? '/dashboard/freelancer' : '/dashboard/client',
   };
 }
+
+export async function cloudGoogleSignIn(input: {
+  email: string;
+  name?: string;
+  role?: 'USER' | 'SELLER' | 'FREELANCER';
+}): Promise<{
+  success: boolean;
+  error?: string;
+  redirectTo?: string;
+  user?: SessionCookiePayload;
+}> {
+  const cleanEmail = (input.email || '').trim().toLowerCase();
+  if (!cleanEmail || !cleanEmail.includes('@')) {
+    return {success: false, error: 'Veuillez entrer une adresse Google (@gmail.com) valide.'};
+  }
+
+  const derivedName =
+    (input.name || '').trim() ||
+    cleanEmail
+      .split('@')[0]
+      .replace(/[._-]/g, ' ')
+      .replace(/\b\w/g, l => l.toUpperCase()) ||
+    'Utilisateur Google';
+
+  const now = new Date().toISOString();
+  const store = readCloudStore();
+  let cloudUser = store.users.find(u => u.email.toLowerCase() === cleanEmail);
+
+  const requestedRole: 'USER' | 'SELLER' =
+    input.role === 'SELLER' || input.role === 'FREELANCER'
+      ? 'SELLER'
+      : cloudUser?.role === 'SELLER' || cloudUser?.role === 'FREELANCER'
+      ? 'SELLER'
+      : 'USER';
+
+  const googleAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+    derivedName
+  )}&background=059669&color=fff&bold=true`;
+
+  if (!cloudUser) {
+    cloudUser = {
+      id: `usr_google_${Date.now().toString(36)}`,
+      name: derivedName,
+      email: cleanEmail,
+      role: requestedRole,
+      points: 50,
+      image: googleAvatar,
+      imageSource: 'GOOGLE',
+      hasPassword: false,
+      emailVerified: true,
+      createdAt: now,
+    };
+    store.users.unshift(cloudUser);
+    store.transactions.unshift({
+      id: `tx_google_${Date.now()}`,
+      userId: cloudUser.id,
+      amount: 50,
+      type: 'BONUS',
+      description: 'Solde de bienvenue Google 9arrini (50 Points = 50 DT)',
+      createdAt: now,
+    });
+  } else {
+    if (input.name && input.name.trim()) {
+      cloudUser.name = input.name.trim();
+    }
+    if (input.role) {
+      cloudUser.role = requestedRole;
+    }
+    cloudUser.image = cloudUser.image || googleAvatar;
+    cloudUser.imageSource = 'GOOGLE';
+  }
+
+  if (requestedRole === 'SELLER') {
+    const hasSeller = store.sellers.some(s => s.userId === cloudUser!.id);
+    if (!hasSeller) {
+      store.sellers.unshift({
+        id: `seller_${cloudUser.id}`,
+        userId: cloudUser.id,
+        bio: `Professeur ${cloudUser.name} sur 9arrini`,
+        isVerified: false,
+        verificationStatus: 'PENDING',
+        createdAt: now,
+      });
+    }
+  }
+
+  writeCloudStore(store);
+
+  const sessionPayload: SessionCookiePayload = {
+    userId: cloudUser.id,
+    name: cloudUser.name,
+    email: cloudUser.email,
+    role: requestedRole,
+    points: cloudUser.points ?? 50,
+    image: cloudUser.image || googleAvatar,
+    imageSource: 'GOOGLE',
+    hasPassword: cloudUser.hasPassword ?? false,
+    emailVerified: true,
+    createdAt: cloudUser.createdAt || now,
+  };
+
+  await setCloudSessionCookie(sessionPayload);
+
+  return {
+    success: true,
+    user: sessionPayload,
+    redirectTo: requestedRole === 'SELLER' ? '/dashboard/freelancer' : '/dashboard/client',
+  };
+}
+

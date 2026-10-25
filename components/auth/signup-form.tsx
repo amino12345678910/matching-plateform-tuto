@@ -7,6 +7,7 @@ import {Input} from '@/components/ui/input';
 import {Label} from '@/components/ui/label';
 import {authClient} from '@/lib/auth-client';
 import {cloudSignUp} from '@/hooks/auth/cloud-auth';
+import {GoogleAuthModal} from '@/components/auth/google-auth-modal';
 import {Alert, AlertDescription, AlertTitle} from '../ui/alert';
 import {Terminal} from 'lucide-react';
 
@@ -22,14 +23,10 @@ export function SignupForm({className, ...props}: React.ComponentProps<'div'>) {
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
 
   const signUp = async () => {
-    const {data: GoogleData, error: GoogleError} = await authClient.signIn.social({
-      provider: 'google',
-      callbackURL: '/auth/select-role',
-    });
-    console.log('Sign up with google data', GoogleData);
-    console.error('Sign up with google error', GoogleError);
+    setShowGoogleModal(true);
   };
 
   async function handleSubmit(e: any) {
@@ -62,6 +59,11 @@ export function SignupForm({className, ...props}: React.ComponentProps<'div'>) {
 
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
+      <GoogleAuthModal
+        isOpen={showGoogleModal}
+        onClose={() => setShowGoogleModal(false)}
+        defaultRole={role}
+      />
       <Card>
         <CardHeader>
           <CardTitle>Create an account</CardTitle>

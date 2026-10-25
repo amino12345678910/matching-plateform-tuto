@@ -7,6 +7,9 @@ import type {BookedServiceType} from '@/types/bookings';
 import {useEffect, useState} from 'react';
 import {profilePhoto} from '../profile-url';
 import {cn} from '@/lib/utils';
+import {getServiceMeetInfo} from '@/lib/google-meet';
+import {Video, Calendar, Copy, ExternalLink} from 'lucide-react';
+import {toast} from 'sonner';
 
 export function BookedServiceCardComponent({service}: {service: BookedServiceType}) {
   const minPrice = Math.min(...service.packages.map(p => p.price)) || 0;
@@ -16,6 +19,11 @@ export function BookedServiceCardComponent({service}: {service: BookedServiceTyp
   const freelancerMail = service.counterparty.email;
   const imageSource = service.counterparty.imageSource;
   const hasSeen = Boolean(service.hasSeen);
+  const meetInfo = getServiceMeetInfo({
+    slug: service.slug,
+    title: service.title,
+    seller: {user: {name: service.counterparty.name}},
+  });
 
   useEffect(() => {
     const init = async () => {
@@ -25,29 +33,20 @@ export function BookedServiceCardComponent({service}: {service: BookedServiceTyp
         email: freelancerMail,
       });
       setAvatar(img);
-      console.log(img);
     };
-    // console.log(service.freelancer);
     init();
-  }, []);
+  }, [imageSource, freelancerImageUrl, freelancerMail]);
 
   return (
-    <div
-      className="
-    grid grid-cols-[160px_1fr]
-    w-full border border-border
-    rounded-lg overflow-hidden
-    bg-background shadow-sm
-    transition hover:shadow-md
-  "
-    >
+    <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] w-full border border-border rounded-xl overflow-hidden bg-background shadow-sm transition hover:shadow-md">
       <Link href={`/service/${service.slug}`} target="_blank">
-        <div className="relative h-full min-h-[160px] w-full overflow-hidden">
+        <div className="relative h-40 sm:h-full min-h-[160px] w-full overflow-hidden">
           <Image
             src={
-              service.images[0] ? cloudinaryUrl(service.images[0], 'q_30,f_auto') : '/fallback.jpg'
+              service.images[0]
+                ? cloudinaryUrl(service.images[0], 'q_30,f_auto')
+                : '/assets/tutoring-academy.jpg'
             }
-            preload
             loading="eager"
             alt={service.title}
             width={400}
@@ -57,22 +56,22 @@ export function BookedServiceCardComponent({service}: {service: BookedServiceTyp
         </div>
       </Link>
 
-      <div className="flex flex-col justify-between p-4">
+      <div className="flex flex-col justify-between p-4 gap-3">
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs">
             <span
               className={cn(
                 'inline-flex items-center gap-2 font-medium',
-                hasSeen ? 'text-foreground' : 'text-muted-foreground'
+                hasSeen ? 'text-foreground' : 'text-emerald-700'
               )}
             >
-              <span className={cn('h-2 w-2', hasSeen ? 'bg-green-500' : 'bg-destructive')} />
-              {hasSeen ? 'Seen by seller' : 'Waiting for seller'}
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              {hasSeen ? 'Confirmé par le professeur' : 'Séance réservée & confirmée'}
             </span>
 
             {hasSeen && (
               <span className="text-[11px] text-muted-foreground">
-                {service.hasSeen!.toLocaleDateString()}
+                {new Date(service.hasSeen!).toLocaleDateString()}
               </span>
             )}
           </div>
@@ -84,25 +83,72 @@ export function BookedServiceCardComponent({service}: {service: BookedServiceTyp
           </Link>
 
           <Link
-            href={`/seller/${service.counterparty.id}`}
+            href={`/freelancer/${service.counterparty.id}`}
             target="_blank"
-            className="flex items-center gap-2 mt-1  text-xs text-muted-foreground hover:text-foreground"
+            className="flex items-center gap-2 mt-1 text-xs text-muted-foreground hover:text-foreground"
           >
-            <img src={avatar} alt={service.counterparty.name} className="h-5 w-5 object-cover" />
-            <span className="font-medium truncate">{service.counterparty.name}</span>
+            <img
+              src={avatar || '/avatar.png'}
+              alt={service.counterparty.name}
+              className="h-5 w-5 rounded-full object-cover"
+            />
+            <span className="font-medium truncate">Prof. {service.counterparty.name}</span>
           </Link>
+
+          {/* Google Meet & Schedule Box */}
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2.5 space-y-1.5 text-xs mt-2">
+            <div className="flex items-center justify-between text-emerald-900 font-semibold">
+              <span className="inline-flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5 text-emerald-600" />
+                {meetInfo.formattedDateLabel}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(meetInfo.meetUrl);
+                  toast.success('Lien Google Meet copié !');
+                }}
+                className="inline-flex items-center gap-1 text-[11px] text-emerald-700 hover:underline cursor-pointer"
+              >
+                <Copy className="h-3 w-3" />
+                {meetInfo.meetCode}
+              </button>
+            </div>
+            <div className="flex items-center gap-2 pt-0.5">
+              <a
+                href={meetInfo.meetUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 inline-flex items-center justify-center gap-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white py-1 px-2 text-[11px] font-semibold"
+              >
+                <Video className="h-3 w-3" />
+                Rejoindre Google Meet
+              </a>
+              <a
+                href={meetInfo.googleCalendarUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-1 rounded border border-emerald-300 bg-white hover:bg-emerald-100 text-emerald-800 py-1 px-2 text-[11px] font-semibold"
+              >
+                <ExternalLink className="h-3 w-3" />
+                Agenda
+              </a>
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center justify-between pt-3 border-t border-border text-xs">
+        <div className="flex items-center justify-between pt-2 border-t border-border text-xs">
           <Link
             href={`/service/${service.slug}`}
             target="_blank"
             className="font-medium text-muted-foreground hover:text-foreground hover:underline"
           >
-            View service
+            Voir le cours
           </Link>
 
-          <span className="font-semibold text-foreground">From ${minPrice}</span>
+          <span className="font-semibold text-emerald-700">
+            {minPrice} Pts ({minPrice} DT)
+          </span>
         </div>
       </div>
     </div>
