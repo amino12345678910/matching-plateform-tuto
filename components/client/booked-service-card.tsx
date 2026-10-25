@@ -30,11 +30,13 @@ export function BookedServiceCardComponent({service}: {service: BookedServiceTyp
     seller: {user: {name: service.counterparty.name}},
   });
 
-  const cleanPhone = (rawService.tutorPhone || '+21622410112').replace(/[^0-9]/g, '');
+  const cleanPhone = (rawService.tutorPhone || '').replace(/[^0-9]/g, '');
   const whatsappMessage = encodeURIComponent(
     `Bonjour Professeur ${service.counterparty.name}, j'ai réservé votre cours "${service.title}" sur 9arrini.me prévu le ${meetInfo.formattedDateLabel} (Lien Google Meet : ${meetInfo.meetUrl}).`
   );
-  const whatsappUrl = `https://wa.me/${cleanPhone || '21622410112'}?text=${whatsappMessage}`;
+  const whatsappUrl = cleanPhone
+    ? `https://wa.me/${cleanPhone}?text=${whatsappMessage}`
+    : `https://wa.me/?text=${whatsappMessage}`;
   const internalChatUrl = `/dashboard/messages?tutorId=${encodeURIComponent(
     service.counterparty.id
   )}&tutorName=${encodeURIComponent(service.counterparty.name)}&course=${encodeURIComponent(

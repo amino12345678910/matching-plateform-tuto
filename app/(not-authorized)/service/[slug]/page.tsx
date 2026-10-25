@@ -1,17 +1,14 @@
-//////
-///
-//
-
 import {Navbar} from '@/components/essentials/Navbar';
 import {ServiceDetailPage} from '@/components/service/detailed-card';
 import {Alert, AlertDescription, AlertTitle} from '@/components/ui/alert';
-import {cloudinaryUrl} from '@/lib/cloudinary';
 import {prisma} from '@/lib/prisma';
 import type {Metadata} from 'next';
 import {Footer} from '@/components/footer/footer-2';
 import type {Service} from '@/types/service';
 import {profilePhoto} from '@/components/profile-url';
-import {getAllCloudServices, readCloudStore} from '@/lib/cloud-store';
+import {readCloudStore} from '@/lib/cloud-store';
+import {getAllRealServices, getReviewsCookie} from '@/hooks/book/bookings-store';
+import {checkUserHasBookedService} from '@/hooks/points/points-actions';
 
 type generateMetaDataProps = {
   params: Promise<{
@@ -29,11 +26,13 @@ export async function generateMetadata({params}: generateMetaDataProps): Promise
       include: {tags: true, freelancer: {select: {name: true}}},
     });
   } catch {
-    service = getAllCloudServices().find(s => s.slug === resolvedParams);
+    const allReal = await getAllRealServices();
+    service = allReal.find(s => s.slug === resolvedParams);
   }
 
   if (!service) {
-    service = getAllCloudServices().find(s => s.slug === resolvedParams);
+    const allReal = await getAllRealServices();
+    service = allReal.find(s => s.slug === resolvedParams);
   }
 
   if (!service) {
@@ -43,10 +42,10 @@ export async function generateMetadata({params}: generateMetaDataProps): Promise
     };
   }
 
-  const tutorName = service.freelancer?.name || service.seller?.user?.name || 'Prof 9arrini';
+  const tutorName = service.freelancer?.name || service.seller?.user?.name || 'Professeur 9arrini';
   return {
     title: `${service.title} | ${tutorName}`,
-    description: service.description?.slice(0, 160) ?? '',
+    description: service.description?.replace(/<[^>]*>/g, '').slice(0, 160) ?? '',
   };
 }
 
@@ -81,32 +80,40 @@ async function detailedPage({params}: {params: Promise<{slug: string}>}) {
       },
     });
   } catch {
-    fetchedService = getAllCloudServices().find(s => s.slug === slug) || getAllCloudServices()[0];
+    const allReal = await getAllRealServices();
+    fetchedService = allReal.find(s => s.slug === slug);
   }
 
   if (!fetchedService) {
-    fetchedService = getAllCloudServices().find(s => s.slug === slug);
+    const allReal = await getAllRealServices();
+    fetchedService = allReal.find(s => s.slug === slug);
   }
 
   if (fetchedService) {
     const store = readCloudStore();
-    const cloudReviews = (store.reviews || [])
-      .filter((r: any) => r.serviceId === fetchedService.id || r.serviceSlug === slug)
-      .map((r: any) => ({
-        id: r.id,
-        rating: r.rating,
-        comment: r.comment,
-        clientId: r.clientId,
-        serviceId: r.serviceId,
-        createdAt: new Date(r.createdAt),
-        updatedAt: new Date(r.updatedAt || r.createdAt),
-        client: {
-          id: r.clientId,
-          name: r.clientName || 'Élève 9arrini',
-          avatar: r.clientAvatar || undefined,
-          imageSource: 'GOOGLE' as const,
-        },
-      }));
+    const cookieReviews = await getReviewsCookie(fetchedService.id);
+    const rawCloudReviews = [
+      ...cookieReviews,
+      ...(store.reviews || []).filter(
+        (r: any) => r.serviceId === fetchedService.id || r.serviceSlug === slug
+      ),
+    ];
+
+    const cloudReviews = rawCloudReviews.map((r: any) => ({
+      id: r.id,
+      rating: r.rating,
+      comment: r.comment,
+      clientId: r.clientId,
+      serviceId: r.serviceId,
+      createdAt: new Date(r.createdAt),
+      updatedAt: new Date(r.updatedAt || r.createdAt),
+      client: {
+        id: r.clientId,
+        name: r.clientName || 'Élève 9arrini',
+        avatar: r.clientAvatar || undefined,
+        imageSource: 'GOOGLE' as const,
+      },
+    }));
 
     const combinedRaw = [...(fetchedService.reviews || []), ...cloudReviews];
     const uniqueRaw = Array.from(new Map(combinedRaw.map((r: any) => [r.id, r])).values());
@@ -127,6 +134,11 @@ async function detailedPage({params}: {params: Promise<{slug: string}>}) {
       }))
     );
 
+    const initialHasBooked = await checkUserHasBookedService(
+      fetchedService.id,
+      fetchedService.slug || slug
+    );
+
     const formattedService: Service = {
       ...fetchedService,
       reviews: reviews,
@@ -143,7 +155,7 @@ async function detailedPage({params}: {params: Promise<{slug: string}>}) {
     return (
       <>
         <Navbar />
-        <ServiceDetailPage service={formattedService} />
+        <ServiceDetailPage service={formattedService} initialHasBooked={initialHasBooked} />
         <Footer />
       </>
     );
@@ -151,8 +163,8 @@ async function detailedPage({params}: {params: Promise<{slug: string}>}) {
     return (
       <div className="grid grid-cols 1 justify-center items-center min-h-[84vh] mx-auto">
         <Alert className="h-fit" variant="destructive">
-          <AlertTitle>Service not found</AlertTitle>
-          <AlertDescription>This link does not correlate with our service.</AlertDescription>
+          <AlertTitle>Cours introuvable</AlertTitle>
+          <AlertDescription>Ce lien ne correspond à aucun cours actif sur 9arrini.</AlertDescription>
         </Alert>
       </div>
     );

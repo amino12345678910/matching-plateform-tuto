@@ -1,6 +1,7 @@
 'use server';
 import {prisma as dbContext} from '@/lib/prisma';
 import {readCloudStore, writeCloudStore} from '@/lib/cloud-store';
+import {saveReviewCookie} from '@/hooks/book/bookings-store';
 
 type AddReviewProps = {
   clientId: string;
@@ -21,6 +22,20 @@ export const AddReview = async ({
 }: AddReviewProps) => {
   const now = new Date();
   const reviewId = `rev_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+
+  const reviewObj = {
+    id: reviewId,
+    clientId,
+    clientName,
+    clientAvatar,
+    serviceId,
+    rating,
+    comment,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+  };
+
+  await saveReviewCookie(reviewObj);
 
   // 1. Try Prisma if available
   try {
@@ -48,18 +63,6 @@ export const AddReview = async ({
       r => r.clientId === clientId && r.serviceId === serviceId
     );
 
-    const reviewObj = {
-      id: reviewId,
-      clientId,
-      clientName,
-      clientAvatar,
-      serviceId,
-      rating,
-      comment,
-      createdAt: now.toISOString(),
-      updatedAt: now.toISOString(),
-    };
-
     if (existingIndex >= 0) {
       store.reviews[existingIndex] = {
         ...store.reviews[existingIndex],
@@ -73,28 +76,18 @@ export const AddReview = async ({
     }
 
     writeCloudStore(store);
-
-    return {
-      success: true,
-      review: {
-        id: reviewId,
-        rating,
-        comment,
-        createdAt: now.toISOString(),
-        updatedAt: now.toISOString(),
-      },
-    };
   } catch (err) {
     console.error('Error saving review to cloud store:', err);
-    return {
-      success: true,
-      review: {
-        id: reviewId,
-        rating,
-        comment,
-        createdAt: now.toISOString(),
-        updatedAt: now.toISOString(),
-      },
-    };
   }
+
+  return {
+    success: true,
+    review: {
+      id: reviewId,
+      rating,
+      comment,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    },
+  };
 };

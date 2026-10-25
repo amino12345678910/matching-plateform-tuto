@@ -18,19 +18,6 @@ interface EnhancedServiceCardType extends ServiceCardType {
 const FALLBACK_COURSE_IMAGE =
   'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=900&auto=format&fit=crop&q=80';
 
-function formatCleanCourseTitle(title: string, sellerName?: string): string {
-  const cleaned = (title || '').trim();
-  const words = cleaned.split(/\s+/).filter(Boolean);
-  if (words.length < 5 || cleaned.toLowerCase().startsWith('i teach')) {
-    const topic = cleaned.replace(/^i\s+teach\s+/i, '').trim() || 'Soutien Scolaire';
-    const capTopic = topic.charAt(0).toUpperCase() + topic.slice(1);
-    return `Cours & Révision : ${capTopic} — Accompagnement Personnalisé${
-      sellerName ? ` avec ${sellerName}` : ''
-    }`;
-  }
-  return cleaned;
-}
-
 export function ServiceCardComponent({service}: {service: EnhancedServiceCardType}) {
   const [isLiked, setIsLiked] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -41,15 +28,17 @@ export function ServiceCardComponent({service}: {service: EnhancedServiceCardTyp
   const hasMultiplePrices = minPrice !== maxPrice;
   const deliveryDays = service.packages[0]?.delivery || 3;
 
-  const isSellerVerified =
-    (service.seller as any)?.isVerified !== false && service.seller?.verified !== false;
-  const displayTitle = formatCleanCourseTitle(service.title, service.seller?.user?.name);
+  const isSellerVerified = Boolean(
+    (service.seller as any)?.isVerified === true || service.seller?.verified === true
+  );
+  const displayTitle = (service.title || '').trim();
   const imageSrc =
     service.images && service.images.length > 0 && service.images[0]
       ? cloudinaryUrl(service.images[0], 'q_40,f_auto,w_600')
       : FALLBACK_COURSE_IMAGE;
 
   const sellerAvatar =
+    (service?.seller?.user as any)?.image ||
     (service?.seller?.profilePhoto ? cloudinaryUrl(service.seller?.profilePhoto) : undefined) ||
     `https://api.dicebear.com/6.x/initials/svg?seed=${service.seller.user.name}`;
 

@@ -6,6 +6,7 @@ import {generateSlug} from '../use-slug';
 import {revalidatePath} from 'next/cache';
 import {readCloudStore, writeCloudStore} from '@/lib/cloud-store';
 import {getUserInfo} from '@/hooks/shared/get-user-info';
+import {saveCustomServiceCookie} from '@/hooks/book/bookings-store';
 import {
   generateMeetCode,
   getDefaultSessionDate,
@@ -23,52 +24,25 @@ const CATEGORY_DEFAULT_IMAGES: Record<string, string> = {
   'exam-prep': '/assets/website-development.webp',
 };
 
-function formatProfessionalTitle(rawTitle: string, categorySlug?: string | null): string {
-  const cleaned = rawTitle.trim().replace(/\s+/g, ' ');
-  const words = cleaned.split(' ').filter(Boolean);
-  const capitalized = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
-
-  if (words.length < 4 || capitalized.length < 22) {
-    const subjectLabel = categorySlug
-      ? categorySlug.replace(/-/g, ' ').toUpperCase()
-      : 'Accompagnement Scolaire & Universitaire';
-    return `Cours particuliers : ${capitalized} — Suivi 1-on-1 & Préparation Examens (${subjectLabel})`;
-  }
-  return capitalized;
-}
-
-function formatStructuredDescription(
+function appendMeetScheduleToDescription(
   rawDesc: string,
-  title: string,
   meetUrl: string,
   scheduledDate: string,
   scheduledTime: string
 ): string {
-  const plain = rawDesc.replace(/<[^>]*>/g, '').trim();
+  const cleaned = (rawDesc || '').trim();
   const scheduleBanner = `
     <div data-session-date="${scheduledDate}" data-session-time="${scheduledTime}">
-      <h3>📹 Séance Live Google Meet & Horaire Planifié</h3>
-      <p><strong>Date & Heure prévues :</strong> ${formatScheduleLabel(scheduledDate, scheduledTime)} • <strong>Lien Google Meet direct :</strong> <a href="${meetUrl}" target="_blank" rel="noopener noreferrer">${meetUrl}</a></p>
+      <h3>📹 Séance Google Meet Planifiée</h3>
+      <p><strong>Date & Heure prévues :</strong> ${formatScheduleLabel(scheduledDate, scheduledTime)} • <strong>Lien Google Meet :</strong> <a href="${meetUrl}" target="_blank" rel="noopener noreferrer">${meetUrl}</a></p>
     </div>
   `.trim();
 
-  if (rawDesc.includes('<h3>') && plain.length >= 100) {
-    return `${rawDesc}\n${scheduleBanner}`;
+  if (!cleaned) return scheduleBanner;
+  if (cleaned.includes('<p>') || cleaned.includes('<h3>') || cleaned.includes('<ul>')) {
+    return `${cleaned}\n${scheduleBanner}`;
   }
-
-  return `
-    <h3>🎯 Objectifs pédagogiques du cours</h3>
-    <p>${plain || `Accompagnement personnalisé et structuré autour de : ${title}.`}</p>
-    <h3>📚 Déroulement d'une séance sur 9arrini</h3>
-    <ul>
-      <li><strong>Diagnostic & Rappel de cours :</strong> Explication claire des concepts clés et méthodes essentielles.</li>
-      <li><strong>Pratique intensive :</strong> Résolution guidée de séries d'exercices et d'anciens sujets de devoirs/examens.</li>
-      <li><strong>Supports inclus :</strong> Fiches de révision PDF, exercices corrigés et suivi personnalisé des progrès.</li>
-    </ul>
-    ${scheduleBanner}
-    <h3>✅ Engagement Qualité 9arrini</h3>
-    <p>Séances interactives en direct sur Google Meet, adaptées au rythme et au niveau de chaque élève, payables directement via votre Portefeuille Points (1 Point = 1 DT).</p>
-  `.trim();
+  return `<p>${cleaned}</p>\n${scheduleBanner}`;
 }
 
 export const storeService = async (
@@ -83,16 +57,14 @@ export const storeService = async (
 }> => {
   try {
     const rawTitle = (service.title || '').trim();
-    const words = rawTitle.split(/\s+/).filter(Boolean);
-    if (words.length < 3 || rawTitle.length < 12) {
+    if (rawTitle.length < 3) {
       return {
         success: false,
-        error:
-          'Titre trop court ou non conforme : veuillez rédiger un titre complet décrivant la matière et le niveau (au moins 4 mots).',
+        error: 'Veuillez saisir un titre valide pour votre cours.',
       };
     }
 
-    const formattedTitle = formatProfessionalTitle(rawTitle, service.categorySlug);
+    const formattedTitle = rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1);
     let createdSlug =
       service.slug || generateSlug(formattedTitle, {lowercase: true, randNum: true});
 
@@ -103,9 +75,8 @@ export const storeService = async (
         ? service.meetLink
         : `https://meet.google.com/${generateMeetCode(createdSlug)}`;
 
-    const formattedDescription = formatStructuredDescription(
+    const formattedDescription = appendMeetScheduleToDescription(
       service.description || '',
-      formattedTitle,
       meetLink,
       scheduledDate,
       scheduledTime
@@ -120,31 +91,7 @@ export const storeService = async (
         ? cloudinaryImageUrls
         : [fallbackImg];
 
-    const defaultPkgDescriptions: Record<string, string> = {
-      BASIC:
-        '1 séance de cours particulier 1-on-1 sur Google Meet (60 min) + explication du chapitre + série d’exercices PDF',
-      STANDARD:
-        'Pack 3 séances de cours particuliers sur Google Meet + correction de devoirs + fiches résumé de révision',
-      PREMIUM:
-        'Pack intensif 6 séances sur Google Meet (Préparation Examen / Bac) + suivi complet + Q&A illimité avec le professeur',
-    };
-
-    const defaultFaqs =
-      Array.isArray(service.faqs) && service.faqs.length > 0
-        ? service.faqs
-        : [
-            {
-              id: `faq-default-1-${Date.now()}`,
-              question: 'Comment rejoindre la séance sur Google Meet ?',
-              answer: `Le lien Google Meet (${meetLink}) est généré automatiquement et planifié pour le ${formatScheduleLabel(scheduledDate, scheduledTime)}. Vous pouvez cliquer dessus directement depuis votre tableau de bord ou l'ajouter à Google Agenda.`,
-            },
-            {
-              id: `faq-default-2-${Date.now()}`,
-              question: 'Comment régler la séance avec mes Points 9arrini ?',
-              answer:
-                '1 Point = 1 Dinar (DT). Il vous suffit de recharger votre Portefeuille Points depuis votre espace élève et de réserver en 1 clic.',
-            },
-          ];
+    const realFaqs = Array.isArray(service.faqs) ? service.faqs.filter((f: any) => f.question && f.answer) : [];
 
     try {
       const data = await prisma.service.create({
@@ -155,7 +102,7 @@ export const storeService = async (
           images: validImages,
           status: service.status || 'ACTIVE',
           faqs: {
-            create: defaultFaqs.map((faq: FAQ) => ({
+            create: realFaqs.map((faq: FAQ) => ({
               question: faq.question,
               answer: faq.answer,
             })),
@@ -178,13 +125,10 @@ export const storeService = async (
           packages: {
             create: service.packages.map((pkg: any) => ({
               name: pkg.name,
-              price: Math.max(10, Number(pkg.price) || 25),
-              delivery: Math.max(1, Number(pkg.delivery) || 2),
-              revisions: Math.max(1, Number(pkg.revisions) || 2),
-              description:
-                pkg.description && pkg.description.trim().length >= 15
-                  ? pkg.description.trim()
-                  : defaultPkgDescriptions[pkg.name] || defaultPkgDescriptions.BASIC,
+              price: Math.max(1, Number(pkg.price) || 25),
+              delivery: Math.max(1, Number(pkg.delivery) || 1),
+              revisions: Math.max(1, Number(pkg.revisions) || 1),
+              description: (pkg.description || '').trim() || `Pack ${pkg.name} — ${formattedTitle}`,
             })),
           },
           freelancer: {connect: {id: service.sellerId}},
@@ -198,17 +142,18 @@ export const storeService = async (
       });
       createdSlug = data?.slug || createdSlug;
     } catch {
-      // Cloud fallback when running on Netlify/Vercel
+      // Cloud fallback when running on Vercel
     }
 
-    // Also store in Cloud Store so newly created courses appear live on Netlify/Vercel
     const {name, email} = await getUserInfo();
     const store = readCloudStore();
     const cloudSeller = store.sellers.find(s => s.userId === service.sellerId);
+    const cloudUser = store.users.find(u => u.id === service.sellerId);
     const now = new Date().toISOString();
+    const serviceId = `srv_${Date.now()}`;
 
-    store.customServices.unshift({
-      id: `srv_${Date.now()}`,
+    const newServiceObj = {
+      id: serviceId,
       slug: createdSlug,
       title: formattedTitle,
       description: formattedDescription,
@@ -223,8 +168,8 @@ export const storeService = async (
       sellerId: cloudSeller?.id || `seller_${service.sellerId}`,
       categoryId: catSlug,
       category: {id: catSlug, slug: catSlug, name: catSlug.toUpperCase()},
-      averageRating: 5.0,
-      _count: {reviews: 1, bookings: 0},
+      averageRating: 0,
+      _count: {reviews: 0, bookings: 0},
       reviews: [],
       bookings: [],
       tags: (service.tags || []).map((t: string, i: number) => ({
@@ -233,7 +178,7 @@ export const storeService = async (
         slug: t,
         isApproved: true,
       })),
-      faqs: defaultFaqs,
+      faqs: realFaqs,
       seller: {
         id: cloudSeller?.id || `seller_${service.sellerId}`,
         userId: service.sellerId,
@@ -243,32 +188,33 @@ export const storeService = async (
         specialty: cloudSeller?.specialty,
         credentials: cloudSeller?.credentials,
         experience: cloudSeller?.experience,
-        bio: cloudSeller?.bio || `Professeur ${name || ''} sur 9arrini`,
+        phone: cloudSeller?.phone || '',
+        bio: cloudSeller?.bio || '',
         profilePhoto: undefined,
         createdAt: now,
         updatedAt: now,
         user: {
           id: service.sellerId,
-          name: name || 'Professeur 9arrini',
-          email: email || 'prof@9arrini.tn',
-          image: null,
-          imageSource: 'NULL',
+          name: cloudUser?.name || name || 'Professeur 9arrini',
+          email: cloudUser?.email || email || '',
+          image: cloudUser?.image || null,
+          imageSource: cloudUser?.imageSource || 'GOOGLE',
         },
       },
       packages: service.packages.map((pkg: any, idx: number) => ({
         id: `pkg_${Date.now()}_${idx}`,
-        serviceId: `srv_${Date.now()}`,
+        serviceId,
         name: pkg.name,
-        price: Math.max(10, Number(pkg.price) || 25),
-        delivery: Math.max(1, Number(pkg.delivery) || 2),
-        revisions: Math.max(1, Number(pkg.revisions) || 2),
-        description:
-          pkg.description && pkg.description.trim().length >= 15
-            ? pkg.description.trim()
-            : defaultPkgDescriptions[pkg.name] || defaultPkgDescriptions.BASIC,
+        price: Math.max(1, Number(pkg.price) || 25),
+        delivery: Math.max(1, Number(pkg.delivery) || 1),
+        revisions: Math.max(1, Number(pkg.revisions) || 1),
+        description: (pkg.description || '').trim() || `Pack ${pkg.name} — ${formattedTitle}`,
       })),
-    });
+    };
+
+    store.customServices.unshift(newServiceObj);
     writeCloudStore(store);
+    await saveCustomServiceCookie(newServiceObj);
 
     revalidatePath('/explore');
     revalidatePath('/');

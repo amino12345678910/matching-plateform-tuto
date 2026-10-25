@@ -3,7 +3,8 @@
 import {prisma} from '@/lib/prisma';
 import {revalidatePath} from 'next/cache';
 import type {BookingStatus, ServiceStatus} from '@/generated/prisma';
-import {readCloudStore, writeCloudStore, getAllCloudServices} from '@/lib/cloud-store';
+import {readCloudStore, writeCloudStore} from '@/lib/cloud-store';
+import {getAllRealServices, deleteCustomServiceCookie} from '@/hooks/book/bookings-store';
 
 export async function getAdminDashboardData() {
   try {
@@ -148,9 +149,9 @@ export async function getAdminDashboardData() {
       transactions,
     };
   } catch {
-    // Cloud fallback using readCloudStore()
+    // Cloud fallback using readCloudStore() + getAllRealServices()
+    const cloudServices = await getAllRealServices();
     const store = readCloudStore();
-    const cloudServices = getAllCloudServices();
 
     const sellers = store.sellers.map(s => {
       const u = store.users.find(usr => usr.id === s.userId) || {
@@ -302,6 +303,7 @@ export async function adminVerifyTutor(sellerId: string, verify: boolean) {
   return {
     success: true,
     message: verify ? 'Professeur vérifié avec succès !' : 'Statut de vérification révoqué.',
+    error: undefined as string | undefined,
   };
 }
 
@@ -398,7 +400,11 @@ export async function adminUpdateBookingStatus(bookingId: string, status: Bookin
   revalidatePath('/dashboard/client');
   revalidatePath('/dashboard/freelancer');
 
-  return {success: true, message: `Statut de la réservation mis à jour : ${status}`};
+  return {
+    success: true,
+    message: `Statut de la réservation mis à jour : ${status}`,
+    error: undefined as string | undefined,
+  };
 }
 
 export async function adminUpdateServiceStatus(serviceId: string, status: ServiceStatus) {
@@ -423,7 +429,11 @@ export async function adminUpdateServiceStatus(serviceId: string, status: Servic
   revalidatePath('/explore');
   revalidatePath('/');
 
-  return {success: true, message: `Statut du cours mis à jour : ${status}`};
+  return {
+    success: true,
+    message: `Statut du cours mis à jour : ${status}`,
+    error: undefined as string | undefined,
+  };
 }
 
 export async function adminDeleteService(serviceId: string) {
@@ -438,11 +448,16 @@ export async function adminDeleteService(serviceId: string) {
   const store = readCloudStore();
   store.customServices = store.customServices.filter((item: any) => item.id !== serviceId);
   writeCloudStore(store);
+  await deleteCustomServiceCookie(serviceId);
 
   revalidatePath('/admin');
   revalidatePath('/admin/dashboard');
   revalidatePath('/explore');
   revalidatePath('/');
 
-  return {success: true, message: 'Cours supprimé avec succès.'};
+  return {
+    success: true,
+    message: 'Cours supprimé avec succès.',
+    error: undefined as string | undefined,
+  };
 }

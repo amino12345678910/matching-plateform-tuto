@@ -37,7 +37,11 @@ import {allowClientOnly} from './validate/allow-user-only';
 import {toast} from 'sonner';
 import {ServiceCarousel} from '../autoplay-carousel';
 import {bookService} from '@/hooks/book/book-service';
-import {getStudentPointsData, buyStudentPoints, checkUserHasBookedService} from '@/hooks/points/points-actions';
+import {
+  getStudentPointsData,
+  buyStudentPoints,
+  checkUserHasBookedService,
+} from '@/hooks/points/points-actions';
 import {profilePhoto} from '../profile-url';
 import Link from 'next/link';
 import moment from 'moment';
@@ -52,20 +56,15 @@ import {
   buildGoogleCalendarMeetUrl,
 } from '@/lib/google-meet';
 
-function formatCleanCourseTitle(title: string, sellerName?: string): string {
-  const cleaned = (title || '').trim();
-  const words = cleaned.split(/\s+/).filter(Boolean);
-  if (words.length < 5 || cleaned.toLowerCase().startsWith('i teach')) {
-    const topic = cleaned.replace(/^i\s+teach\s+/i, '').trim() || 'Soutien Scolaire';
-    const capTopic = topic.charAt(0).toUpperCase() + topic.slice(1);
-    return `Cours & Révision : ${capTopic} — Accompagnement Personnalisé${
-      sellerName ? ` avec ${sellerName}` : ''
-    }`;
-  }
-  return cleaned;
-}
+const BOOKED_SERVICES_STORAGE_KEY = '9arrini_booked_services_v1';
 
-export function ServiceDetailPage({service}: {service: Service}) {
+export function ServiceDetailPage({
+  service,
+  initialHasBooked = false,
+}: {
+  service: Service;
+  initialHasBooked?: boolean;
+}) {
   const [selectedPackage, setSelectedPackage] = useState<ServicePackage['name']>('BASIC');
   const [isBooking, setIsBooking] = useState(false);
   const [isRecharging, setIsRecharging] = useState(false);
@@ -74,9 +73,9 @@ export function ServiceDetailPage({service}: {service: Service}) {
   const [studentPoints, setStudentPoints] = useState<number | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [hasBooked, setHasBooked] = useState(false);
+  const [hasBooked, setHasBooked] = useState<boolean>(Boolean(initialHasBooked));
 
-  const reviewCount = service.reviews!.length;
+  const reviewCount = service.reviews?.length || 0;
   const avgRating = useMemo(
     () =>
       reviewCount === 0
@@ -87,13 +86,14 @@ export function ServiceDetailPage({service}: {service: Service}) {
 
   const seller = service.seller;
   const sellerName = seller.user.name || 'Professeur 9arrini';
-  const isSellerVerified =
-    (seller as any)?.isVerified !== false && (seller as any)?.verified !== false;
+  const isSellerVerified = Boolean(
+    (seller as any)?.isVerified === true || (seller as any)?.verified === true
+  );
   const sellerSpecialty = (seller as any)?.specialty;
   const sellerCredentials = (seller as any)?.credentials;
   const sellerExperience = (seller as any)?.experience;
 
-  const displayTitle = formatCleanCourseTitle(service.title, sellerName);
+  const displayTitle = (service.title || '').trim();
   const initialMeet = useMemo(() => getServiceMeetInfo(service as any), [service]);
   const [sessionDate, setSessionDate] = useState(initialMeet.scheduledDate);
   const [sessionTime, setSessionTime] = useState(initialMeet.scheduledTime);
@@ -120,25 +120,42 @@ export function ServiceDetailPage({service}: {service: Service}) {
     const init = async () => {
       const img = await profilePhoto({
         imageUrl: service.seller.user.image,
-        imageSource: 'CLOUDINARY',
+        imageSource: (service.seller.user as any).imageSource || 'CLOUDINARY',
         email: service.seller.user.email || '',
       });
       setAvatar(img);
 
       const pointsRes = await getStudentPointsData();
+      let resolvedUid: string | null = null;
       if (pointsRes.success && pointsRes.user) {
         setStudentPoints(pointsRes.user.points ?? 0);
         setUserRole(pointsRes.user.role ?? null);
-        setCurrentUserId(pointsRes.user.id || pointsRes.userId || null);
+        resolvedUid = pointsRes.user.id || pointsRes.userId || null;
+        setCurrentUserId(resolvedUid);
       }
 
-      const booked = await checkUserHasBookedService(service.id);
+      // Check local storage for immediate client-side persistence
+      if (resolvedUid) {
+        try {
+          const raw = localStorage.getItem(`${BOOKED_SERVICES_STORAGE_KEY}_${resolvedUid}`);
+          if (raw) {
+            const arr: string[] = JSON.parse(raw);
+            if (arr.includes(service.id) || (service.slug && arr.includes(service.slug))) {
+              setHasBooked(true);
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      const booked = await checkUserHasBookedService(service.id, service.slug);
       if (booked) {
         setHasBooked(true);
       }
     };
     init();
-  }, [service.id, service.seller.user.image, service.seller.user.email]);
+  }, [service.id, service.slug, service.seller.user.image, service.seller.user.email]);
 
   const isTutorOwner = Boolean(
     (userRole === 'SELLER' || userRole === 'FREELANCER') &&
@@ -149,7 +166,7 @@ export function ServiceDetailPage({service}: {service: Service}) {
 
   const avgResponseTime = useMemo(() => {
     const {hasSeen, createdAt} = service.bookings?.[0] || {};
-    if (!hasSeen || !createdAt) return 'Moins de 2 heures';
+    if (!hasSeen || !createdAt) return 'En direct';
     const now = moment();
     const created = moment(createdAt);
     const diffHours = now.diff(created, 'hours');
@@ -177,7 +194,7 @@ export function ServiceDetailPage({service}: {service: Service}) {
       ? Math.max(0, currentPackage.price - studentPoints)
       : 0;
 
-  const tutorPhone = ((seller as any)?.phone || '+216 22 410 112').replace(/[^0-9]/g, '');
+  const rawTutorPhone = ((seller as any)?.phone || '').replace(/[^0-9]/g, '');
   const whatsappUrl = useMemo(() => {
     const msg = encodeURIComponent(
       `Bonjour Professeur ${sellerName}, je vous contacte depuis 9arrini.me concernant le cours "${displayTitle}" prévu le ${formatScheduleLabel(
@@ -185,12 +202,16 @@ export function ServiceDetailPage({service}: {service: Service}) {
         sessionTime
       )}.`
     );
-    return `https://wa.me/${tutorPhone || '21622410112'}?text=${msg}`;
-  }, [sellerName, displayTitle, sessionDate, sessionTime, tutorPhone]);
+    return rawTutorPhone
+      ? `https://wa.me/${rawTutorPhone}?text=${msg}`
+      : `https://wa.me/?text=${msg}`;
+  }, [sellerName, displayTitle, sessionDate, sessionTime, rawTutorPhone]);
 
   const internalChatUrl = `/dashboard/messages?tutorId=${encodeURIComponent(
-    service.freelancerId || service.seller?.userId || 'tutor_1'
-  )}&tutorName=${encodeURIComponent(sellerName)}&course=${encodeURIComponent(displayTitle)}`;
+    service.freelancerId || service.seller?.userId || ''
+  )}&tutorName=${encodeURIComponent(sellerName)}&course=${encodeURIComponent(
+    displayTitle
+  )}&slug=${encodeURIComponent(service.slug || '')}`;
 
   const handleQuickRecharge = async (amountToRecharge: number) => {
     setIsRecharging(true);
@@ -218,6 +239,10 @@ export function ServiceDetailPage({service}: {service: Service}) {
 
   // Booking handler using Points (1 Point = 1 DT)
   const handleBooking = async () => {
+    if (hasBooked) {
+      toast.info('Vous êtes déjà inscrit(e) à ce cours.');
+      return;
+    }
     setIsBooking(true);
     try {
       const {disable, role, clientId, name: clientName} = await allowClientOnly();
@@ -239,7 +264,6 @@ export function ServiceDetailPage({service}: {service: Service}) {
           error,
           message,
           newBalance,
-          insufficientPoints,
         }: {
           success: boolean;
           error?: string;
@@ -263,10 +287,23 @@ export function ServiceDetailPage({service}: {service: Service}) {
           scheduledDate: sessionDate,
           scheduledTime: sessionTime,
           meetUrl: initialMeet.meetUrl,
+          tutorPhone: (seller as any)?.phone || '',
         });
 
         if (success) {
           setHasBooked(true);
+          try {
+            const key = `${BOOKED_SERVICES_STORAGE_KEY}_${clientId}`;
+            const existingRaw = localStorage.getItem(key);
+            const existingArr: string[] = existingRaw ? JSON.parse(existingRaw) : [];
+            const nextArr = Array.from(
+              new Set([...existingArr, service.id, service.slug].filter(Boolean))
+            );
+            localStorage.setItem(key, JSON.stringify(nextArr));
+          } catch {
+            // ignore
+          }
+
           const computedBalance =
             typeof newBalance === 'number'
               ? newBalance
@@ -281,9 +318,6 @@ export function ServiceDetailPage({service}: {service: Service}) {
           );
         } else if (error) {
           toast.error(error);
-          if (insufficientPoints) {
-            // Prompt user to recharge
-          }
         }
       }
     } catch (error) {
@@ -296,21 +330,14 @@ export function ServiceDetailPage({service}: {service: Service}) {
 
   const formattedDescriptionHtml = useMemo(() => {
     const raw = (service.description || '').trim();
-    if (raw.includes('<h3>') || raw.includes('<h2>') || raw.includes('<ul>')) {
+    if (!raw) {
+      return `<p>Cours proposé par ${sellerName}.</p>`;
+    }
+    if (raw.includes('<p>') || raw.includes('<h3>') || raw.includes('<h2>') || raw.includes('<ul>')) {
       return raw;
     }
-    const cleanText = raw.replace(/<[^>]*>/g, '').trim();
-    return `
-      <h3>🎯 Objectifs Pédagogiques de la Séance</h3>
-      <p>${cleanText || `Accompagnement personnalisé et structuré en ${service.category?.name || 'Soutien Scolaire'} avec ${sellerName}.`}</p>
-      <h3>📚 Programme & Déroulement du Cours</h3>
-      <ul>
-        <li><strong>Explication claire du cours :</strong> Rappel des notions fondamentales, théorèmes et astuces de résolution rapide.</li>
-        <li><strong>Pratique intensive :</strong> Exercices d'application gradués et séries d'examens nationaux corrigés pas à pas.</li>
-        <li><strong>Suivi & Support PDF :</strong> Fiche résumé complète envoyée à la fin de la séance + réponses aux questions.</li>
-      </ul>
-    `;
-  }, [service.description, service.category?.name, sellerName]);
+    return `<p>${raw}</p>`;
+  }, [service.description, sellerName]);
 
   return (
     <main className="min-h-screen bg-background">
@@ -323,7 +350,7 @@ export function ServiceDetailPage({service}: {service: Service}) {
               <div className="flex flex-wrap items-center gap-2 mb-3">
                 <Badge className="bg-emerald-600/10 text-emerald-700 border-emerald-500/20 text-xs font-semibold px-2.5 py-1">
                   <GraduationCap className="h-3.5 w-3.5 mr-1" />
-                  {service.category?.name || 'Soutien Académique'}
+                  {service.category?.name || 'Cours'}
                 </Badge>
                 {isSellerVerified ? (
                   <Badge className="bg-emerald-600 text-white text-xs font-semibold px-2.5 py-1">
@@ -332,7 +359,7 @@ export function ServiceDetailPage({service}: {service: Service}) {
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="border-amber-500/40 text-amber-700 text-xs px-2.5 py-1">
-                    ⏳ Dossier Prof en cours de confirmation
+                    Professeur 9arrini
                   </Badge>
                 )}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground ml-1">
@@ -355,40 +382,11 @@ export function ServiceDetailPage({service}: {service: Service}) {
 
             {/* Detailed Content Sections */}
             <div className="space-y-10">
-              <section>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold flex items-center gap-2">
-                    <BookOpen className="h-5 w-5 text-emerald-600" />
-                    Ce qui est inclus dans chaque séance
-                  </h2>
-                  <Badge variant="secondary" className="text-xs font-medium">
-                    Standard Académique 9arrini
-                  </Badge>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {[
-                    'Séance 1-on-1 en direct avec méthodologie claire',
-                    'Fiches de révision & Résumés de cours PDF',
-                    'Séries d’exercices & Anciens devoirs corrigés',
-                    'Suivi personnalisé & Réponses aux questions (Q&A)',
-                  ].map((feature, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-3 p-3.5 rounded-xl border bg-card hover:border-emerald-500/40 transition-colors"
-                    >
-                      <CheckCircle className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                      <span className="text-sm font-medium">{feature}</span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* Structured Academic Description */}
+              {/* Course Description */}
               <section className="rounded-2xl border bg-card p-6 shadow-xs">
                 <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <Award className="h-5 w-5 text-emerald-600" />
-                  Programme & Détails du Cours
+                  <BookOpen className="h-5 w-5 text-emerald-600" />
+                  Description & Détails du Cours
                 </h2>
 
                 <div
@@ -415,14 +413,10 @@ export function ServiceDetailPage({service}: {service: Service}) {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1.5">
                       <h3 className="font-bold text-lg truncate">{sellerName}</h3>
-                      {isSellerVerified ? (
+                      {isSellerVerified && (
                         <Badge className="bg-emerald-600 text-white text-xs">
                           <ShieldCheck className="h-3 w-3 mr-1" />
                           Prof Vérifié ✓
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs border-amber-500/40 text-amber-700">
-                          ⏳ En attente de confirmation Admin
                         </Badge>
                       )}
                     </div>
@@ -456,7 +450,7 @@ export function ServiceDetailPage({service}: {service: Service}) {
 
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Clock className="h-3.5 w-3.5" />
-                        <span>Réponse moyenne : {avgResponseTime}</span>
+                        <span>Réponse : {avgResponseTime}</span>
                       </div>
                     </div>
                   </div>
@@ -497,9 +491,9 @@ export function ServiceDetailPage({service}: {service: Service}) {
               </section>
 
               {/* FAQ */}
-              <section>
-                <h2 className="text-xl font-bold mb-3">Questions Fréquentes (FAQ)</h2>
-                {service.faqs && service.faqs.length > 0 ? (
+              {service.faqs && service.faqs.length > 0 && (
+                <section>
+                  <h2 className="text-xl font-bold mb-3">Questions Fréquentes (FAQ)</h2>
                   <Accordion type="single" collapsible className="w-full" defaultValue="item-1">
                     {service.faqs.map((faq, index) => (
                       <AccordionItem value={`item-${index + 1}`} key={index}>
@@ -510,12 +504,8 @@ export function ServiceDetailPage({service}: {service: Service}) {
                       </AccordionItem>
                     ))}
                   </Accordion>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground rounded-lg border">
-                    Aucune FAQ supplémentaire pour ce cours.
-                  </div>
-                )}
-              </section>
+                </section>
+              )}
 
               <section>
                 <ReviewForm sendCurrentReview={setCurrentReview} serviceId={service.id} />
@@ -526,15 +516,21 @@ export function ServiceDetailPage({service}: {service: Service}) {
             </div>
           </div>
 
-          {/* Booking Sidebar with Points Wallet Integration */}
+          {/* Right Sidebar: Shows EITHER Registered/Unlocked View OR Booking/Payment View */}
           <div className="lg:col-span-1 order-1">
             <div className="sticky top-8 space-y-6">
               <Card className="border-2 border-emerald-500/20 shadow-xl shadow-emerald-500/5 rounded-2xl overflow-hidden">
                 <CardHeader className="pb-4 px-6 pt-6 bg-gradient-to-r from-emerald-950/5 to-teal-950/5">
                   <CardTitle className="text-lg flex items-center justify-between">
-                    <span>Choisir un Pack de Cours</span>
+                    <span>
+                      {canAccessMeet
+                        ? isTutorOwner
+                          ? 'Gestion de votre Séance'
+                          : 'Votre Séance Réservée'
+                        : 'Choisir un Pack de Cours'}
+                    </span>
                     <Badge className="bg-emerald-600 text-white text-xs font-semibold">
-                      1 Point = 1 DT
+                      {canAccessMeet ? 'Inscrit ✓' : '1 Point = 1 DT'}
                     </Badge>
                   </CardTitle>
                 </CardHeader>
@@ -565,281 +561,349 @@ export function ServiceDetailPage({service}: {service: Service}) {
                     </div>
                   )}
 
-                  {/* Package Tabs */}
-                  <div className="space-y-4">
-                    <Tabs
-                      value={selectedPackage}
-                      onValueChange={setSelectedPackage as any}
-                      className="w-full"
-                    >
-                      <TabsList className="grid grid-cols-3 w-full rounded-lg mb-3 h-auto border">
-                        {sortedPackages.map(pkg => (
-                          <TabsTrigger
-                            key={pkg.id}
-                            value={pkg.name}
-                            className="rounded-md py-2 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-md"
-                          >
-                            <div className="text-center">
-                              <div className="font-semibold text-xs">{pkg.name}</div>
-                              <div className="text-[11px] opacity-90 mt-0.5">
-                                {pkg.price} Pts ({pkg.price} DT)
-                              </div>
-                            </div>
-                          </TabsTrigger>
-                        ))}
-                      </TabsList>
-                    </Tabs>
-
-                    {/* Selected Package Details */}
+                  {canAccessMeet ? (
+                    /* ================= ALREADY PAID & REGISTERED VIEW ================= */
                     <div className="space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-3xl font-extrabold text-emerald-700 dark:text-emerald-400">
-                            {currentPackage.price} Points
-                          </span>
-                          <span className="text-sm font-semibold text-muted-foreground">
-                            ({currentPackage.price} Dinars / DT)
-                          </span>
+                      {!isTutorOwner && (
+                        <div className="rounded-xl bg-emerald-600 text-white p-3.5 flex items-start gap-2.5 shadow-sm">
+                          <CheckCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                          <div className="text-xs leading-relaxed">
+                            <p className="font-bold text-sm">Vous êtes déjà inscrit(e) à ce cours !</p>
+                            <p className="opacity-90 mt-0.5">
+                              Votre paiement a été validé et votre séance est enregistrée dans vos cours réservés et vos rappels de notifications.
+                            </p>
+                          </div>
                         </div>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                          {currentPackage.description}
-                        </p>
+                      )}
+
+                      <div className="rounded-xl border-2 border-emerald-500 bg-emerald-50/80 dark:bg-emerald-950/40 p-3.5 space-y-3 shadow-md shadow-emerald-500/10">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                            <Video className="h-4 w-4 text-emerald-600" />
+                            <span>Séance Google Meet Planifiée</span>
+                          </div>
+                          <Badge className="bg-emerald-600 text-white text-[10px] font-semibold">
+                            {isTutorOwner ? 'Professeur' : 'Accès Débloqué ✓'}
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                              <Calendar className="h-3 w-3 text-emerald-600" />
+                              Date du cours
+                            </label>
+                            <input
+                              type="date"
+                              value={sessionDate}
+                              min={new Date().toISOString().split('T')[0]}
+                              onChange={e => setSessionDate(e.target.value)}
+                              className="w-full rounded-lg border border-emerald-300 bg-white dark:bg-slate-900 px-2 py-1 text-xs font-medium text-slate-900 dark:text-slate-100"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                              <Clock className="h-3 w-3 text-emerald-600" />
+                              Heure prévue
+                            </label>
+                            <input
+                              type="time"
+                              value={sessionTime}
+                              onChange={e => setSessionTime(e.target.value)}
+                              className="w-full rounded-lg border border-emerald-300 bg-white dark:bg-slate-900 px-2 py-1 text-xs font-medium text-slate-900 dark:text-slate-100"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="rounded-lg bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 p-2.5 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400 truncate">
+                              {initialMeet.meetUrl}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={copyMeetUrl}
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:underline shrink-0 cursor-pointer"
+                            >
+                              <Copy className="h-3 w-3" />
+                              Copier
+                            </button>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-1">
+                            <a
+                              href={initialMeet.meetUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-2 text-xs font-bold transition"
+                            >
+                              <Video className="h-3.5 w-3.5" />
+                              Rejoindre Meet
+                            </a>
+                            <a
+                              href={liveCalendarUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 py-2 px-2 text-xs font-semibold transition"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              Google Agenda
+                            </a>
+                          </div>
+                        </div>
                       </div>
 
-                      <Separator />
+                      <div className="space-y-2.5 pt-1">
+                        <Button
+                          asChild
+                          className="w-full h-11 text-sm font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
+                        >
+                          <Link href="/dashboard/client/bookings">
+                            <BellRing className="mr-2 h-4 w-4" />
+                            Voir dans Mes Cours Réservés
+                            <ChevronRight className="ml-1.5 h-4 w-4" />
+                          </Link>
+                        </Button>
 
-                      <div className="space-y-2.5">
-                        <div className="flex items-center justify-between py-1">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">Durée du programme</span>
-                          </div>
-                          <span className="font-semibold text-sm">
-                            {currentPackage.delivery} jour{currentPackage.delivery !== 1 ? 's' : ''}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-between py-1">
-                          <div className="flex items-center gap-2">
-                            <RefreshCw className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">Suivi Q&A inclus</span>
-                          </div>
-                          <span className="font-semibold text-sm">
-                            {currentPackage.revisions} séance{currentPackage.revisions !== 1 ? 's' : ''}
-                          </span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            asChild
+                            size="sm"
+                            className="bg-[#25D366] hover:bg-[#1ebe5d] text-white font-semibold text-xs h-9 rounded-lg"
+                          >
+                            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+                              <MessageCircle className="mr-1.5 h-3.5 w-3.5" />
+                              WhatsApp Prof
+                            </a>
+                          </Button>
+                          <Button
+                            asChild
+                            variant="outline"
+                            size="sm"
+                            className="text-xs font-semibold h-9 rounded-lg"
+                          >
+                            <Link href={internalChatUrl}>
+                              <MessageSquare className="mr-1.5 h-3.5 w-3.5 text-emerald-600" />
+                              Message 9arrini
+                            </Link>
+                          </Button>
                         </div>
                       </div>
-
-                      {/* Scheduled Google Meet Session Box */}
-                      {canAccessMeet ? (
-                        <div className="rounded-xl border-2 border-emerald-500 bg-emerald-50/80 dark:bg-emerald-950/40 p-3.5 space-y-3 shadow-md shadow-emerald-500/10 animate-in fade-in duration-300">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-xs font-bold text-emerald-900 dark:text-emerald-200">
-                              <Video className="h-4 w-4 text-emerald-600" />
-                              <span>Séance Google Meet Planifiée</span>
-                            </div>
-                            <Badge className="bg-emerald-600 text-white text-[10px] font-semibold">
-                              {isTutorOwner ? 'Professeur' : 'Séance Débloquée ✓'}
-                            </Badge>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 mb-1">
-                                <Calendar className="h-3 w-3 text-emerald-600" />
-                                Date du cours
-                              </label>
-                              <input
-                                type="date"
-                                value={sessionDate}
-                                min={new Date().toISOString().split('T')[0]}
-                                onChange={e => setSessionDate(e.target.value)}
-                                className="w-full rounded-lg border border-emerald-300 bg-white dark:bg-slate-900 px-2 py-1 text-xs font-medium text-slate-900 dark:text-slate-100"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 mb-1">
-                                <Clock className="h-3 w-3 text-emerald-600" />
-                                Heure prévue
-                              </label>
-                              <input
-                                type="time"
-                                value={sessionTime}
-                                onChange={e => setSessionTime(e.target.value)}
-                                className="w-full rounded-lg border border-emerald-300 bg-white dark:bg-slate-900 px-2 py-1 text-xs font-medium text-slate-900 dark:text-slate-100"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="rounded-lg bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 p-2.5 space-y-2">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400 truncate">
-                                {initialMeet.meetUrl}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={copyMeetUrl}
-                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:underline shrink-0 cursor-pointer"
+                    </div>
+                  ) : (
+                    /* ================= NOT YET BOOKED VIEW (CHOOSE PACKAGE & PAY) ================= */
+                    <>
+                      <div className="space-y-4">
+                        <Tabs
+                          value={selectedPackage}
+                          onValueChange={setSelectedPackage as any}
+                          className="w-full"
+                        >
+                          <TabsList className="grid grid-cols-3 w-full rounded-lg mb-3 h-auto border">
+                            {sortedPackages.map((pkg, idx) => (
+                              <TabsTrigger
+                                key={pkg.id || idx}
+                                value={pkg.name}
+                                className="rounded-md py-2 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-md"
                               >
-                                <Copy className="h-3 w-3" />
-                                Copier
-                              </button>
-                            </div>
+                                <div className="text-center">
+                                  <div className="font-semibold text-xs">{pkg.name}</div>
+                                  <div className="text-[11px] opacity-90 mt-0.5">
+                                    {pkg.price} Pts ({pkg.price} DT)
+                                  </div>
+                                </div>
+                              </TabsTrigger>
+                            ))}
+                          </TabsList>
+                        </Tabs>
 
-                            <div className="flex items-center gap-2 pt-1">
-                              <a
-                                href={initialMeet.meetUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 px-2 text-xs font-semibold transition"
-                              >
-                                <Video className="h-3.5 w-3.5" />
-                                Rejoindre Meet
-                              </a>
-                              <a
-                                href={liveCalendarUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 py-1.5 px-2 text-xs font-semibold transition"
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                                Agenda ({formatScheduleLabel(sessionDate, sessionTime).split(' ')[0]})
-                              </a>
-                            </div>
-
-                            <div className="flex items-center gap-2 pt-1 border-t border-emerald-100 dark:border-emerald-900">
-                              <a
-                                href={whatsappUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-1 inline-flex items-center justify-center gap-1 rounded-md bg-[#25D366] hover:bg-[#1ebe5d] text-white py-1 px-2 text-[11px] font-semibold transition"
-                              >
-                                <MessageCircle className="h-3 w-3" />
-                                WhatsApp Prof
-                              </a>
-                              <Link
-                                href="/dashboard/client/bookings"
-                                className="flex-1 inline-flex items-center justify-center gap-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-800 py-1 px-2 text-[11px] font-semibold transition"
-                              >
-                                <BellRing className="h-3 w-3 text-emerald-600" />
-                                Mes Cours Réservés
-                              </Link>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="rounded-xl border border-dashed border-emerald-400 bg-emerald-50/70 dark:bg-emerald-950/30 p-3.5 space-y-3">
-                          <div className="flex items-start gap-2.5">
-                            <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center shrink-0 text-emerald-700 dark:text-emerald-300">
-                              <Lock className="h-4 w-4" />
-                            </div>
-                            <div className="space-y-0.5 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                                  Lien Google Meet Protégé
-                                </h4>
-                                <Badge variant="outline" className="text-[10px] border-emerald-500/30 text-emerald-700 dark:text-emerald-400">
-                                  Paiement requis
-                                </Badge>
+                        {/* Selected Package Details */}
+                        {currentPackage && (
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-3xl font-extrabold text-emerald-700 dark:text-emerald-400">
+                                  {currentPackage.price} Points
+                                </span>
+                                <span className="text-sm font-semibold text-muted-foreground">
+                                  ({currentPackage.price} Dinars / DT)
+                                </span>
                               </div>
-                              <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                Le lien Google Meet direct et l&apos;invitation Google Agenda sont masqués. Ils seront débloqués dès la réservation de cette séance débitée de votre solde de Points ({currentPackage.price} Points = {currentPackage.price} DT).
+                              <p className="text-sm text-muted-foreground leading-relaxed">
+                                {currentPackage.description}
                               </p>
                             </div>
-                          </div>
 
-                          <div className="rounded-lg bg-white/80 dark:bg-slate-900/80 border border-emerald-200 dark:border-emerald-900/50 p-2 flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-1.5 text-muted-foreground">
-                              <Calendar className="h-3.5 w-3.5 text-emerald-600" />
-                              <span className="text-[11px]">Date : <strong>{formatScheduleLabel(sessionDate, sessionTime)}</strong></span>
+                            <Separator />
+
+                            <div className="space-y-2.5">
+                              <div className="flex items-center justify-between py-1">
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-sm">Durée du programme</span>
+                                </div>
+                                <span className="font-semibold text-sm">
+                                  {currentPackage.delivery} jour
+                                  {currentPackage.delivery !== 1 ? 's' : ''}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center justify-between py-1">
+                                <div className="flex items-center gap-2">
+                                  <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-sm">Suivi Q&A inclus</span>
+                                </div>
+                                <span className="font-semibold text-sm">
+                                  {currentPackage.revisions} séance
+                                  {currentPackage.revisions !== 1 ? 's' : ''}
+                                </span>
+                              </div>
                             </div>
-                            <span className="text-[10px] font-mono font-medium text-emerald-700 bg-emerald-100 dark:bg-emerald-900/50 px-2 py-0.5 rounded">
-                              meet.google.com/•••-••••-•••
-                            </span>
-                          </div>
 
+                            {/* Locked Google Meet Session Box */}
+                            <div className="rounded-xl border border-dashed border-emerald-400 bg-emerald-50/70 dark:bg-emerald-950/30 p-3.5 space-y-3">
+                              <div className="flex items-start gap-2.5">
+                                <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center shrink-0 text-emerald-700 dark:text-emerald-300">
+                                  <Lock className="h-4 w-4" />
+                                </div>
+                                <div className="space-y-0.5 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                                      Lien Google Meet Protégé
+                                    </h4>
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[10px] border-emerald-500/30 text-emerald-700 dark:text-emerald-400"
+                                    >
+                                      Paiement requis
+                                    </Badge>
+                                  </div>
+                                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                    Le lien Google Meet direct sera débloqué immédiatement après
+                                    l&apos;inscription à ce cours ({currentPackage.price} Points ={' '}
+                                    {currentPackage.price} DT).
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="text-[10px] font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                                    <Calendar className="h-3 w-3 text-emerald-600" />
+                                    Choisir la date
+                                  </label>
+                                  <input
+                                    type="date"
+                                    value={sessionDate}
+                                    min={new Date().toISOString().split('T')[0]}
+                                    onChange={e => setSessionDate(e.target.value)}
+                                    className="w-full rounded-lg border border-emerald-300 bg-white dark:bg-slate-900 px-2 py-1 text-xs font-medium text-slate-900 dark:text-slate-100"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                                    <Clock className="h-3 w-3 text-emerald-600" />
+                                    Choisir l&apos;heure
+                                  </label>
+                                  <input
+                                    type="time"
+                                    value={sessionTime}
+                                    onChange={e => setSessionTime(e.target.value)}
+                                    className="w-full rounded-lg border border-emerald-300 bg-white dark:bg-slate-900 px-2 py-1 text-xs font-medium text-slate-900 dark:text-slate-100"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="rounded-lg bg-white/80 dark:bg-slate-900/80 border border-emerald-200 dark:border-emerald-900/50 p-2 flex items-center justify-between text-xs">
+                                <span className="text-[11px] text-muted-foreground">
+                                  Séance : <strong>{formatScheduleLabel(sessionDate, sessionTime)}</strong>
+                                </span>
+                                <span className="text-[10px] font-mono font-medium text-emerald-700 bg-emerald-100 dark:bg-emerald-900/50 px-2 py-0.5 rounded">
+                                  meet.google.com/•••-••••-•••
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Insufficient Points Quick Top-Up Box */}
+                      {studentPoints !== null && !hasEnoughPoints && currentPackage && (
+                        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3.5 space-y-2.5">
+                          <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
+                            Il vous manque{' '}
+                            <strong>
+                              {missingPoints} Points ({missingPoints} DT)
+                            </strong>{' '}
+                            pour réserver ce pack ({currentPackage.price} Pts requis).
+                          </p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={isRecharging}
+                            onClick={() => handleQuickRecharge(Math.max(missingPoints, 25))}
+                            className="w-full bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold"
+                          >
+                            <PlusCircle className="h-3.5 w-3.5 mr-1.5" />
+                            {isRecharging
+                              ? 'Recharge en cours...'
+                              : `Recharger +${Math.max(missingPoints, 25)} Points (${Math.max(
+                                  missingPoints,
+                                  25
+                                )} DT) maintenant`}
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* Single Registration & Payment CTA Button */}
+                      {currentPackage && (
+                        <div className="space-y-3">
                           {!currentUserId ? (
                             <Button
                               type="button"
                               onClick={() => (window.location.href = '/auth/login')}
-                              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold h-8 rounded-lg"
+                              className="w-full h-12 text-base font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20"
                             >
-                              <UserCheck className="h-3.5 w-3.5 mr-1.5" />
-                              Se connecter pour débloquer le Meet
+                              <UserCheck className="mr-2 h-4 w-4" />
+                              Se connecter pour s&apos;inscrire
                             </Button>
                           ) : (
                             <Button
-                              type="button"
                               onClick={handleBooking}
                               disabled={isBooking || !hasEnoughPoints}
-                              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold h-8 rounded-lg shadow-sm"
+                              className="w-full h-12 text-base font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20 transition-all duration-200"
                             >
-                              <Coins className="h-3.5 w-3.5 mr-1.5" />
-                              {isBooking
-                                ? 'Validation du paiement...'
-                                : `Payer ${currentPackage.price} Points pour débloquer le Meet`}
+                              {isBooking ? (
+                                <>
+                                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-2" />
+                                  Validation en cours...
+                                </>
+                              ) : (
+                                <>
+                                  <Coins className="mr-2 h-4 w-4" />
+                                  S&apos;inscrire & Payer ({currentPackage.price} Points /{' '}
+                                  {currentPackage.price} DT)
+                                  <ChevronRight className="ml-1.5 h-4 w-4" />
+                                </>
+                              )}
                             </Button>
                           )}
+
+                          <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Shield className="h-3 w-3 text-emerald-600" />
+                              <span>Débit Points instantané</span>
+                            </div>
+                            <div className="h-3 w-px bg-border" />
+                            <div className="flex items-center gap-1">
+                              <Zap className="h-3 w-3 text-emerald-600" />
+                              <span>Déblocage Google Meet</span>
+                            </div>
+                          </div>
                         </div>
                       )}
-                    </div>
-                  </div>
-
-                  {/* Insufficient Points Quick Top-Up Box */}
-                  {studentPoints !== null && !hasEnoughPoints && (
-                    <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3.5 space-y-2.5">
-                      <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
-                        Il vous manque <strong>{missingPoints} Points ({missingPoints} DT)</strong> pour
-                        réserver ce pack ({currentPackage.price} Pts requis).
-                      </p>
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={isRecharging}
-                        onClick={() => handleQuickRecharge(Math.max(missingPoints, 25))}
-                        className="w-full bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold"
-                      >
-                        <PlusCircle className="h-3.5 w-3.5 mr-1.5" />
-                        {isRecharging
-                          ? 'Recharge en cours...'
-                          : `Recharger +${Math.max(missingPoints, 25)} Points (${Math.max(missingPoints, 25)} DT) maintenant`}
-                      </Button>
-                    </div>
+                    </>
                   )}
-
-                  {/* CTA Button */}
-                  <div className="space-y-3">
-                    <Button
-                      onClick={handleBooking}
-                      disabled={isBooking}
-                      className="w-full h-12 text-base font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20 transition-all duration-200"
-                    >
-                      {isBooking ? (
-                        <>
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-2" />
-                          Validation en cours...
-                        </>
-                      ) : (
-                        <>
-                          <Coins className="mr-2 h-4 w-4" />
-                          Payer avec {currentPackage.price} Points ({currentPackage.price} DT)
-                          <ChevronRight className="ml-1.5 h-4 w-4" />
-                        </>
-                      )}
-                    </Button>
-
-                    <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Shield className="h-3 w-3 text-emerald-600" />
-                        <span>Débit Points instantané</span>
-                      </div>
-                      <div className="h-3 w-px bg-border" />
-                      <div className="flex items-center gap-1">
-                        <Zap className="h-3 w-3 text-emerald-600" />
-                        <span>Accès chat direct prof</span>
-                      </div>
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
 
@@ -850,9 +914,9 @@ export function ServiceDetailPage({service}: {service: Service}) {
                     <ShieldCheck className="h-5 w-5 text-emerald-600" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate">Garantie 9arrini Points</p>
+                    <p className="text-sm font-semibold truncate">Portefeuille Points 9arrini</p>
                     <p className="text-xs text-muted-foreground truncate">
-                      1 Point = 1 DT • Sans carte bancaire requise
+                      1 Point = 1 DT • Paiement sécurisé et rappel de séance
                     </p>
                   </div>
                 </div>

@@ -214,14 +214,21 @@ export async function buyStudentPoints(amount: number, packLabel?: string) {
   };
 }
 
-export async function checkUserHasBookedService(serviceId: string): Promise<boolean> {
+export async function checkUserHasBookedService(
+  serviceId: string,
+  serviceSlug?: string
+): Promise<boolean> {
   const {userId} = await getUserInfo();
   if (!userId) return false;
+
+  const matchesService = (b: {serviceId?: string; serviceSlug?: string}) =>
+    b.serviceId === serviceId ||
+    Boolean(serviceSlug && (b.serviceSlug === serviceSlug || b.serviceId === serviceSlug));
 
   // 1. Check persistent client bookings cookie
   try {
     const cookieBookings = await getClientBookingsCookie(userId);
-    if (cookieBookings.some(b => b.serviceId === serviceId)) return true;
+    if (cookieBookings.some(matchesService)) return true;
   } catch {
     // ignore
   }
@@ -244,7 +251,7 @@ export async function checkUserHasBookedService(serviceId: string): Promise<bool
   try {
     const store = readCloudStore();
     return (store.bookings || []).some(
-      b => b.serviceId === serviceId && b.clientId === userId
+      b => b.clientId === userId && matchesService(b)
     );
   } catch {
     return false;

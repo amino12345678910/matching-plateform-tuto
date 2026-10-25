@@ -1,8 +1,8 @@
 import {prisma as dbContext} from '@/lib/prisma';
 import {type UserInfo} from './get-user-info';
 import type {BookedServiceType} from '@/types/bookings';
-import {readCloudStore, getAllCloudServices} from '@/lib/cloud-store';
-import {getClientBookingsCookie} from '@/hooks/book/bookings-store';
+import {readCloudStore} from '@/lib/cloud-store';
+import {getClientBookingsCookie, getAllRealServices} from '@/hooks/book/bookings-store';
 
 type Role = 'CLIENT' | 'FREELANCER';
 
@@ -88,7 +88,7 @@ async function getMyBookings({
 
   const cookieBookings = await getClientBookingsCookie(user.userId);
   const store = readCloudStore();
-  const allServices = getAllCloudServices();
+  const allServices = await getAllRealServices();
   const rawBookings = [
     ...cookieBookings,
     ...store.bookings.filter(b =>
@@ -110,7 +110,7 @@ async function getMyBookings({
       scheduledDate: b.scheduledDate,
       scheduledTime: b.scheduledTime,
       meetLink: b.meetUrl,
-      tutorPhone: b.tutorPhone || '+216 22 410 112',
+      tutorPhone: b.tutorPhone || '',
       packages: [
         {name: b.servicePackageTier, price: b.totalPrice, delivery: b.delivery},
       ],
@@ -118,7 +118,7 @@ async function getMyBookings({
         ? {
             id: b.freelancerId,
             name: b.freelancerName,
-            email: 'prof@9arrini.tn',
+            email: '',
             imageSource: 'NULL' as const,
           }
         : {

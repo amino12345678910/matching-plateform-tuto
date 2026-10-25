@@ -3,7 +3,7 @@
 import {prisma as dbContext} from '@/lib/prisma';
 import {getUserInfo} from '../shared/get-user-info';
 import type {ServiceCardLite} from '@/types/service-lite';
-import {getAllCloudServices} from '@/lib/cloud-store';
+import {getAllRealServices} from '@/hooks/book/bookings-store';
 
 async function getMyServices(): Promise<ServiceCardLite[]> {
   const {userId} = await getUserInfo();
@@ -61,7 +61,7 @@ async function getMyServices(): Promise<ServiceCardLite[]> {
     // Cloud fallback
   }
 
-  const allServices = getAllCloudServices();
+  const allServices = await getAllRealServices();
   return allServices
     .filter(s => s.freelancerId === userId || s.seller?.userId === userId)
     .map(s => ({

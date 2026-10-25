@@ -2,7 +2,7 @@
 
 import {getUserInfo} from '@/hooks/shared/get-user-info';
 import {prisma as dbContext} from '@/lib/prisma';
-import {getAllCloudServices} from '@/lib/cloud-store';
+import {getAllRealServices} from '@/hooks/book/bookings-store';
 
 export type ServiceNavLite = {
   id: string;
@@ -40,7 +40,7 @@ async function getMyServicesLite(): Promise<ServiceNavLite[]> {
 
     return services;
   } catch {
-    const all = getAllCloudServices();
+    const all = await getAllRealServices();
     return all
       .filter(s => s.freelancerId === userId || s.seller?.userId === userId)
       .map(s => ({

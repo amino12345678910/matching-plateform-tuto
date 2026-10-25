@@ -9,6 +9,7 @@ import {revalidatePath} from 'next/cache';
 import {readCloudStore, writeCloudStore} from '@/lib/cloud-store';
 import {getCloudSessionCookie, setCloudSessionCookie} from '@/hooks/auth/cloud-auth';
 import {
+  getClientBookingsCookie,
   saveClientBookingCookie,
   saveClientTransactionCookie,
   saveClientNotificationCookie,
@@ -79,6 +80,30 @@ export const bookService = async ({
   let cloudStudent = store.users.find(u => u.id === clientId);
 
   let currentPoints = cloudSession?.points ?? cloudStudent?.points ?? 50;
+
+  // Prevent paying twice for the same course
+  try {
+    const existingCookieBookings = await getClientBookingsCookie(clientId);
+    const alreadyInCookie = existingCookieBookings.some(
+      b =>
+        b.clientId === clientId &&
+        (b.serviceId === serviceId || (serviceSlug && b.serviceSlug === serviceSlug))
+    );
+    const alreadyInStore = (store.bookings || []).some(
+      b =>
+        b.clientId === clientId &&
+        (b.serviceId === serviceId || (serviceSlug && b.serviceSlug === serviceSlug))
+    );
+    if (alreadyInCookie || alreadyInStore) {
+      return {
+        success: true,
+        newBalance: currentPoints,
+        message: 'Vous êtes déjà inscrit(e) à ce cours ! Votre lien Google Meet est actif.',
+      };
+    }
+  } catch {
+    // ignore
+  }
 
   try {
     const student = await dbContext.user.findUnique({
@@ -255,7 +280,7 @@ export const bookService = async ({
     scheduledDate: finalDate,
     scheduledTime: finalTime,
     meetUrl: finalMeetUrl,
-    tutorPhone: tutorPhone || '+216 22 410 112',
+    tutorPhone: tutorPhone || '',
     createdAt: now,
   };
 

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import {FALLBACK_CATEGORIES, FALLBACK_SERVICES} from './fallback-data';
+import {FALLBACK_CATEGORIES} from './fallback-data';
 
 export interface CloudUser {
   id: string;
@@ -78,6 +78,8 @@ export interface CloudChatMessage {
   roomId: string;
   senderId: string;
   senderName: string;
+  recipientId?: string;
+  recipientName?: string;
   text: string;
   createdAt: string;
 }
@@ -109,43 +111,18 @@ export interface CloudStoreData {
   messages?: CloudChatMessage[];
 }
 
-const STORE_FILE = path.join(os.tmpdir(), '9arrini-cloud-store-v1.json');
+const STORE_FILE = path.join(os.tmpdir(), '9arrini-cloud-store-v3-real.json');
 
 function getInitialStore(): CloudStoreData {
-  const now = new Date().toISOString();
-  const initialUsers: CloudUser[] = FALLBACK_SERVICES.map(s => ({
-    id: s.seller.user.id,
-    name: s.seller.user.name,
-    email: s.seller.user.email,
-    role: 'FREELANCER',
-    points: 120,
-    image: null,
-    imageSource: 'NULL',
-    hasPassword: true,
-    emailVerified: true,
-    createdAt: now,
-  }));
-
-  const initialSellers: CloudSeller[] = FALLBACK_SERVICES.map(s => ({
-    id: s.seller.id,
-    userId: s.seller.userId,
-    bio: s.seller.bio || '',
-    isVerified: s.seller.isVerified,
-    verificationStatus: (s.seller.verificationStatus as any) || 'VERIFIED',
-    specialty: s.seller.specialty,
-    credentials: s.seller.credentials,
-    experience: s.seller.experience,
-    phone: '+216 22 410 112',
-    createdAt: now,
-  }));
-
   return {
-    users: initialUsers,
-    sellers: initialSellers,
+    users: [],
+    sellers: [],
     transactions: [],
     bookings: [],
     customServices: [],
     reviews: [],
+    notifications: [],
+    messages: [],
   };
 }
 
@@ -156,6 +133,11 @@ export function readCloudStore(): CloudStoreData {
       const parsed = JSON.parse(raw);
       if (parsed && Array.isArray(parsed.users)) {
         if (!Array.isArray(parsed.reviews)) parsed.reviews = [];
+        if (!Array.isArray(parsed.customServices)) parsed.customServices = [];
+        if (!Array.isArray(parsed.bookings)) parsed.bookings = [];
+        if (!Array.isArray(parsed.transactions)) parsed.transactions = [];
+        if (!Array.isArray(parsed.notifications)) parsed.notifications = [];
+        if (!Array.isArray(parsed.messages)) parsed.messages = [];
         return parsed;
       }
     }
@@ -178,27 +160,54 @@ export function writeCloudStore(data: CloudStoreData): void {
 export function getAllCloudServices() {
   const store = readCloudStore();
   const sellerMap = new Map(store.sellers.map(s => [s.userId, s]));
-  const baseServices = FALLBACK_SERVICES.map(srv => {
-    const updatedSeller = sellerMap.get(srv.seller.userId);
-    if (updatedSeller) {
-      return {
-        ...srv,
-        seller: {
-          ...srv.seller,
-          isVerified: updatedSeller.isVerified,
-          verified: updatedSeller.isVerified,
-          verificationStatus: updatedSeller.verificationStatus,
-          specialty: updatedSeller.specialty || srv.seller.specialty,
-          credentials: updatedSeller.credentials || srv.seller.credentials,
-          experience: updatedSeller.experience || srv.seller.experience,
-          bio: updatedSeller.bio || srv.seller.bio,
-        },
-      };
-    }
-    return srv;
-  });
+  const userMap = new Map(store.users.map(u => [u.id, u]));
 
-  return [...store.customServices, ...baseServices];
+  return (store.customServices || []).map(srv => {
+    const sellerUserId = srv.seller?.userId || srv.freelancerId;
+    const updatedSeller = sellerMap.get(sellerUserId);
+    const updatedUser = userMap.get(sellerUserId);
+    const serviceReviews = (store.reviews || []).filter(
+      r => r.serviceId === srv.id || (srv.slug && r.serviceSlug === srv.slug)
+    );
+    const serviceBookings = (store.bookings || []).filter(
+      b =>
+        (b.serviceId === srv.id || (srv.slug && b.serviceSlug === srv.slug)) &&
+        b.status !== 'CANCELLED'
+    );
+    const avgRating =
+      serviceReviews.length > 0
+        ? serviceReviews.reduce((acc, r) => acc + r.rating, 0) / serviceReviews.length
+        : 0;
+
+    return {
+      ...srv,
+      averageRating: avgRating,
+      reviews: serviceReviews,
+      _count: {
+        reviews: serviceReviews.length,
+        bookings: serviceBookings.length,
+      },
+      seller: {
+        ...srv.seller,
+        isVerified: updatedSeller ? updatedSeller.isVerified : srv.seller?.isVerified ?? false,
+        verified: updatedSeller ? updatedSeller.isVerified : srv.seller?.isVerified ?? false,
+        verificationStatus:
+          updatedSeller?.verificationStatus || srv.seller?.verificationStatus || 'PENDING',
+        specialty: updatedSeller?.specialty || srv.seller?.specialty,
+        credentials: updatedSeller?.credentials || srv.seller?.credentials,
+        experience: updatedSeller?.experience || srv.seller?.experience,
+        phone: updatedSeller?.phone || srv.seller?.phone,
+        bio: updatedSeller?.bio || srv.seller?.bio,
+        user: {
+          ...srv.seller?.user,
+          name: updatedUser?.name || srv.seller?.user?.name || 'Professeur 9arrini',
+          email: updatedUser?.email || srv.seller?.user?.email || '',
+          image: updatedUser?.image ?? srv.seller?.user?.image ?? null,
+          imageSource: updatedUser?.imageSource || srv.seller?.user?.imageSource || 'NULL',
+        },
+      },
+    };
+  });
 }
 
 export {FALLBACK_CATEGORIES};

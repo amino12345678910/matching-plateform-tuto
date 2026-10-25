@@ -3,7 +3,8 @@
 import {notFound} from 'next/navigation';
 import {profilePhoto} from '@/components/profile-url';
 import {prisma} from '@/lib/prisma';
-import {getAllCloudServices, readCloudStore} from '@/lib/cloud-store';
+import {readCloudStore} from '@/lib/cloud-store';
+import {getAllRealServices} from '@/hooks/book/bookings-store';
 import FreelancerProfileView from '@/components/freelancer/profileView';
 import Navbar from '@/components/essentials/Navbar';
 import {Footer} from '@/components/footer/footer-2';
@@ -70,7 +71,7 @@ async function FreelancerProfilePage({params}: {params: Promise<{slug: string}>}
 
   if (!freelancerData || !freelancerData.seller) {
     const store = readCloudStore();
-    const allServices = getAllCloudServices();
+    const allServices = await getAllRealServices();
     const tutorServices = allServices.filter(
       s => s.freelancerId === freelancerId || s.seller?.userId === freelancerId
     );
@@ -88,17 +89,14 @@ async function FreelancerProfilePage({params}: {params: Promise<{slug: string}>}
       freelancerData = {
         id: freelancerId,
         name: cloudUser?.name || fallbackFirst?.seller?.user?.name || 'Professeur 9arrini',
-        email: cloudUser?.email || fallbackFirst?.seller?.user?.email || 'prof@9arrini.tn',
+        email: cloudUser?.email || fallbackFirst?.seller?.user?.email || '',
         image: cloudUser?.image || fallbackFirst?.seller?.user?.image || null,
         imageSource: cloudUser?.imageSource || 'NULL',
         createdAt: new Date(cloudUser?.createdAt || Date.now()),
         seller: {
           id: cloudSeller?.id || fallbackFirst?.seller?.id || `seller_${freelancerId}`,
-          bio:
-            cloudSeller?.bio ||
-            fallbackFirst?.seller?.bio ||
-            'Professeur vérifié sur la plateforme 9arrini',
-          isVerified: cloudSeller?.isVerified ?? fallbackFirst?.seller?.isVerified ?? true,
+          bio: cloudSeller?.bio || fallbackFirst?.seller?.bio || '',
+          isVerified: Boolean(cloudSeller?.isVerified ?? fallbackFirst?.seller?.isVerified ?? false),
           createdAt: new Date(cloudSeller?.createdAt || Date.now()),
           services: tutorServices.map((s: any) => ({
             id: s.id,
@@ -109,7 +107,7 @@ async function FreelancerProfilePage({params}: {params: Promise<{slug: string}>}
             category: {name: s.category?.name || 'Cours'},
             tags: s.tags || [],
             packages: s.packages || [],
-            _count: {bookings: s._count?.bookings || 12},
+            _count: {bookings: s._count?.bookings || 0},
           })),
         },
         reviews,
@@ -129,7 +127,7 @@ async function FreelancerProfilePage({params}: {params: Promise<{slug: string}>}
     freelancerData.reviews.length > 0
       ? freelancerData.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) /
         freelancerData.reviews.length
-      : 5.0;
+      : 0;
 
   const pfp = await profilePhoto({
     imageUrl: freelancerData.image,

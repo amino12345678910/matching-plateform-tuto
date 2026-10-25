@@ -1,4 +1,3 @@
-// app/explore/page.tsx
 import ServiceCards from '@/components/service/card-client';
 import {prisma} from '@/lib/prisma';
 import NoServicesFound from '@/components/service/service-non-found';
@@ -13,7 +12,8 @@ import {ScrollArea} from '@/components/ui/scroll-area';
 import Link from 'next/link';
 import {cloudinaryUrl} from '@/lib/cloudinary';
 import Image from 'next/image';
-import {FALLBACK_CATEGORIES, getAllCloudServices} from '@/lib/cloud-store';
+import {FALLBACK_CATEGORIES} from '@/lib/cloud-store';
+import {getAllRealServices} from '@/hooks/book/bookings-store';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,6 +79,7 @@ export default async function ExplorePage({
               select: {
                 name: true,
                 id: true,
+                image: true,
               },
             },
           },
@@ -105,42 +106,52 @@ export default async function ExplorePage({
   } catch (err) {
     console.error('Database fallback on ExplorePage:', err);
     categories = FALLBACK_CATEGORIES;
-    services = getAllCloudServices();
+    services = [];
   }
 
   if (categories.length === 0) categories = FALLBACK_CATEGORIES;
-  if (services.length === 0 && !categoryFilter && !searchQuery) services = getAllCloudServices();
+  if (services.length === 0) {
+    const allReal = await getAllRealServices();
+    services = allReal.filter(s => {
+      if (s.status && s.status !== 'ACTIVE') return false;
+      if (
+        categoryFilter &&
+        s.category?.slug !== categoryFilter &&
+        s.categoryId !== categoryFilter
+      ) {
+        return false;
+      }
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const matchTitle = (s.title || '').toLowerCase().includes(q);
+        const matchDesc = (s.description || '').toLowerCase().includes(q);
+        const matchTutor = (s.seller?.user?.name || '').toLowerCase().includes(q);
+        return matchTitle || matchDesc || matchTutor;
+      }
+      return true;
+    });
+  }
 
   // Calculate average rating for each service
   const formattedServices = services.map(service => {
-    const totalRating = service.reviews.reduce((sum, review) => sum + review.rating, 0);
-    const averageRating = service.reviews.length > 0 ? totalRating / service.reviews.length : 0;
+    const reviewsList = service.reviews || [];
+    const totalRating = reviewsList.reduce((sum: number, review: any) => sum + review.rating, 0);
+    const averageRating = reviewsList.length > 0 ? totalRating / reviewsList.length : 0;
 
     return {
       ...service,
       averageRating,
       seller: {
         ...service.seller,
-        verified: service.seller.isVerified,
-        profilePhoto: service.seller.profilePhoto ?? undefined,
+        verified: Boolean(service.seller?.isVerified),
+        profilePhoto: service.seller?.profilePhoto ?? undefined,
       },
     };
   });
 
   const trendingServices = [...formattedServices]
-    .sort((a, b) => b._count.bookings - a._count.bookings)
+    .sort((a, b) => (b._count?.bookings || 0) - (a._count?.bookings || 0))
     .slice(0, 6);
-
-  const formatTrendingTitle = (title: string) => {
-    const cleaned = (title || '').trim();
-    const words = cleaned.split(/\s+/).filter(Boolean);
-    if (words.length < 5 || cleaned.toLowerCase().startsWith('i teach')) {
-      const topic = cleaned.replace(/^i\s+teach\s+/i, '').trim() || 'Soutien Scolaire';
-      const capTopic = topic.charAt(0).toUpperCase() + topic.slice(1);
-      return `Cours & Révision : ${capTopic} — Accompagnement 1-on-1`;
-    }
-    return cleaned;
-  };
 
   return (
     <div className="min-h-screen">
@@ -151,10 +162,10 @@ export default async function ExplorePage({
         <div className="container mx-auto px-4 py-12">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
-              Find the perfect tutor & lesson
+              Trouvez votre professeur & votre séance
             </h1>
             <p className="text-xl text-muted-foreground mb-8">
-              Browse 1-on-1 tutoring sessions, interactive courses, and mentorship from verified educators
+              Parcourez les cours publiés par les professeurs de la plateforme 9arrini
             </p>
 
             {/* Simple Search */}
@@ -163,18 +174,18 @@ export default async function ExplorePage({
               <Input
                 name="q"
                 defaultValue={searchQuery || ''}
-                placeholder="Search subjects, skills, or topics (e.g. Calculus, Python, Spanish)..."
+                placeholder="Rechercher une matière, un cours ou un professeur..."
                 className="pl-12 py-6 text-lg rounded-full"
               />
               <Button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 px-6 rounded-full">
-                Search
+                Rechercher
               </Button>
             </form>
 
             <div className="flex flex-wrap justify-center gap-2">
               <Link href="/explore" className="transition-opacity hover:opacity-80">
                 <Badge variant={!categoryFilter ? 'default' : 'secondary'} className="px-4 py-2">
-                  All Subjects
+                  Toutes les matières
                 </Badge>
               </Link>
               {categories.slice(0, 6).map(category => (
@@ -191,18 +202,12 @@ export default async function ExplorePage({
                   </Badge>
                 </Link>
               ))}
-              <Link href="/explore/categories" className="transition-opacity hover:opacity-80">
-                <Badge variant="outline" className="px-4 py-2 gap-2">
-                  More subjects
-                  <ArrowRight className="h-3 w-3" />
-                </Badge>
-              </Link>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content - Clean and Focused */}
+      {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
         {trendingServices.length > 0 && (
           <div className="mb-12">
@@ -210,13 +215,13 @@ export default async function ExplorePage({
               <div>
                 <h2 className="text-2xl font-bold flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-primary" />
-                  Trending Tutoring Sessions
+                  Séances publiées récemment
                 </h2>
-                <p className="text-muted-foreground">Most popular lessons booked by students this week</p>
+                <p className="text-muted-foreground">Cours actifs disponibles à la réservation</p>
               </div>
               <Button variant="ghost" className="gap-2" asChild>
                 <Link href="/explore">
-                  View all sessions
+                  Tout voir
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
@@ -225,7 +230,7 @@ export default async function ExplorePage({
             <ScrollArea className="w-full pb-4">
               <div className="flex gap-4">
                 {trendingServices.map(service => {
-                  const minPrice = Math.min(...service.packages.map(p => p.price)) || 0;
+                  const minPrice = Math.min(...service.packages.map((p: any) => p.price)) || 0;
                   return (
                     <Link
                       key={service.id}
@@ -248,14 +253,15 @@ export default async function ExplorePage({
                           </div>
                           <div className="flex-1 min-w-0">
                             <h3 className="font-semibold text-sm line-clamp-2 text-balance group-hover:text-emerald-700 mb-2">
-                              {formatTrendingTitle(service.title)}
+                              {service.title}
                             </h3>
                             <div className="flex items-center justify-between">
                               <span className="font-bold text-emerald-700 text-xs">
                                 {minPrice} Pts ({minPrice} DT)
                               </span>
                               <span className="text-xs text-muted-foreground">
-                                {service._count.bookings} élèves
+                                {service._count?.bookings || 0} élève
+                                {(service._count?.bookings || 0) !== 1 ? 's' : ''}
                               </span>
                             </div>
                           </div>
@@ -274,21 +280,11 @@ export default async function ExplorePage({
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold">
-                All Tutoring Sessions ({formattedServices.length})
+                Tous les cours publiés ({formattedServices.length})
               </h2>
               <p className="text-muted-foreground">
-                Browse personalized 1-on-1 lessons and study programs
+                Séances 1-on-1 créées par les professeurs inscrits sur 9arrini
               </p>
-            </div>
-
-            {/* Simple Sort Dropdown */}
-            <div className="flex items-center gap-4">
-              <select className="text-sm border rounded-md px-3 py-2 bg-background">
-                <option>Sort by: Recommended</option>
-                <option>Price: Low to High</option>
-                <option>Price: High to Low</option>
-                <option>Best Rating</option>
-              </select>
             </div>
           </div>
 
@@ -300,14 +296,6 @@ export default async function ExplorePage({
             )}
           </div>
         </div>
-
-        {formattedServices.length > 0 && (
-          <div className="text-center mt-8">
-            <Button variant="outline" className="px-8">
-              Load More
-            </Button>
-          </div>
-        )}
       </div>
 
       <Footer />
