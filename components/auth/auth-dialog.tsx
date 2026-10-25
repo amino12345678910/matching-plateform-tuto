@@ -2,9 +2,9 @@
 
 import {useState} from 'react';
 import Image from 'next/image';
-import {useRouter} from 'next/navigation';
 import {toast} from 'sonner';
 import {authClient} from '@/lib/auth-client';
+import {cloudSignIn, cloudSignUp} from '@/hooks/auth/cloud-auth';
 import {
   IconArrowLeft,
   IconMail,
@@ -51,7 +51,6 @@ interface LoginForm {
 }
 
 export default function AuthModal({isOpen, onClose}: AuthModalProps) {
-  const router = useRouter();
   const [step, setStep] = useState<'signup' | 'login'>('signup');
   const [regStep, setRegStep] = useState<
     'null' | 'create' | 'createName' | 'createFinal' | 'email'
@@ -105,103 +104,101 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
     setShowRoleDialog(true);
   };
 
-  // Handle email registration start
   const handleEmailSignupStart = () => {
     setRegStep('create');
   };
 
-  // Handle email registration
+  // Handle email registration (works both locally and on Netlify)
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     const selectedRole = regForm.role || 'USER';
 
     try {
-      const {data, error} = await authClient.signUp.email(
-        {
+      try {
+        await authClient.signUp.email({
           email: regForm.email,
           password: regForm.password,
           name: regForm.username,
           role: selectedRole,
           hasPassword: true,
           imageSource: 'NULL',
-        },
-        {
-          onRequest: () => {
-            setLoading(true);
-          },
-          onSuccess: () => {
-            toast.success('Account created successfully!');
-            const targetUrl =
-              selectedRole === 'SELLER' ? '/dashboard/freelancer' : '/dashboard/client';
-            setRegStep('null');
-            setRegForm({
-              email: '',
-              password: '',
-              username: '',
-              role: '',
-            });
-            setLoading(false);
-            onClose();
-            window.location.href = targetUrl;
-          },
-          onError: ctx => {
-            toast.error(ctx.error.message || 'Registration failed');
-            setLoading(false);
-          },
-        }
-      );
-      if (error) {
-        toast.error(error.message || 'Registration failed');
+        });
+      } catch {
+        // Cloud fallback handled by cloudSignUp below
+      }
+
+      const res = await cloudSignUp({
+        name: regForm.username,
+        email: regForm.email,
+        password: regForm.password,
+        role: selectedRole,
+      });
+
+      if (res.success) {
+        toast.success('Compte créé avec succès ! (+50 Points = 50 DT offerts)');
+        const targetUrl =
+          res.redirectTo ||
+          (selectedRole === 'SELLER' ? '/dashboard/freelancer' : '/dashboard/client');
+        setRegStep('null');
+        setRegForm({
+          email: '',
+          password: '',
+          username: '',
+          role: '',
+        });
+        setLoading(false);
+        onClose();
+        window.location.href = targetUrl;
+        return;
+      } else {
+        toast.error(res.error || 'Registration failed');
         setLoading(false);
       }
     } catch (error: any) {
-      toast.error(error.message || 'Registration failed');
+      toast.error(error?.message || 'Registration failed');
       setLoading(false);
     }
   };
 
-  // Handle email login
+  // Handle email login (works both locally and on Netlify)
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const {data, error} = await authClient.signIn.email(
-        {
+      try {
+        await authClient.signIn.email({
           email: loginForm.email,
           password: loginForm.password,
-          callbackURL: '/dashboard',
           rememberMe: true,
-        },
-        {
-          onRequest: () => {
-            setLoading(true);
-          },
-          onSuccess: () => {
-            toast.success('Successfully logged in!');
-            onClose();
-            setLoginForm({email: '', password: ''});
-            setLoading(false);
-            window.location.href = '/dashboard';
-          },
-          onError: ctx => {
-            toast.error(ctx.error.message || 'Login failed');
-            setLoading(false);
-          },
-        }
-      );
-      if (error) {
-        toast.error(error.message || 'Login failed');
+        });
+      } catch {
+        // Cloud fallback handled by cloudSignIn below
+      }
+
+      const res = await cloudSignIn({
+        email: loginForm.email,
+        password: loginForm.password,
+      });
+
+      if (res.success) {
+        toast.success('Connexion réussie ! Mar7bé bik fi 9arrini');
+        onClose();
+        setLoginForm({email: '', password: ''});
+        setLoading(false);
+        window.location.href = res.redirectTo || '/dashboard';
+        return;
+      } else {
+        toast.error(res.error || 'Login failed');
         setLoading(false);
       }
     } catch (error: any) {
-      toast.error(error.message || 'Login failed');
+      toast.error(error?.message || 'Login failed');
       setLoading(false);
     }
   };
 
-  // Reset states when modal closes
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       setRegForm({
@@ -223,7 +220,6 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
     onClose();
   };
 
-  //functions
   const handleGoogleSignIn = async (isSignIn: boolean) => {
     try {
       const {data: _, error} = await authClient.signIn.social({
@@ -250,7 +246,6 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-4xl p-0 h-[85vh] overflow-hidden">
           <div className="grid lg:grid-cols-2 h-full">
-            {/* Left Image Section */}
             <div className="hidden lg:block relative">
               <Image
                 src={girlImage}
@@ -307,7 +302,7 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                         </>
                       ) : (
                         <>
-                          Don't have an account?{' '}
+                          Don&apos;t have an account?{' '}
                           <Button
                             variant="link"
                             className="p-0 h-auto"
@@ -322,7 +317,6 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
 
                   <Card className="border-none shadow-none">
                     <CardContent className="p-0 space-y-4">
-                      {/* Google Button */}
                       <Button
                         variant="outline"
                         className="w-full h-12"
@@ -338,7 +332,6 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                         Continue with Google
                       </Button>
 
-                      {/* Email Button - Different behavior for signup vs login */}
                       <Button
                         variant="outline"
                         className="w-full h-12"
@@ -363,7 +356,6 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                   </p>
                 </div>
               )}
-              {/* Login Form */}
               {regStep === 'email' && (
                 <div className="p-8 md:p-10">
                   <DialogHeader className="mb-6">
@@ -428,7 +420,6 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                   </form>
                 </div>
               )}
-              {/* Registration Step 1: Email & Password */}
               {regStep === 'create' && (
                 <div className="p-8 md:p-10">
                   <DialogHeader className="mb-6">
@@ -483,7 +474,6 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                       </div>
                     </div>
 
-                    {/* Password Requirements */}
                     <div className="space-y-2">
                       <Label className="text-sm">Password must contain:</Label>
                       <div className="grid grid-cols-2 gap-2">
@@ -529,14 +519,13 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                   </form>
                 </div>
               )}
-              {/* Registration Step 2: Username */}
               {regStep === 'createName' && (
                 <div className="p-8 md:p-10">
                   <DialogHeader className="mb-6">
                     <DialogTitle className="text-2xl">Get your profile started</DialogTitle>
                     <DialogDescription>
-                      We'll help you set up your learning or teaching profile on 9arrini. You can
-                      always update your profile later.
+                      We&apos;ll help you set up your learning or teaching profile on 9arrini. You
+                      can always update your profile later.
                     </DialogDescription>
                   </DialogHeader>
 
@@ -563,7 +552,6 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
                   </div>
                 </div>
               )}
-              {/* Registration Step 3: Role Selection (for email signup) */}
               {regStep === 'createFinal' && (
                 <div className="p-8 md:p-10">
                   <DialogHeader className="mb-6">

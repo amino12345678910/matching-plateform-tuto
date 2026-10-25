@@ -4,11 +4,12 @@ import {SidebarInset, SidebarProvider} from '@/components/ui/sidebar';
 import {prisma as dbContext} from '@/lib/prisma';
 import {redirect} from 'next/navigation';
 import {getUserInfo} from '@/hooks/shared/get-user-info';
+import {readCloudStore, writeCloudStore} from '@/lib/cloud-store';
 import type {Metadata} from 'next';
 
 export const metadata: Metadata = {
-  title: 'Dashboard - Five Services',
-  description: 'Five Services - All your services at one place',
+  title: 'Espace Professeur - 9arrini',
+  description: '9arrini - Gérez vos cours particuliers et vos élèves',
 };
 
 export default async function FreelancerLayout({
@@ -21,13 +22,39 @@ export default async function FreelancerLayout({
   if (!user.role || !user.userId) return redirect('/auth/login');
   const {role, userId} = user;
 
-  if (role === 'USER' || role !== 'SELLER') return redirect('/explore');
+  if (role === 'USER' || (role !== 'SELLER' && role !== 'FREELANCER')) {
+    return redirect('/explore');
+  }
 
-  const hasSellerProfile = await dbContext.seller.findFirst({
-    where: {userId: userId},
-  });
-
-  if (!hasSellerProfile) return redirect('/become-seller');
+  try {
+    let hasSellerProfile = await dbContext.seller.findFirst({
+      where: {userId: userId},
+    });
+    if (!hasSellerProfile) {
+      hasSellerProfile = await dbContext.seller.create({
+        data: {
+          userId,
+          bio: `Professeur ${user.name || ''} sur 9arrini`,
+          isVerified: false,
+          verificationStatus: 'PENDING',
+        },
+      });
+    }
+  } catch {
+    const store = readCloudStore();
+    const existing = store.sellers.find(s => s.userId === userId);
+    if (!existing) {
+      store.sellers.unshift({
+        id: `seller_${userId}`,
+        userId,
+        bio: `Professeur ${user.name || ''} sur 9arrini`,
+        isVerified: false,
+        verificationStatus: 'PENDING',
+        createdAt: new Date().toISOString(),
+      });
+      writeCloudStore(store);
+    }
+  }
 
   return (
     <SidebarProvider

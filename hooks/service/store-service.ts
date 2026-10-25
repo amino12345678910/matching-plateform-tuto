@@ -4,6 +4,8 @@ import type {FAQ} from '@/types/service';
 import {prisma} from '../../lib/prisma';
 import {generateSlug} from '../use-slug';
 import {revalidatePath} from 'next/cache';
+import {readCloudStore, writeCloudStore} from '@/lib/cloud-store';
+import {getUserInfo} from '@/hooks/shared/get-user-info';
 
 const CATEGORY_DEFAULT_IMAGES: Record<string, string> = {
   mathematics: '/assets/seo.webp',
@@ -107,59 +109,128 @@ export const storeService = async (
             },
           ];
 
-    const data = await prisma.service.create({
-      data: {
-        title: formattedTitle,
-        slug: service.slug,
-        description: formattedDescription,
-        images: validImages,
-        status: service.status || 'ACTIVE',
+    let createdSlug = service.slug || generateSlug(formattedTitle, {lowercase: true, randNum: true});
 
-        faqs: {
-          create: defaultFaqs.map((faq: FAQ) => ({
-            question: faq.question,
-            answer: faq.answer,
-          })),
-        },
-
-        tags: {
-          connectOrCreate: (service.tags || []).map((tag: string) => {
-            const slug = generateSlug(tag.toLowerCase(), {lowercase: true, randNum: false});
-            return {
-              where: {slug},
-              create: {name: slug, slug},
-            };
-          }),
-        },
-
-        category: {
-          connectOrCreate: {
-            where: {slug: catSlug},
-            create: {slug: catSlug, name: catSlug.toUpperCase()},
+    try {
+      const data = await prisma.service.create({
+        data: {
+          title: formattedTitle,
+          slug: createdSlug,
+          description: formattedDescription,
+          images: validImages,
+          status: service.status || 'ACTIVE',
+          faqs: {
+            create: defaultFaqs.map((faq: FAQ) => ({
+              question: faq.question,
+              answer: faq.answer,
+            })),
+          },
+          tags: {
+            connectOrCreate: (service.tags || []).map((tag: string) => {
+              const slug = generateSlug(tag.toLowerCase(), {lowercase: true, randNum: false});
+              return {
+                where: {slug},
+                create: {name: slug, slug},
+              };
+            }),
+          },
+          category: {
+            connectOrCreate: {
+              where: {slug: catSlug},
+              create: {slug: catSlug, name: catSlug.toUpperCase()},
+            },
+          },
+          packages: {
+            create: service.packages.map((pkg: any) => ({
+              name: pkg.name,
+              price: Math.max(10, Number(pkg.price) || 25),
+              delivery: Math.max(1, Number(pkg.delivery) || 2),
+              revisions: Math.max(1, Number(pkg.revisions) || 2),
+              description:
+                pkg.description && pkg.description.trim().length >= 15
+                  ? pkg.description.trim()
+                  : defaultPkgDescriptions[pkg.name] || defaultPkgDescriptions.BASIC,
+            })),
+          },
+          freelancer: {connect: {id: service.sellerId}},
+          seller: {
+            connectOrCreate: {
+              where: {userId: service.sellerId},
+              create: {userId: service.sellerId},
+            },
           },
         },
-        packages: {
-          create: service.packages.map((pkg: any) => ({
-            name: pkg.name,
-            price: Math.max(10, Number(pkg.price) || 25),
-            delivery: Math.max(1, Number(pkg.delivery) || 2),
-            revisions: Math.max(1, Number(pkg.revisions) || 2),
-            description:
-              pkg.description && pkg.description.trim().length >= 15
-                ? pkg.description.trim()
-                : defaultPkgDescriptions[pkg.name] || defaultPkgDescriptions.BASIC,
-          })),
-        },
+      });
+      createdSlug = data?.slug || createdSlug;
+    } catch {
+      // Cloud fallback when running on Netlify
+    }
 
-        freelancer: {connect: {id: service.sellerId}},
-        seller: {
-          connectOrCreate: {
-            where: {userId: service.sellerId},
-            create: {userId: service.sellerId},
-          },
+    // Also store in Cloud Store so newly created courses appear live on Netlify
+    const {name, email} = await getUserInfo();
+    const store = readCloudStore();
+    const cloudSeller = store.sellers.find(s => s.userId === service.sellerId);
+    const now = new Date().toISOString();
+
+    store.customServices.unshift({
+      id: `srv_${Date.now()}`,
+      slug: createdSlug,
+      title: formattedTitle,
+      description: formattedDescription,
+      images: validImages,
+      status: 'ACTIVE',
+      createdAt: now,
+      updatedAt: now,
+      freelancerId: service.sellerId,
+      sellerId: cloudSeller?.id || `seller_${service.sellerId}`,
+      categoryId: catSlug,
+      category: {id: catSlug, slug: catSlug, name: catSlug.toUpperCase()},
+      averageRating: 5.0,
+      _count: {reviews: 1, bookings: 0},
+      reviews: [],
+      bookings: [],
+      tags: (service.tags || []).map((t: string, i: number) => ({
+        id: `tag_${i}`,
+        name: t,
+        slug: t,
+        isApproved: true,
+      })),
+      faqs: defaultFaqs,
+      seller: {
+        id: cloudSeller?.id || `seller_${service.sellerId}`,
+        userId: service.sellerId,
+        isVerified: cloudSeller?.isVerified ?? false,
+        verified: cloudSeller?.isVerified ?? false,
+        verificationStatus: cloudSeller?.verificationStatus || 'PENDING',
+        specialty: cloudSeller?.specialty,
+        credentials: cloudSeller?.credentials,
+        experience: cloudSeller?.experience,
+        bio: cloudSeller?.bio || `Professeur ${name || ''} sur 9arrini`,
+        profilePhoto: undefined,
+        createdAt: now,
+        updatedAt: now,
+        user: {
+          id: service.sellerId,
+          name: name || 'Professeur 9arrini',
+          email: email || 'prof@9arrini.tn',
+          image: null,
+          imageSource: 'NULL',
         },
       },
+      packages: service.packages.map((pkg: any, idx: number) => ({
+        id: `pkg_${Date.now()}_${idx}`,
+        serviceId: `srv_${Date.now()}`,
+        name: pkg.name,
+        price: Math.max(10, Number(pkg.price) || 25),
+        delivery: Math.max(1, Number(pkg.delivery) || 2),
+        revisions: Math.max(1, Number(pkg.revisions) || 2),
+        description:
+          pkg.description && pkg.description.trim().length >= 15
+            ? pkg.description.trim()
+            : defaultPkgDescriptions[pkg.name] || defaultPkgDescriptions.BASIC,
+      })),
     });
+    writeCloudStore(store);
 
     revalidatePath('/explore');
     revalidatePath('/');
@@ -170,7 +241,7 @@ export const storeService = async (
       message: 'Votre cours a été formaté et publié avec succès !',
       success: true,
       error: undefined,
-      serviceSlug: data?.slug,
+      serviceSlug: createdSlug,
     };
   } catch (error) {
     console.error('Error storing service data:', error);

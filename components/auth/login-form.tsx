@@ -6,8 +6,10 @@ import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/compo
 import {Input} from '@/components/ui/input';
 import {Label} from '@/components/ui/label';
 import {authClient} from '@/lib/auth-client';
+import {cloudSignIn} from '@/hooks/auth/cloud-auth';
 import {Alert, AlertDescription} from '../ui/alert';
 import {Terminal} from 'lucide-react';
+import {toast} from 'sonner';
 
 import {IconLoader} from '@tabler/icons-react';
 
@@ -29,40 +31,34 @@ export function LoginForm({className, ...props}: React.ComponentProps<'div'>) {
 
   async function handleSubmit(e: any) {
     e.preventDefault();
+    setLoading(true);
+    setError('');
 
-    const {data, error} = await authClient.signIn.email(
-      {
-        /**
-         * The user email
-         */
-        email,
-        /**
-         * The user password
-         */
-        password,
-        /**
-         * a url to redirect to after the user verifies their email (optional)
-         */
-        callbackURL: '/dashboard',
-        /**
-         * remember the user session after the browser is closed.
-         * @default true
-         */
-        rememberMe: false,
-      },
-      {
-        onRequest: ctx => {
-          setLoading(true);
-        },
-        onSuccess: ctx => {
-          window.location.href = '/dashboard';
-        },
-        onError: ctx => {
-          setError(ctx.error.message);
-          setLoading(false);
-        },
+    try {
+      // Attempt better-auth sign-in if local DB is active (non-blocking)
+      try {
+        await authClient.signIn.email({
+          email,
+          password,
+          rememberMe: true,
+        });
+      } catch {
+        // Handled by cloudSignIn below
       }
-    );
+
+      const res = await cloudSignIn({email, password});
+      if (res.success) {
+        toast.success('Connexion réussie ! Mar7bé bik fi 9arrini');
+        window.location.href = res.redirectTo || '/dashboard';
+        return;
+      } else {
+        setError(res.error || 'Impossible de se connecter.');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Erreur lors de la connexion.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

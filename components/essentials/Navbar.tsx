@@ -3,7 +3,7 @@
 import {useEffect, useState} from 'react';
 import {useRouter} from 'next/navigation';
 import Link from 'next/link';
-import {MessageSquare, Bell, User, ChevronDown, Compass, Briefcase, BarChart3} from 'lucide-react';
+import {MessageSquare, Bell, User, ChevronDown, Compass, Briefcase, BarChart3, Coins} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Badge} from '@/components/ui/badge';
 import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
@@ -15,12 +15,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import AuthModal from '../auth/auth-dialog';
 import {getUserInfo} from '@/hooks/shared/get-user-info';
+import {clearCloudSessionCookie} from '@/hooks/auth/cloud-auth';
 import {authClient} from '../../lib/auth-client';
 import {profilePhoto} from '../profile-url';
 import {getNotifications} from '@/hooks/notification/get-notifications';
 import {getStudentPointsData} from '@/hooks/points/points-actions';
 import {Skeleton} from '../loading-primitives';
-import {Coins} from 'lucide-react';
+
 export const Navbar = () => {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -34,24 +35,33 @@ export const Navbar = () => {
 
   useEffect(() => {
     const getAuthAndNotifications = async () => {
-      const {userId, role, image, imageSource, email} = await getUserInfo();
-      if (userId && role && imageSource) {
-        setIsAuth(true);
-        setInitialLoading(false);
-        setRole(role);
-        const pfp = await profilePhoto({imageUrl: image, imageSource, email});
-        setProfileImage(pfp);
+      try {
+        const {userId, role, image, imageSource, email} = await getUserInfo();
+        if (userId && role) {
+          setIsAuth(true);
+          setInitialLoading(false);
+          setRole(role);
+          const pfp = await profilePhoto({
+            imageUrl: image,
+            imageSource: imageSource || 'NULL',
+            email,
+          });
+          setProfileImage(pfp);
 
-        const [{success, notifications: localNotification}, ptsData] = await Promise.all([
-          getNotifications({userId}),
-          getStudentPointsData(),
-        ]);
-        setPoints(ptsData.points ?? 0);
-        if (success && localNotification) {
-          setNotifications(prev => [...prev, ...localNotification]);
+          const [{success, notifications: localNotification}, ptsData] = await Promise.all([
+            getNotifications({userId}),
+            getStudentPointsData(),
+          ]);
+          setPoints(ptsData.points ?? 0);
+          if (success && localNotification) {
+            setNotifications(prev => [...prev, ...localNotification]);
+          }
         }
+      } catch (e) {
+        console.error('Navbar auth check:', e);
+      } finally {
+        setInitialLoading(false);
       }
-      setInitialLoading(false);
     };
 
     getAuthAndNotifications();
@@ -77,7 +87,12 @@ export const Navbar = () => {
   ];
 
   const handleLogout = async () => {
-    await authClient.signOut();
+    try {
+      await clearCloudSessionCookie();
+      await authClient.signOut();
+    } catch {
+      // ignore
+    }
     setIsAuth(false);
     setRole('');
     window.location.href = '/';
@@ -97,7 +112,6 @@ export const Navbar = () => {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
-              {/* Logo */}
               <Link href="/" className="flex items-center gap-1.5">
                 <span className="text-2xl font-black tracking-tight text-emerald-600">
                   9arrini<span className="text-gray-900 font-medium">.tn</span>
@@ -112,7 +126,7 @@ export const Navbar = () => {
                   <Link
                     key={item.label}
                     href={item.href}
-                    className="text-sm font-medium  hover:text-foreground/90 transition-colors"
+                    className="text-sm font-medium hover:text-foreground/90 transition-colors"
                   >
                     {item.label}
                   </Link>
@@ -192,10 +206,7 @@ export const Navbar = () => {
                         <BarChart3 className="h-4 w-4 mr-2" />
                         Dashboard
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-red-600"
-                        onClick={handleLogout}
-                      >
+                      <DropdownMenuItem className="text-red-600" onClick={handleLogout}>
                         Logout
                       </DropdownMenuItem>
                     </DropdownMenuContent>

@@ -5,10 +5,8 @@ import {Button} from '@/components/ui/button';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card';
 import {Input} from '@/components/ui/input';
 import {Label} from '@/components/ui/label';
-
-import {useRouter} from 'next/navigation';
-
 import {authClient} from '@/lib/auth-client';
+import {cloudSignUp} from '@/hooks/auth/cloud-auth';
 import {Alert, AlertDescription, AlertTitle} from '../ui/alert';
 import {Terminal} from 'lucide-react';
 
@@ -17,8 +15,6 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '../
 import {toast} from 'sonner';
 
 export function SignupForm({className, ...props}: React.ComponentProps<'div'>) {
-  const router = useRouter();
-
   const [fullname, setFullname] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,10 +22,6 @@ export function SignupForm({className, ...props}: React.ComponentProps<'div'>) {
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  // const signIn = async () => {
-  //   // const {data} = await authClient.signUp.email;
-  // };
 
   const signUp = async () => {
     const {data: GoogleData, error: GoogleError} = await authClient.signIn.social({
@@ -42,30 +34,38 @@ export function SignupForm({className, ...props}: React.ComponentProps<'div'>) {
 
   async function handleSubmit(e: any) {
     e.preventDefault();
+    setLoading(true);
+    setError('');
 
     try {
-      const {data: _, error: signupError} = await authClient.signUp.email(
-        {email, password, name: fullname, role: role, hasPassword: true, imageSource: 'NULL'},
-        {
-          onRequest: ctx => {
-            setLoading(true);
-          },
-          onSuccess: ctx => {
-            toast.success('Account created successfully!');
-            if (role === 'SELLER') {
-              window.location.href = '/dashboard/freelancer';
-            } else {
-              window.location.href = '/dashboard/client';
-            }
-          },
-          onError: ctx => {
-            setError(ctx.error.message);
-            setLoading(false);
-          },
-        }
-      );
-      if (signupError) {
-        throw signupError;
+      // Attempt better-auth registration if local DB is active (non-blocking)
+      try {
+        await authClient.signUp.email({
+          email,
+          password,
+          name: fullname,
+          role,
+          hasPassword: true,
+          imageSource: 'NULL',
+        });
+      } catch {
+        // Handled by cloudSignUp below
+      }
+
+      const res = await cloudSignUp({
+        name: fullname,
+        email,
+        password,
+        role,
+      });
+
+      if (res.success) {
+        toast.success('Compte créé avec succès ! (+50 Points = 50 DT offerts)');
+        window.location.href =
+          res.redirectTo || (role === 'SELLER' ? '/dashboard/freelancer' : '/dashboard/client');
+        return;
+      } else {
+        setError(res.error || 'Impossible de créer le compte.');
       }
     } catch (err: any) {
       setError(err?.message || 'Unexpected error');

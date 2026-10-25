@@ -16,7 +16,12 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
   }),
-  trustedOrigins: ['http://localhost:3001', 'http://localhost:3000'],
+  trustedOrigins: [
+    'http://localhost:3001',
+    'http://localhost:3000',
+    'https://*.netlify.app',
+    'https://*.vercel.app',
+  ],
   user: {
     additionalFields: {
       imageSource: {

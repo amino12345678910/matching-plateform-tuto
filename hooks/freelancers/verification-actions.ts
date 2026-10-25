@@ -2,22 +2,60 @@
 
 import {prisma} from '@/lib/prisma';
 import {getUserInfo} from '@/hooks/shared/get-user-info';
+import {readCloudStore, writeCloudStore} from '@/lib/cloud-store';
 import {revalidatePath} from 'next/cache';
 
 export async function getTutorVerificationData() {
-  const {userId} = await getUserInfo();
+  const {userId, name, email} = await getUserInfo();
   if (!userId) return null;
 
-  const seller = await prisma.seller.findUnique({
-    where: {userId},
-    include: {
-      user: {
-        select: {name: true, email: true, points: true},
+  try {
+    const seller = await prisma.seller.findUnique({
+      where: {userId},
+      include: {
+        user: {
+          select: {name: true, email: true, points: true},
+        },
       },
-    },
-  });
+    });
+    if (seller) return seller;
+  } catch {
+    // Cloud fallback
+  }
 
-  return seller;
+  const store = readCloudStore();
+  let cloudSeller = store.sellers.find(s => s.userId === userId);
+  const cloudUser = store.users.find(u => u.id === userId);
+
+  if (!cloudSeller) {
+    cloudSeller = {
+      id: `seller_${userId}`,
+      userId,
+      bio: `Professeur ${name || ''} sur 9arrini`,
+      isVerified: false,
+      verificationStatus: 'UNVERIFIED',
+      createdAt: new Date().toISOString(),
+    };
+    store.sellers.unshift(cloudSeller);
+    writeCloudStore(store);
+  }
+
+  return {
+    ...cloudSeller,
+    profilePhoto: cloudSeller.profilePhoto || null,
+    imageSource: 'NULL' as const,
+    specialty: cloudSeller.specialty || null,
+    experience: cloudSeller.experience || null,
+    credentials: cloudSeller.credentials || null,
+    phone: cloudSeller.phone || null,
+    createdAt: new Date(cloudSeller.createdAt),
+    updatedAt: new Date(cloudSeller.createdAt),
+    user: {
+      name: cloudUser?.name || name || 'Professeur 9arrini',
+      email: cloudUser?.email || email || '',
+      points: cloudUser?.points ?? 120,
+    },
+  };
 }
 
 export async function submitTutorVerification(data: {
@@ -40,7 +78,7 @@ export async function submitTutorVerification(data: {
   }
 
   try {
-    const seller = await prisma.seller.upsert({
+    await prisma.seller.upsert({
       where: {userId},
       update: {
         specialty: data.specialty.trim(),
@@ -61,31 +99,44 @@ export async function submitTutorVerification(data: {
         verificationStatus: 'PENDING',
       },
     });
-
-    await prisma.notification.create({
-      data: {
-        userId,
-        type: 'AUTOMATED',
-        title:
-          'Votre demande de vérification Prof 9arrini a été envoyée aux administrateurs pour confirmation.',
-        link: '/dashboard/freelancer',
-      },
-    });
-
-    revalidatePath('/dashboard/freelancer');
-    revalidatePath('/dashboard/profile');
-
-    return {
-      success: true,
-      seller,
-      message:
-        'Demande envoyée ! Votre dossier est en cours de confirmation par l’administration 9arrini.',
-    };
-  } catch (error) {
-    console.error('Error submitting tutor verification:', error);
-    return {
-      success: false,
-      error: 'Erreur lors de la soumission du dossier de vérification.',
-    };
+  } catch {
+    // Cloud fallback
   }
+
+  const store = readCloudStore();
+  let cloudSeller = store.sellers.find(s => s.userId === userId);
+  if (!cloudSeller) {
+    cloudSeller = {
+      id: `seller_${userId}`,
+      userId,
+      bio: data.bio.trim(),
+      isVerified: false,
+      verificationStatus: 'PENDING',
+      specialty: data.specialty.trim(),
+      experience: data.experience.trim(),
+      credentials: data.credentials.trim(),
+      phone: data.phone.trim(),
+      createdAt: new Date().toISOString(),
+    };
+    store.sellers.unshift(cloudSeller);
+  } else {
+    cloudSeller.specialty = data.specialty.trim();
+    cloudSeller.experience = data.experience.trim();
+    cloudSeller.credentials = data.credentials.trim();
+    cloudSeller.phone = data.phone.trim();
+    cloudSeller.bio = data.bio.trim();
+    cloudSeller.verificationStatus = 'PENDING';
+  }
+  writeCloudStore(store);
+
+  revalidatePath('/dashboard/freelancer');
+  revalidatePath('/dashboard/profile');
+  revalidatePath('/admin');
+
+  return {
+    success: true,
+    seller: cloudSeller,
+    message:
+      'Demande envoyée ! Votre dossier est en cours de confirmation par l’administration 9arrini.',
+  };
 }

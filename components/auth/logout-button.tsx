@@ -2,6 +2,7 @@
 import React, {useState} from 'react';
 
 import {authClient} from '@/lib/auth-client';
+import {clearCloudSessionCookie} from '@/hooks/auth/cloud-auth';
 import {useRouter} from 'next/navigation';
 
 export default function LogoutButton() {
@@ -10,19 +11,17 @@ export default function LogoutButton() {
   const [loading, setLoading] = useState(false);
 
   async function handleLogOut() {
-    await authClient.signOut({
-      fetchOptions: {
-        onSuccess: () => {
-          router.push('/auth/login'); // redirect to login page
-        },
-        onRequest: ctx => {
-          setLoading(true);
-        },
-        onResponse: ctx => {
-          setLoading(false);
-        },
-      },
-    });
+    setLoading(true);
+    try {
+      await clearCloudSessionCookie();
+      await authClient.signOut();
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+      router.push('/auth/login');
+      window.location.href = '/auth/login';
+    }
   }
   return <button onClick={() => handleLogOut()}>{loading ? 'Logging out...' : 'Log out'}</button>;
 }

@@ -11,7 +11,7 @@ import type {Metadata} from 'next';
 import {Footer} from '@/components/footer/footer-2';
 import type {Service} from '@/types/service';
 import {profilePhoto} from '@/components/profile-url';
-import {FALLBACK_SERVICES} from '@/lib/fallback-data';
+import {getAllCloudServices} from '@/lib/cloud-store';
 
 type generateMetaDataProps = {
   params: Promise<{
@@ -29,11 +29,11 @@ export async function generateMetadata({params}: generateMetaDataProps): Promise
       include: {tags: true, freelancer: {select: {name: true}}},
     });
   } catch {
-    service = FALLBACK_SERVICES.find(s => s.slug === resolvedParams);
+    service = getAllCloudServices().find(s => s.slug === resolvedParams);
   }
 
   if (!service) {
-    service = FALLBACK_SERVICES.find(s => s.slug === resolvedParams);
+    service = getAllCloudServices().find(s => s.slug === resolvedParams);
   }
 
   if (!service) {
@@ -81,11 +81,11 @@ async function detailedPage({params}: {params: Promise<{slug: string}>}) {
       },
     });
   } catch {
-    fetchedService = FALLBACK_SERVICES.find(s => s.slug === slug) || FALLBACK_SERVICES[0];
+    fetchedService = getAllCloudServices().find(s => s.slug === slug) || getAllCloudServices()[0];
   }
 
   if (!fetchedService) {
-    fetchedService = FALLBACK_SERVICES.find(s => s.slug === slug);
+    fetchedService = getAllCloudServices().find(s => s.slug === slug);
   }
 
   if (fetchedService) {
