@@ -26,13 +26,15 @@ import {
   Calendar,
   Copy,
   ExternalLink,
+  Lock,
+  UserCheck,
 } from 'lucide-react';
 import type {Service, ServicePackage} from '@/types/service';
 import {allowClientOnly} from './validate/allow-user-only';
 import {toast} from 'sonner';
 import {ServiceCarousel} from '../autoplay-carousel';
 import {bookService} from '@/hooks/book/book-service';
-import {getStudentPointsData, buyStudentPoints} from '@/hooks/points/points-actions';
+import {getStudentPointsData, buyStudentPoints, checkUserHasBookedService} from '@/hooks/points/points-actions';
 import {profilePhoto} from '../profile-url';
 import Link from 'next/link';
 import moment from 'moment';
@@ -68,6 +70,8 @@ export function ServiceDetailPage({service}: {service: Service}) {
   const [currentReview, setCurrentReview] = useState<Review>();
   const [studentPoints, setStudentPoints] = useState<number | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [hasBooked, setHasBooked] = useState(false);
 
   const reviewCount = service.reviews!.length;
   const avgRating = useMemo(
@@ -122,10 +126,23 @@ export function ServiceDetailPage({service}: {service: Service}) {
       if (pointsRes.success && pointsRes.user) {
         setStudentPoints(pointsRes.user.points ?? 0);
         setUserRole(pointsRes.user.role ?? null);
+        setCurrentUserId(pointsRes.user.id || pointsRes.userId || null);
+      }
+
+      const booked = await checkUserHasBookedService(service.id);
+      if (booked) {
+        setHasBooked(true);
       }
     };
     init();
-  }, [service.seller.user.image, service.seller.user.email]);
+  }, [service.id, service.seller.user.image, service.seller.user.email]);
+
+  const isTutorOwner = Boolean(
+    (userRole === 'SELLER' || userRole === 'FREELANCER') &&
+      currentUserId &&
+      (currentUserId === service.seller?.userId || currentUserId === service.freelancerId)
+  );
+  const canAccessMeet = isTutorOwner || hasBooked;
 
   const avgResponseTime = useMemo(() => {
     const {hasSeen, createdAt} = service.bookings?.[0] || {};
@@ -222,9 +239,10 @@ export function ServiceDetailPage({service}: {service: Service}) {
         });
 
         if (success) {
+          setHasBooked(true);
           toast.success(
             message ||
-              `Séance réservée avec succès ! (-${currentPackage.price} Points / ${currentPackage.price} DT)`
+              `Séance réservée avec succès ! (-${currentPackage.price} Points / ${currentPackage.price} DT) • Le lien Google Meet est maintenant débloqué !`
           );
           if (typeof newBalance === 'number') {
             setStudentPoints(newBalance);
@@ -565,80 +583,138 @@ export function ServiceDetailPage({service}: {service: Service}) {
                       </div>
 
                       {/* Scheduled Google Meet Session Box */}
-                      <div className="rounded-xl border border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-950/30 p-3.5 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-xs font-bold text-emerald-900 dark:text-emerald-200">
-                            <Video className="h-4 w-4 text-emerald-600" />
-                            <span>Séance Google Meet Planifiée</span>
+                      {canAccessMeet ? (
+                        <div className="rounded-xl border-2 border-emerald-500 bg-emerald-50/80 dark:bg-emerald-950/40 p-3.5 space-y-3 shadow-md shadow-emerald-500/10 animate-in fade-in duration-300">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                              <Video className="h-4 w-4 text-emerald-600" />
+                              <span>Séance Google Meet Planifiée</span>
+                            </div>
+                            <Badge className="bg-emerald-600 text-white text-[10px] font-semibold">
+                              {isTutorOwner ? 'Professeur' : 'Séance Débloquée ✓'}
+                            </Badge>
                           </div>
-                          <Badge className="bg-emerald-600 text-white text-[10px]">Auto-Ready</Badge>
-                        </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 mb-1">
-                              <Calendar className="h-3 w-3 text-emerald-600" />
-                              Date du cours
-                            </label>
-                            <input
-                              type="date"
-                              value={sessionDate}
-                              min={new Date().toISOString().split('T')[0]}
-                              onChange={e => setSessionDate(e.target.value)}
-                              className="w-full rounded-lg border border-emerald-300 bg-white px-2 py-1 text-xs font-medium text-slate-900"
-                            />
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                                <Calendar className="h-3 w-3 text-emerald-600" />
+                                Date du cours
+                              </label>
+                              <input
+                                type="date"
+                                value={sessionDate}
+                                min={new Date().toISOString().split('T')[0]}
+                                onChange={e => setSessionDate(e.target.value)}
+                                className="w-full rounded-lg border border-emerald-300 bg-white dark:bg-slate-900 px-2 py-1 text-xs font-medium text-slate-900 dark:text-slate-100"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                                <Clock className="h-3 w-3 text-emerald-600" />
+                                Heure prévue
+                              </label>
+                              <input
+                                type="time"
+                                value={sessionTime}
+                                onChange={e => setSessionTime(e.target.value)}
+                                className="w-full rounded-lg border border-emerald-300 bg-white dark:bg-slate-900 px-2 py-1 text-xs font-medium text-slate-900 dark:text-slate-100"
+                              />
+                            </div>
                           </div>
-                          <div>
-                            <label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 mb-1">
-                              <Clock className="h-3 w-3 text-emerald-600" />
-                              Heure prévue
-                            </label>
-                            <input
-                              type="time"
-                              value={sessionTime}
-                              onChange={e => setSessionTime(e.target.value)}
-                              className="w-full rounded-lg border border-emerald-300 bg-white px-2 py-1 text-xs font-medium text-slate-900"
-                            />
+
+                          <div className="rounded-lg bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 p-2.5 space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400 truncate">
+                                {initialMeet.meetUrl}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={copyMeetUrl}
+                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:underline shrink-0 cursor-pointer"
+                              >
+                                <Copy className="h-3 w-3" />
+                                Copier
+                              </button>
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-1">
+                              <a
+                                href={initialMeet.meetUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 px-2 text-xs font-semibold transition"
+                              >
+                                <Video className="h-3.5 w-3.5" />
+                                Rejoindre Meet
+                              </a>
+                              <a
+                                href={liveCalendarUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 py-1.5 px-2 text-xs font-semibold transition"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                Agenda ({formatScheduleLabel(sessionDate, sessionTime).split(' ')[0]})
+                              </a>
+                            </div>
                           </div>
                         </div>
+                      ) : (
+                        <div className="rounded-xl border border-dashed border-emerald-400 bg-emerald-50/70 dark:bg-emerald-950/30 p-3.5 space-y-3">
+                          <div className="flex items-start gap-2.5">
+                            <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center shrink-0 text-emerald-700 dark:text-emerald-300">
+                              <Lock className="h-4 w-4" />
+                            </div>
+                            <div className="space-y-0.5 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                                  Lien Google Meet Protégé
+                                </h4>
+                                <Badge variant="outline" className="text-[10px] border-emerald-500/30 text-emerald-700 dark:text-emerald-400">
+                                  Paiement requis
+                                </Badge>
+                              </div>
+                              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                Le lien Google Meet direct et l&apos;invitation Google Agenda sont masqués. Ils seront débloqués dès la réservation de cette séance débitée de votre solde de Points ({currentPackage.price} Points = {currentPackage.price} DT).
+                              </p>
+                            </div>
+                          </div>
 
-                        <div className="rounded-lg bg-white border border-emerald-200 p-2.5 space-y-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-mono font-bold text-emerald-700 truncate">
-                              {initialMeet.meetUrl}
+                          <div className="rounded-lg bg-white/80 dark:bg-slate-900/80 border border-emerald-200 dark:border-emerald-900/50 p-2 flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              <Calendar className="h-3.5 w-3.5 text-emerald-600" />
+                              <span className="text-[11px]">Date : <strong>{formatScheduleLabel(sessionDate, sessionTime)}</strong></span>
+                            </div>
+                            <span className="text-[10px] font-mono font-medium text-emerald-700 bg-emerald-100 dark:bg-emerald-900/50 px-2 py-0.5 rounded">
+                              meet.google.com/•••-••••-•••
                             </span>
-                            <button
-                              type="button"
-                              onClick={copyMeetUrl}
-                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:underline shrink-0 cursor-pointer"
-                            >
-                              <Copy className="h-3 w-3" />
-                              Copier
-                            </button>
                           </div>
 
-                          <div className="flex items-center gap-2 pt-1">
-                            <a
-                              href={initialMeet.meetUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 px-2 text-xs font-semibold transition"
+                          {!currentUserId ? (
+                            <Button
+                              type="button"
+                              onClick={() => (window.location.href = '/auth/login')}
+                              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold h-8 rounded-lg"
                             >
-                              <Video className="h-3.5 w-3.5" />
-                              Rejoindre Meet
-                            </a>
-                            <a
-                              href={liveCalendarUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 py-1.5 px-2 text-xs font-semibold transition"
+                              <UserCheck className="h-3.5 w-3.5 mr-1.5" />
+                              Se connecter pour débloquer le Meet
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              onClick={handleBooking}
+                              disabled={isBooking || !hasEnoughPoints}
+                              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold h-8 rounded-lg shadow-sm"
                             >
-                              <ExternalLink className="h-3 w-3" />
-                              Agenda ({formatScheduleLabel(sessionDate, sessionTime).split(' ')[0]})
-                            </a>
-                          </div>
+                              <Coins className="h-3.5 w-3.5 mr-1.5" />
+                              {isBooking
+                                ? 'Validation du paiement...'
+                                : `Payer ${currentPackage.price} Points pour débloquer le Meet`}
+                            </Button>
+                          )}
                         </div>
-                      </div>
+                      )}
                     </div>
                   </div>
 

@@ -59,12 +59,29 @@ export interface CloudBooking {
   createdAt: string;
 }
 
+export interface CloudReview {
+  id: string;
+  clientId: string;
+  clientName: string;
+  clientAvatar?: string;
+  serviceId: string;
+  serviceSlug?: string;
+  rating: number;
+  comment: string;
+  quality?: number;
+  communication?: number;
+  behavior?: number;
+  professionalism?: number;
+  createdAt: string;
+}
+
 export interface CloudStoreData {
   users: CloudUser[];
   sellers: CloudSeller[];
   transactions: CloudPointTransaction[];
   bookings: CloudBooking[];
   customServices: any[];
+  reviews: CloudReview[];
 }
 
 const STORE_FILE = path.join(os.tmpdir(), '9arrini-cloud-store-v1.json');
@@ -103,6 +120,7 @@ function getInitialStore(): CloudStoreData {
     transactions: [],
     bookings: [],
     customServices: [],
+    reviews: [],
   };
 }
 
@@ -112,6 +130,7 @@ export function readCloudStore(): CloudStoreData {
       const raw = fs.readFileSync(STORE_FILE, 'utf-8');
       const parsed = JSON.parse(raw);
       if (parsed && Array.isArray(parsed.users)) {
+        if (!Array.isArray(parsed.reviews)) parsed.reviews = [];
         return parsed;
       }
     }

@@ -11,7 +11,7 @@ import type {Metadata} from 'next';
 import {Footer} from '@/components/footer/footer-2';
 import type {Service} from '@/types/service';
 import {profilePhoto} from '@/components/profile-url';
-import {getAllCloudServices} from '@/lib/cloud-store';
+import {getAllCloudServices, readCloudStore} from '@/lib/cloud-store';
 
 type generateMetaDataProps = {
   params: Promise<{
@@ -89,19 +89,44 @@ async function detailedPage({params}: {params: Promise<{slug: string}>}) {
   }
 
   if (fetchedService) {
+    const store = readCloudStore();
+    const cloudReviews = (store.reviews || [])
+      .filter((r: any) => r.serviceId === fetchedService.id || r.serviceSlug === slug)
+      .map((r: any) => ({
+        id: r.id,
+        rating: r.rating,
+        comment: r.comment,
+        clientId: r.clientId,
+        serviceId: r.serviceId,
+        createdAt: new Date(r.createdAt),
+        updatedAt: new Date(r.updatedAt || r.createdAt),
+        client: {
+          id: r.clientId,
+          name: r.clientName || 'Élève 9arrini',
+          avatar: r.clientAvatar || undefined,
+          imageSource: 'GOOGLE' as const,
+        },
+      }));
+
+    const combinedRaw = [...(fetchedService.reviews || []), ...cloudReviews];
+    const uniqueRaw = Array.from(new Map(combinedRaw.map((r: any) => [r.id, r])).values());
+
     const reviews = await Promise.all(
-      (fetchedService.reviews || []).map(async (review: any) => ({
+      uniqueRaw.map(async (review: any) => ({
         ...review,
         client: {
           ...review.client,
-          avatar: await profilePhoto({
-            imageUrl: review.client.image,
-            imageSource: review.client.imageSource,
-            email: review.client.name,
-          }),
+          avatar:
+            review.client?.avatar ||
+            (await profilePhoto({
+              imageUrl: review.client?.image,
+              imageSource: review.client?.imageSource,
+              email: review.client?.name,
+            })),
         },
       }))
     );
+
     const formattedService: Service = {
       ...fetchedService,
       reviews: reviews,

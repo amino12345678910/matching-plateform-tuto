@@ -63,7 +63,7 @@ export async function getUserInfo(): Promise<UserInfo> {
         image,
         createdAt,
         emailVerified,
-        hasPassword,
+        hasPassword: hasPassword ?? false,
         imageSource: imageSource ?? 'NULL',
       };
     }

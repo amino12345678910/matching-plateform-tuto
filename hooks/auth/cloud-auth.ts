@@ -410,6 +410,7 @@ export async function cloudGoogleSignIn(input: {
   email: string;
   name?: string;
   role?: 'USER' | 'SELLER' | 'FREELANCER';
+  image?: string | null;
 }): Promise<{
   success: boolean;
   error?: string;
@@ -440,9 +441,12 @@ export async function cloudGoogleSignIn(input: {
       ? 'SELLER'
       : 'USER';
 
-  const googleAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-    derivedName
-  )}&background=059669&color=fff&bold=true`;
+  const actualGoogleImage = input.image || null;
+  const avatarUrl =
+    actualGoogleImage ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      derivedName
+    )}&background=059669&color=fff&bold=true`;
 
   if (!cloudUser) {
     cloudUser = {
@@ -451,7 +455,7 @@ export async function cloudGoogleSignIn(input: {
       email: cleanEmail,
       role: requestedRole,
       points: 50,
-      image: googleAvatar,
+      image: actualGoogleImage || avatarUrl,
       imageSource: 'GOOGLE',
       hasPassword: false,
       emailVerified: true,
@@ -473,7 +477,11 @@ export async function cloudGoogleSignIn(input: {
     if (input.role) {
       cloudUser.role = requestedRole;
     }
-    cloudUser.image = cloudUser.image || googleAvatar;
+    if (actualGoogleImage) {
+      cloudUser.image = actualGoogleImage;
+    } else {
+      cloudUser.image = cloudUser.image || avatarUrl;
+    }
     cloudUser.imageSource = 'GOOGLE';
   }
 
@@ -499,7 +507,7 @@ export async function cloudGoogleSignIn(input: {
     email: cloudUser.email,
     role: requestedRole,
     points: cloudUser.points ?? 50,
-    image: cloudUser.image || googleAvatar,
+    image: actualGoogleImage || cloudUser.image || avatarUrl,
     imageSource: 'GOOGLE',
     hasPassword: cloudUser.hasPassword ?? false,
     emailVerified: true,

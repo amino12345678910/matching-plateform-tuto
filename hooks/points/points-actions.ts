@@ -170,3 +170,30 @@ export async function buyStudentPoints(amount: number, packLabel?: string) {
     message: `Mabrouk ! +${cleanAmount} Points (${cleanAmount} DT) ajoutés à votre compte.`,
   };
 }
+
+export async function checkUserHasBookedService(serviceId: string): Promise<boolean> {
+  const {userId} = await getUserInfo();
+  if (!userId) return false;
+
+  try {
+    const booking = await prisma.booking.findFirst({
+      where: {
+        serviceId,
+        clientId: userId,
+      },
+      select: {id: true},
+    });
+    if (booking) return true;
+  } catch {
+    // ignore
+  }
+
+  try {
+    const store = readCloudStore();
+    return (store.bookings || []).some(
+      b => b.serviceId === serviceId && b.clientId === userId
+    );
+  } catch {
+    return false;
+  }
+}

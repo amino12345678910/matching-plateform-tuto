@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
       email: profile.email,
       name: profile.name || profile.given_name || profile.email.split('@')[0],
       role,
+      image: profile.picture || null,
     });
 
     const target =

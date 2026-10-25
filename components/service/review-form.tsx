@@ -1,5 +1,6 @@
 'use client';
-import {Star} from 'lucide-react';
+
+import {Star, MessageSquare, Send, CheckCircle2, UserCheck, LogIn} from 'lucide-react';
 import {Button} from '../ui/button';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '../ui/card';
 import {Label} from '../ui/label';
@@ -12,253 +13,271 @@ import {VerifyReview} from '@/hooks/service/review/verify-review';
 import type {Review} from '@/types/review';
 import {getUserInfo} from '@/hooks/shared/get-user-info';
 import {profilePhoto} from '../profile-url';
+import {toast} from 'sonner';
 
-export interface ReviewData {
-  rating: number;
-  comment?: string;
-  categories?: {
-    quality: number;
-    communication: number;
-    behavior: number;
-    professionalism: number;
-  };
-}
 interface ReviewsProps {
   serviceId: string;
   sendCurrentReview: (review: Review) => void;
 }
 
-const categories = [
-  {
-    id: 'quality' as const,
-    label: 'Quality of Work',
-    question: 'How satisfied are you with the final deliverables?',
-  },
-  {
-    id: 'communication' as const,
-    label: 'Communication',
-    question: 'How well did they communicate throughout the project?',
-  },
-  {
-    id: 'behavior' as const,
-    label: 'Professional Behavior',
-    question: 'Were they professional and easy to work with?',
-  },
-  {
-    id: 'professionalism' as const,
-    label: 'Professionalism',
-    question: 'Did they meet deadlines and follow instructions?',
-  },
-];
+const RATING_LABELS: Record<number, string> = {
+  1: '1/5 • À améliorer',
+  2: '2/5 • Passable',
+  3: '3/5 • Bien',
+  4: '4/5 • Très bien',
+  5: '5/5 • Excellent professeur !',
+};
+
 export function ReviewForm({serviceId, sendCurrentReview}: ReviewsProps) {
-  const [categoryRatings, setCategoryRatings] = useState({
-    quality: 0,
-    communication: 0,
-    behavior: 0,
-    professionalism: 0,
-  });
+  const [rating, setRating] = useState<number>(5);
+  const [hoverRating, setHoverRating] = useState<number | null>(null);
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [canClientSubmit, setCanClientSubmit] = useState(false);
+  const [alreadyReviewed, setAlreadyReviewed] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userName, setUserName] = useState('');
 
   useEffect(() => {
     const init = async () => {
-      const {disable, clientId} = await allowClientOnly();
-      if (disable || !clientId) return;
-      const {hasReview} = await VerifyReview({clientId, serviceId});
-      if (!hasReview) setCanClientSubmit(true);
+      try {
+        const {disable, clientId, name, role} = await allowClientOnly();
+        if (role) setIsLoggedIn(true);
+        if (name) setUserName(name);
+
+        if (!clientId) {
+          setCanClientSubmit(false);
+          return;
+        }
+
+        const {hasReview} = await VerifyReview({clientId, serviceId});
+        if (hasReview) {
+          setAlreadyReviewed(true);
+          setCanClientSubmit(false);
+        } else {
+          setCanClientSubmit(true);
+        }
+      } catch (err) {
+        console.error('Review check error:', err);
+      }
     };
     init();
-  }, []);
+  }, [serviceId]);
 
-  const handleCategoryRating = (categoryId: keyof typeof categoryRatings, rating: number) => {
-    setCategoryRatings(prev => ({
-      ...prev,
-      [categoryId]: rating,
-    }));
-  };
-
-  const calculateAverageRating = () => {
-    const categoryValues = Object.values(categoryRatings).filter(r => r > 0);
-    if (categoryValues.length === 0) return 0;
-
-    const sum = categoryValues.reduce((acc, val) => acc + val, 0);
-    return Math.round((sum / categoryValues.length) * 10) / 10;
-  };
-
-  const handleSubmit = async () => {
-    const finalRating = calculateAverageRating();
-    if (finalRating === 0) {
-      alert('Please provide at least one rating');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (rating < 1 || rating > 5) {
+      toast.error('Veuillez sélectionner une note entre 1 et 5 étoiles');
+      return;
+    }
+    if (!comment.trim()) {
+      toast.error('Veuillez ajouter un court commentaire pour ce professeur');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const {disable, clientId} = await allowClientOnly();
+      const {disable, clientId, name} = await allowClientOnly();
       if (disable || !clientId) {
-        console.error(`Only clients can give review`);
+        toast.info('Veuillez vous connecter avec un compte élève pour noter ce professeur');
         return;
       }
-      const reviewPayload = {clientId, serviceId, rating: finalRating, comment};
 
-      const {success, review} = await AddReview({
-        ...reviewPayload,
+      const {userId, name: uName, image, imageSource, email} = await getUserInfo();
+      const avatarUrl = await profilePhoto({
+        imageUrl: image,
+        imageSource,
+        email: email || uName,
       });
 
-      if (success && review) {
-        const {userId, name, image, imageSource} = await getUserInfo();
-        const avatar = await profilePhoto({imageUrl: image, imageSource, email: name});
+      const clientDisplayName = uName || name || 'Élève 9arrini';
 
+      const res = await AddReview({
+        clientId,
+        serviceId,
+        rating,
+        comment: comment.trim(),
+        clientName: clientDisplayName,
+        clientAvatar: avatarUrl,
+      });
+
+      if (res.success && res.review) {
+        toast.success('Merci ! Votre avis a été publié avec succès.');
         sendCurrentReview({
-          ...reviewPayload,
-          ...review,
-          client: {id: userId!, name: name!, avatar, imageSource},
+          id: res.review.id || `rev_${Date.now()}`,
+          rating,
+          comment: comment.trim(),
+          clientId,
+          serviceId,
+          client: {
+            id: userId || clientId,
+            name: clientDisplayName,
+            avatar: avatarUrl,
+            imageSource: (imageSource as any) || 'GOOGLE',
+          },
+          createdAt: new Date(),
+          updatedAt: new Date(),
         });
 
-        setCategoryRatings({
-          quality: 0,
-          communication: 0,
-          behavior: 0,
-          professionalism: 0,
-        });
         setComment('');
+        setAlreadyReviewed(true);
         setCanClientSubmit(false);
-        // console.log('baly baly!!', review);
+      } else {
+        toast.error('Impossible d’enregistrer votre avis. Réessayez.');
       }
+    } catch (err) {
+      console.error('Error submitting review:', err);
+      toast.error('Erreur lors de l’envoi de votre avis');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const RatingStars = ({
-    rating,
-    onRatingChange,
-    size = 'md',
-  }: {
-    rating: number;
-    onRatingChange: (value: number) => void;
-    size?: 'sm' | 'md' | 'lg';
-  }) => {
-    const starSize = size === 'sm' ? 16 : size === 'lg' ? 24 : 20;
+  const activeStarCount = hoverRating ?? rating;
 
+  if (alreadyReviewed) {
     return (
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map(star => (
-          <button
-            disabled={!canClientSubmit}
-            key={star}
-            type="button"
-            onClick={() => onRatingChange(star)}
-            className="cursor-pointer border-none bg-transparent p-1 transition-transform hover:scale-110 focus:outline-none"
-            aria-label={`Rate ${star} star${star !== 1 ? 's' : ''}`}
-          >
-            <Star
-              size={starSize}
-              className={cn(
-                'transition-colors',
-                star <= rating
-                  ? 'fill-[var(--star-filled)] text-[var(--star-filled)]'
-                  : 'fill-[var(--star-empty)] text-[var(--star-empty)]'
-              )}
-            />
-          </button>
-        ))}
+      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 flex items-center gap-3">
+        <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+        <div className="text-sm">
+          <p className="font-semibold text-emerald-900 dark:text-emerald-300">
+            Avis déjà enregistré
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Vous avez déjà partagé votre note et votre avis pour cette séance. Merci pour votre
+            contribution !
+          </p>
+        </div>
       </div>
     );
-  };
+  }
 
-  if (canClientSubmit)
+  if (!isLoggedIn) {
     return (
-      <Card className="max-w-2xl sm:max-w-full w-full mx-auto border-none shadow-none py-3">
-        <CardHeader className="px-0">
-          <CardTitle className="text-2xl font-semibold mb-2">Leave a Review</CardTitle>
-          <CardDescription>
-            Share your experience working with this freelancer. Your feedback helps others make
-            informed decisions.
-          </CardDescription>
-        </CardHeader>
+      <div className="rounded-xl border border-dashed border-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20 p-5 text-center space-y-2">
+        <div className="flex justify-center text-amber-500">
+          <Star className="h-6 w-6 fill-amber-400 text-amber-400" />
+        </div>
+        <h3 className="text-sm font-bold">Vous avez suivi ce cours ? Donnez votre avis !</h3>
+        <p className="text-xs text-muted-foreground max-w-md mx-auto">
+          Connectez-vous avec votre compte élève pour attribuer une note de 1 à 5 étoiles et laisser
+          un commentaire au professeur.
+        </p>
+        <div className="pt-2">
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => (window.location.href = '/auth/login')}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold"
+          >
+            <LogIn className="h-3.5 w-3.5 mr-1.5" />
+            Se connecter pour noter le professeur
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
-        <CardContent className="space-y-6 px-0">
-          <div className="space-y-5">
-            <Label className="text-base font-medium">Rate Specific Aspects</Label>
+  return (
+    <Card className="w-full border-2 border-emerald-500/20 shadow-md shadow-emerald-500/5 rounded-2xl overflow-hidden my-4">
+      <CardHeader className="bg-gradient-to-r from-emerald-50/60 to-teal-50/60 dark:from-emerald-950/20 dark:to-teal-950/20 pb-4">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
+            <Star className="h-4 w-4 fill-emerald-500" />
+          </div>
+          <div>
+            <CardTitle className="text-base font-bold text-slate-900 dark:text-slate-100">
+              Noter ce professeur et laisser un avis
+            </CardTitle>
+            <CardDescription className="text-xs">
+              En tant qu&apos;élève ({userName}), votre note aide la communauté d&apos;élèves 9arrini.
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
 
-            <div className="space-y-5">
-              {categories.map(category => (
-                <div key={category.id} className="space-y-3">
-                  <div>
-                    <Label className="text-sm font-medium">{category.label}</Label>
-                    <p className="text-sm text-muted-foreground mt-1">{category.question}</p>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <RatingStars
-                      rating={categoryRatings[category.id]}
-                      onRatingChange={rating => handleCategoryRating(category.id, rating)}
-                      size="md"
+      <CardContent className="p-5 space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Main Star Picker */}
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-2">
+              Votre note globale :
+            </Label>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map(starValue => (
+                  <button
+                    key={starValue}
+                    type="button"
+                    onMouseEnter={() => setHoverRating(starValue)}
+                    onMouseLeave={() => setHoverRating(null)}
+                    onClick={() => setRating(starValue)}
+                    className="p-1 transition-transform hover:scale-125 focus:outline-none"
+                    aria-label={`Attribuer ${starValue} étoile${starValue > 1 ? 's' : ''}`}
+                  >
+                    <Star
+                      className={cn(
+                        'h-7 w-7 transition-colors cursor-pointer',
+                        starValue <= activeStarCount
+                          ? 'fill-amber-400 text-amber-400 drop-shadow-sm'
+                          : 'fill-slate-200 text-slate-200 dark:fill-slate-800 dark:text-slate-700'
+                      )}
                     />
-                    <span className="text-sm font-medium text-primary min-w-12 text-center">
-                      {categoryRatings[category.id] > 0
-                        ? `${categoryRatings[category.id]}/5`
-                        : 'Not rated'}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                  </button>
+                ))}
+              </div>
+              <span className="text-xs font-bold text-amber-600 dark:text-amber-400 ml-2">
+                {RATING_LABELS[activeStarCount] || `${activeStarCount}/5`}
+              </span>
             </div>
           </div>
 
-          <div className="space-y-3">
-            <div>
-              <Label className="text-base font-medium">Your Written Review</Label>
-              <p className="text-sm text-muted-foreground mt-1">
-                Tell us about your experience. What went well? What could be improved?
-              </p>
-            </div>
-
+          {/* Comment input */}
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="review-comment"
+              className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5"
+            >
+              <MessageSquare className="h-3.5 w-3.5 text-emerald-600" />
+              Votre commentaire :
+            </Label>
             <Textarea
-              placeholder="Share details of your experience with this freelancer..."
+              id="review-comment"
               value={comment}
               onChange={e => setComment(e.target.value)}
-              className="min-h-[120px] resize-y"
+              placeholder="Expliquez ce qui vous a plu : clarté des explications, méthode de travail, ponctualité, résultats obtenus..."
+              className="min-h-[90px] rounded-xl text-xs resize-none"
               maxLength={1000}
+              required
             />
-
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Your review will be public</span>
-              <span>{comment.length}/1000 characters</span>
+            <div className="flex justify-between items-center text-[10px] text-muted-foreground pt-0.5">
+              <span>Avis public vérifié par 9arrini</span>
+              <span>{comment.length}/1000 caractères</span>
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
+          {/* Submit button */}
+          <div className="flex justify-end pt-1">
             <Button
-              variant="outline"
-              onClick={() => {
-                setCategoryRatings({
-                  quality: 0,
-                  communication: 0,
-                  behavior: 0,
-                  professionalism: 0,
-                });
-                setComment('');
-              }}
-              disabled={isSubmitting}
+              type="submit"
+              disabled={isSubmitting || !comment.trim()}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-md shadow-emerald-600/10"
             >
-              Reset
-            </Button>
-
-            <Button
-              onClick={handleSubmit}
-              disabled={isSubmitting || calculateAverageRating() === 0}
-              className={cn(
-                'font-semibold',
-                calculateAverageRating() === 0 && 'opacity-50 cursor-not-allowed'
+              {isSubmitting ? (
+                <>
+                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent mr-1.5" />
+                  Publication en cours...
+                </>
+              ) : (
+                <>
+                  <Send className="h-3.5 w-3.5 mr-1.5" />
+                  Publier ma note et mon avis
+                </>
               )}
-            >
-              {isSubmitting ? 'Submitting...' : 'Submit Review'}
             </Button>
           </div>
-        </CardContent>
-      </Card>
-    );
+        </form>
+      </CardContent>
+    </Card>
+  );
 }

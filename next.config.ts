@@ -10,8 +10,10 @@ const nextConfig: NextConfig = {
       {hostname: 'res.cloudinary.com'},
       {hostname: 'api.cloudinary.com'},
       {hostname: 'lh3.googleusercontent.com'},
+      {hostname: '*.googleusercontent.com'},
       {hostname: 'api.dicebear.com'},
       {hostname: 'images.unsplash.com'},
+      {hostname: 'ui-avatars.com'},
     ],
   },
 
