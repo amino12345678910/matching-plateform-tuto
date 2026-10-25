@@ -6,7 +6,10 @@ import {generateSlug} from '../use-slug';
 import {revalidatePath} from 'next/cache';
 import {readCloudStore, writeCloudStore} from '@/lib/cloud-store';
 import {getUserInfo} from '@/hooks/shared/get-user-info';
-import {saveCustomServiceCookie} from '@/hooks/book/bookings-store';
+import {
+  saveCustomServiceCookie,
+  getSellersRegistryCookie,
+} from '@/hooks/book/bookings-store';
 import {
   generateMeetCode,
   getDefaultSessionDate,
@@ -147,7 +150,19 @@ export const storeService = async (
 
     const {name, email} = await getUserInfo();
     const store = readCloudStore();
-    const cloudSeller = store.sellers.find(s => s.userId === service.sellerId);
+    const cookieSellers = await getSellersRegistryCookie();
+    const cookieSeller = cookieSellers.find(s => s.userId === service.sellerId);
+    const cloudSeller = store.sellers.find(s => s.userId === service.sellerId) || cookieSeller;
+    const isSellerVerified = Boolean(cloudSeller?.isVerified || cookieSeller?.isVerified);
+
+    if (!isSellerVerified) {
+      return {
+        success: false,
+        error:
+          'Accès restreint : votre candidature Professeur doit d’abord être vérifiée et validée par l’administration 9arrini avant de publier un cours.',
+      };
+    }
+
     const cloudUser = store.users.find(u => u.id === service.sellerId);
     const now = new Date().toISOString();
     const serviceId = `srv_${Date.now()}`;

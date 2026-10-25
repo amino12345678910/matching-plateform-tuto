@@ -25,6 +25,8 @@ import {Skeleton} from '../loading-primitives';
 export const Navbar = () => {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const [authModalRole, setAuthModalRole] = useState<'USER' | 'SELLER'>('USER');
+  const [authModalStep, setAuthModalStep] = useState<'signup' | 'login'>('signup');
   const [isAuth, setIsAuth] = useState(false);
   const [role, setRole] = useState('');
   const [points, setPoints] = useState<number>(0);
@@ -121,7 +123,12 @@ export const Navbar = () => {
 
   return (
     <>
-      <AuthModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      <AuthModal
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        initialRole={authModalRole}
+        initialStep={authModalStep}
+      />
 
       <nav
         className={`sticky top-0 z-[99] w-full transition-all duration-300 ${
@@ -286,20 +293,28 @@ export const Navbar = () => {
               ) : (
                 <>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    onClick={() => setIsOpen(true)}
-                    className="hidden lg:inline-flex font-medium text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
+                    onClick={() => {
+                      setAuthModalRole('SELLER');
+                      setAuthModalStep('signup');
+                      setIsOpen(true);
+                    }}
+                    className="hidden lg:inline-flex font-semibold border-amber-500/40 text-amber-800 hover:text-amber-900 hover:bg-amber-50"
                   >
-                    Walli Prof (Tutor) 🎓
+                    Devenir Prof (Candidature) 👨‍🏫
                   </Button>
 
                   <Button
-                    onClick={() => setIsOpen(true)}
+                    onClick={() => {
+                      setAuthModalRole('USER');
+                      setAuthModalStep('signup');
+                      setIsOpen(true);
+                    }}
                     size="sm"
                     className="hidden lg:inline-flex bg-emerald-600 hover:bg-emerald-700 font-semibold"
                   >
-                    Dkhol / Register
+                    Espace Élève / Connexion 🎓
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -308,11 +323,33 @@ export const Navbar = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setIsOpen(true)}>Sign In</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setIsOpen(true)}>
-                        Become a Tutor
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setAuthModalRole('USER');
+                          setAuthModalStep('login');
+                          setIsOpen(true);
+                        }}
+                      >
+                        Connexion Élève
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setIsOpen(true)}>Join Now</DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setAuthModalRole('USER');
+                          setAuthModalStep('signup');
+                          setIsOpen(true);
+                        }}
+                      >
+                        Inscription Élève
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setAuthModalRole('SELLER');
+                          setAuthModalStep('signup');
+                          setIsOpen(true);
+                        }}
+                      >
+                        Candidature Professeur 👨‍🏫
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </>

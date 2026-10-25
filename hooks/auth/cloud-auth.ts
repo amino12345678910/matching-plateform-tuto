@@ -3,6 +3,11 @@
 import {cookies} from 'next/headers';
 import {prisma} from '@/lib/prisma';
 import {readCloudStore, writeCloudStore} from '@/lib/cloud-store';
+import {
+  saveSellerRegistryCookie,
+  saveClientNotificationCookie,
+  getSellersRegistryCookie,
+} from '@/hooks/book/bookings-store';
 
 const SESSION_COOKIE_NAME = '9arrini_user_session';
 const ACCOUNT_BACKUP_COOKIE = '9arrini_account_backup';
@@ -125,6 +130,11 @@ export async function cloudSignUp(input: {
   email: string;
   password: string;
   role: 'USER' | 'SELLER' | 'FREELANCER';
+  specialty?: string;
+  credentials?: string;
+  experience?: string;
+  phone?: string;
+  bio?: string;
 }): Promise<{
   success: boolean;
   error?: string;
@@ -139,6 +149,11 @@ export async function cloudSignUp(input: {
   if (!cleanEmail || !input.password) {
     return {success: false, error: 'Veuillez renseigner votre email et mot de passe.'};
   }
+
+  const hasTutorApplication = Boolean(
+    normalizedRole === 'SELLER' &&
+      (input.specialty?.trim() || input.credentials?.trim() || input.bio?.trim())
+  );
 
   const now = new Date().toISOString();
   let userId = `usr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
@@ -229,17 +244,43 @@ export async function cloudSignUp(input: {
     }
 
     if (normalizedRole === 'SELLER') {
-      const existingSeller = store.sellers.find(s => s.userId === userId);
+      let existingSeller = store.sellers.find(s => s.userId === userId);
       if (!existingSeller) {
-        store.sellers.unshift({
+        existingSeller = {
           id: `seller_${userId}`,
           userId,
-          bio: `Professeur ${cleanName} sur 9arrini`,
+          bio: input.bio?.trim() || `Professeur ${cleanName} sur 9arrini`,
+          specialty: input.specialty?.trim() || undefined,
+          credentials: input.credentials?.trim() || undefined,
+          experience: input.experience?.trim() || undefined,
+          phone: input.phone?.trim() || undefined,
           isVerified: false,
-          verificationStatus: 'PENDING',
+          verificationStatus: hasTutorApplication ? 'PENDING' : 'UNVERIFIED',
           createdAt: now,
-        });
+        };
+        store.sellers.unshift(existingSeller);
+      } else {
+        if (input.specialty?.trim()) existingSeller.specialty = input.specialty.trim();
+        if (input.credentials?.trim()) existingSeller.credentials = input.credentials.trim();
+        if (input.experience?.trim()) existingSeller.experience = input.experience.trim();
+        if (input.phone?.trim()) existingSeller.phone = input.phone.trim();
+        if (input.bio?.trim()) existingSeller.bio = input.bio.trim();
+        if (hasTutorApplication && !existingSeller.isVerified) {
+          existingSeller.verificationStatus = 'PENDING';
+        }
       }
+      await saveSellerRegistryCookie(existingSeller);
+      await saveClientNotificationCookie({
+        id: `notif_tutor_welcome_${Date.now()}`,
+        userId,
+        title: hasTutorApplication
+          ? `📋 Candidature Professeur reçue ! Votre dossier est en cours de vérification par l'équipe 9arrini avant l'activation de l'accès complet Professeur.`
+          : `👋 Bienvenue dans l'Espace Professeur ! Complétez votre dossier de candidature pour que l'équipe 9arrini vérifie votre compte et débloque l'accès complet.`,
+        type: 'AUTOMATED',
+        link: '/dashboard/freelancer',
+        read: false,
+        createdAt: now,
+      });
     }
 
     writeCloudStore(store);
@@ -489,17 +530,21 @@ export async function cloudGoogleSignIn(input: {
   }
 
   if (requestedRole === 'SELLER') {
-    const hasSeller = store.sellers.some(s => s.userId === cloudUser!.id);
-    if (!hasSeller) {
-      store.sellers.unshift({
+    const cookieSellers = await getSellersRegistryCookie();
+    const cookieSeller = cookieSellers.find(s => s.userId === cloudUser!.id);
+    let existingSeller = store.sellers.find(s => s.userId === cloudUser!.id) || cookieSeller;
+    if (!existingSeller) {
+      existingSeller = {
         id: `seller_${cloudUser.id}`,
         userId: cloudUser.id,
-        bio: `Professeur ${cloudUser.name} sur 9arrini`,
+        bio: '',
         isVerified: false,
-        verificationStatus: 'PENDING',
+        verificationStatus: 'UNVERIFIED',
         createdAt: now,
-      });
+      };
+      store.sellers.unshift(existingSeller);
     }
+    await saveSellerRegistryCookie(existingSeller);
   }
 
   writeCloudStore(store);

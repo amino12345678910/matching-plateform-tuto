@@ -7,6 +7,7 @@ import {
   type CloudNotification,
   type CloudReview,
   type CloudChatMessage,
+  type CloudSeller,
   readCloudStore,
   writeCloudStore,
   getAllCloudServices,
@@ -19,6 +20,7 @@ const NOTIFS_COOKIE_NAME = '9arrini_user_notifications';
 const SERVICES_COOKIE_NAME = '9arrini_custom_services';
 const REVIEWS_COOKIE_NAME = '9arrini_user_reviews';
 const MESSAGES_COOKIE_NAME = '9arrini_user_messages';
+const SELLERS_COOKIE_NAME = '9arrini_sellers_registry';
 
 const COOKIE_OPTS = {
   httpOnly: true,
@@ -300,14 +302,53 @@ export async function deleteCustomServiceCookie(serviceId: string): Promise<void
   }
 }
 
+export async function getSellersRegistryCookie(): Promise<CloudSeller[]> {
+  try {
+    const cookieStore = await cookies();
+    const raw = cookieStore.get(SELLERS_COOKIE_NAME)?.value;
+    if (!raw) return [];
+    const json = Buffer.from(raw, 'base64url').toString('utf-8');
+    const list = JSON.parse(json);
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function saveSellerRegistryCookie(seller: CloudSeller): Promise<void> {
+  try {
+    const cookieStore = await cookies();
+    const current = await getSellersRegistryCookie();
+    const updated = [
+      seller,
+      ...current.filter(s => s.id !== seller.id && s.userId !== seller.userId),
+    ].slice(0, 15);
+    const encoded = Buffer.from(JSON.stringify(updated), 'utf-8').toString('base64url');
+    cookieStore.set(SELLERS_COOKIE_NAME, encoded, COOKIE_OPTS);
+  } catch (err) {
+    console.error('Error saving seller registry cookie:', err);
+  }
+}
+
 export async function getAllRealServices(): Promise<any[]> {
   const store = readCloudStore();
   const cookieServices = await getCustomServicesCookie();
   const cookieReviews = await getReviewsCookie();
   const cookieBookings = await getClientBookingsCookie();
+  const cookieSellers = await getSellersRegistryCookie();
 
-  // Sync any cookie services/reviews/bookings back into the warm instance cloud store
+  // Sync any cookie services/reviews/bookings/sellers back into the warm instance cloud store
   let storeChanged = false;
+  for (const cs of cookieSellers) {
+    const idx = store.sellers.findIndex(s => s.userId === cs.userId || s.id === cs.id);
+    if (idx === -1) {
+      store.sellers.push(cs);
+      storeChanged = true;
+    } else if (cs.isVerified && !store.sellers[idx].isVerified) {
+      store.sellers[idx] = {...store.sellers[idx], ...cs};
+      storeChanged = true;
+    }
+  }
   for (const cs of cookieServices) {
     if (!store.customServices.some((s: any) => s.id === cs.id || s.slug === cs.slug)) {
       store.customServices.push(cs);

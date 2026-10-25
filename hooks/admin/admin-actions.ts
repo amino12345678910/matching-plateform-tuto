@@ -4,7 +4,13 @@ import {prisma} from '@/lib/prisma';
 import {revalidatePath} from 'next/cache';
 import type {BookingStatus, ServiceStatus} from '@/generated/prisma';
 import {readCloudStore, writeCloudStore} from '@/lib/cloud-store';
-import {getAllRealServices, deleteCustomServiceCookie} from '@/hooks/book/bookings-store';
+import {
+  getAllRealServices,
+  deleteCustomServiceCookie,
+  getSellersRegistryCookie,
+  saveSellerRegistryCookie,
+  saveClientNotificationCookie,
+} from '@/hooks/book/bookings-store';
 
 export async function getAdminDashboardData() {
   try {
@@ -287,11 +293,35 @@ export async function adminVerifyTutor(sellerId: string, verify: boolean) {
   }
 
   const store = readCloudStore();
-  const cloudSeller = store.sellers.find(s => s.id === sellerId);
-  if (cloudSeller) {
-    cloudSeller.isVerified = verify;
-    cloudSeller.verificationStatus = verify ? 'VERIFIED' : 'REJECTED';
+  const cookieSellers = await getSellersRegistryCookie();
+  let targetSeller =
+    store.sellers.find(s => s.id === sellerId || s.userId === sellerId) ||
+    cookieSellers.find(s => s.id === sellerId || s.userId === sellerId);
+
+  if (targetSeller) {
+    targetSeller.isVerified = verify;
+    targetSeller.verificationStatus = verify ? 'VERIFIED' : 'REJECTED';
+    const idx = store.sellers.findIndex(
+      s => s.id === targetSeller!.id || s.userId === targetSeller!.userId
+    );
+    if (idx >= 0) {
+      store.sellers[idx] = targetSeller;
+    } else {
+      store.sellers.unshift(targetSeller);
+    }
     writeCloudStore(store);
+    await saveSellerRegistryCookie(targetSeller);
+    await saveClientNotificationCookie({
+      id: `notif_verify_${Date.now()}`,
+      userId: targetSeller.userId,
+      title: verify
+        ? '🎉 Mabrouk ! Votre candidature Professeur a été VÉRIFIÉE et approuvée par 9arrini. Vous avez maintenant accès complet pour publier vos cours !'
+        : '⚠️ Votre statut de candidature Professeur a été mis à jour par l’administration.',
+      type: 'AUTOMATED',
+      link: '/dashboard/freelancer',
+      read: false,
+      createdAt: new Date().toISOString(),
+    });
   }
 
   revalidatePath('/admin');
@@ -299,6 +329,7 @@ export async function adminVerifyTutor(sellerId: string, verify: boolean) {
   revalidatePath('/explore');
   revalidatePath('/');
   revalidatePath('/dashboard/freelancer');
+  revalidatePath('/dashboard/freelancer/create-service');
 
   return {
     success: true,
