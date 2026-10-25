@@ -31,7 +31,6 @@ const girlImage = '/assets/standard.0638957.png';
 import freelancerVector from '@/public/assets/freelancerVector.svg';
 import userVector from '@/public/assets/userVector.svg';
 import {RoleDialog} from '@/components/auth/role-dialog';
-import {GoogleAuthModal} from '@/components/auth/google-auth-modal';
 import {clearPendingRole, setPendingRole} from '@/lib/sessions';
 
 interface AuthModalProps {
@@ -58,7 +57,6 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
   >('null');
 
   const [showRoleDialog, setShowRoleDialog] = useState(false);
-  const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [pendingAuthType, setPendingAuthType] = useState<'google' | 'email' | null>(null);
 
   const [regForm, setRegForm] = useState<RegForm>({
@@ -102,7 +100,9 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
   };
 
   const handleGoogleAuth = () => {
-    setShowGoogleModal(true);
+    const role = regForm.role === 'SELLER' ? 'SELLER' : 'USER';
+    onClose();
+    window.location.href = `/api/auth/google?role=${encodeURIComponent(role)}`;
   };
 
   const handleEmailSignupStart = () => {
@@ -201,16 +201,13 @@ export default function AuthModal({isOpen, onClose}: AuthModalProps) {
   const handleGoogleSignIn = async (_isSignIn: boolean) => {
     setShowRoleDialog(false);
     setPendingAuthType(null);
-    setShowGoogleModal(true);
+    const role = regForm.role === 'SELLER' ? 'SELLER' : 'USER';
+    onClose();
+    window.location.href = `/api/auth/google?role=${encodeURIComponent(role)}`;
   };
 
   return (
     <>
-      <GoogleAuthModal
-        isOpen={showGoogleModal}
-        onClose={() => setShowGoogleModal(false)}
-        defaultRole={regForm.role === 'SELLER' ? 'SELLER' : 'USER'}
-      />
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-4xl p-0 h-[85vh] overflow-hidden">
           <div className="grid lg:grid-cols-2 h-full">
