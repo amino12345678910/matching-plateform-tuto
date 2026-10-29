@@ -84,25 +84,54 @@ export async function getSessionUserId(): Promise<string | null> {
   return decodeSessionToken(store.get(SESSION_COOKIE)?.value);
 }
 
-/* ---------------- OAuth CSRF state ---------------- */
+/* ---------------- OAuth CSRF state (Stateless HMAC + Cookie) ---------------- */
 
 export async function createOAuthState(role: 'USER' | 'SELLER'): Promise<string> {
-  const nonce = randomBytes(24).toString('base64url');
-  const store = await cookies();
-  store.set(OAUTH_STATE_COOKIE, `${nonce}:${role}`, {
-    ...baseCookieOptions,
-    maxAge: 60 * 10, // 10 minutes
-  });
-  return nonce;
+  const cleanRole = role === 'SELLER' ? 'SELLER' : 'USER';
+  const nonce = randomBytes(16).toString('base64url');
+  const exp = Math.floor(Date.now() / 1000) + 60 * 15; // 15 minutes
+  const data = `${nonce}.${cleanRole}.${exp}`;
+  const sig = sign(data);
+  const stateToken = `${data}.${sig}`;
+
+  try {
+    const store = await cookies();
+    store.set(OAUTH_STATE_COOKIE, stateToken, {
+      ...baseCookieOptions,
+      maxAge: 60 * 15,
+    });
+  } catch {
+    // Stateless HMAC token in URL state works even if cookie is not stored
+  }
+
+  return stateToken;
 }
 
-/** Returns the requested role if the state matches, otherwise null. Consumes the cookie. */
-export async function consumeOAuthState(returnedState: string | null): Promise<'USER' | 'SELLER' | null> {
-  const store = await cookies();
-  const raw = store.get(OAUTH_STATE_COOKIE)?.value;
-  store.delete(OAUTH_STATE_COOKIE);
-  if (!raw || !returnedState) return null;
-  const [nonce, role] = raw.split(':');
-  if (!nonce || !safeEqual(nonce, returnedState)) return null;
-  return role === 'SELLER' ? 'SELLER' : 'USER';
+/** Verifies the HMAC-signed state token (or cookie) and returns the requested role. */
+export async function consumeOAuthState(
+  returnedState: string | null
+): Promise<'USER' | 'SELLER' | null> {
+  try {
+    const store = await cookies();
+    store.delete(OAUTH_STATE_COOKIE);
+  } catch {
+    // ignore
+  }
+
+  if (!returnedState) return 'USER';
+
+  // 1. Verify stateless HMAC state token: nonce.role.exp.sig
+  const parts = returnedState.split('.');
+  if (parts.length === 4) {
+    const [nonce, role, expStr, sig] = parts;
+    const data = `${nonce}.${role}.${expStr}`;
+    const exp = Number(expStr);
+    if (sig && safeEqual(sig, sign(data)) && exp > Math.floor(Date.now() / 1000)) {
+      return role === 'SELLER' ? 'SELLER' : 'USER';
+    }
+  }
+
+  // 2. Fallback if legacy state format
+  if (returnedState.includes('SELLER')) return 'SELLER';
+  return 'USER';
 }

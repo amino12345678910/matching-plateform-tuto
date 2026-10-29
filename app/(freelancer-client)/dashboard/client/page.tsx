@@ -17,7 +17,8 @@ export type ClientActiveOrder = {
 
 export default async function Page() {
   const {userId: cId, role} = await getUserInfo();
-  if (role !== 'USER' || !cId) return redirect('/auth/login');
+  if (!cId) return redirect('/auth/login');
+  if (role === 'SELLER') return redirect('/dashboard/freelancer');
 
   const [activeOrders, pointsData] = await Promise.all([
     getActiveOrders(),

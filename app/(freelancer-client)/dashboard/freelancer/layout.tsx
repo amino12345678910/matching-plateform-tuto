@@ -22,7 +22,10 @@ export default async function FreelancerLayout({
   if (!user.role || !user.userId) return redirect('/auth/login');
   const {role, userId} = user;
 
-  if (role === 'USER' || (role !== 'SELLER' && role !== 'FREELANCER')) {
+  if (role === 'USER') {
+    return redirect('/dashboard/client');
+  }
+  if (role !== 'SELLER' && role !== 'FREELANCER' && role !== 'ADMIN') {
     return redirect('/explore');
   }
 

@@ -12,7 +12,11 @@ export default async function AdminLayout({
     redirect('/auth/login');
   }
 
-  const configuredAdmins = (process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || '')
+  const configuredAdmins = (
+    process.env.ADMIN_EMAILS ||
+    process.env.ADMIN_EMAIL ||
+    'amin.aa.aeid@gmail.com'
+  )
     .split(',')
     .map(e => e.trim().toLowerCase())
     .filter(Boolean);

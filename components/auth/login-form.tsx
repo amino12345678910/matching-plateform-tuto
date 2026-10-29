@@ -1,6 +1,6 @@
 'use client';
 
-import {useState} from 'react';
+import {useState, useEffect} from 'react';
 import {cn} from '@/lib/utils';
 import {Button} from '@/components/ui/button';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card';
@@ -12,6 +12,18 @@ import {Terminal, GraduationCap, BookOpen} from 'lucide-react';
 import {toast} from 'sonner';
 import {IconLoader, IconBrandGoogle} from '@tabler/icons-react';
 
+const OAUTH_ERROR_MESSAGES: Record<string, string> = {
+  oauth_state_invalid:
+    'La session Google a expiré ou a changé de domaine. Veuillez réessayer en cliquant sur Continuer avec Google.',
+  google_auth_cancelled: 'La connexion Google a été annulée.',
+  google_token_exchange_failed: 'Impossible de valider le jeton Google. Veuillez réessayer.',
+  google_userinfo_failed: 'Impossible de récupérer votre profil Google.',
+  google_email_missing: 'Aucune adresse email trouvée sur ce compte Google.',
+  google_signin_failed: 'Erreur lors de la création de votre session Google.',
+  google_callback_exception: 'Une erreur technique est survenue lors du retour Google.',
+  google_oauth_not_configured: "La connexion Google n'est pas configurée sur le serveur.",
+};
+
 export function LoginForm({className, ...props}: React.ComponentProps<'div'>) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,6 +31,20 @@ export function LoginForm({className, ...props}: React.ComponentProps<'div'>) {
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const errCode = params.get('error');
+      if (errCode) {
+        setError(OAUTH_ERROR_MESSAGES[errCode] || `Erreur de connexion (${errCode}).`);
+      }
+      const roleParam = params.get('role');
+      if (roleParam === 'SELLER' || roleParam === 'USER') {
+        setRole(roleParam);
+      }
+    }
+  }, []);
 
   const isTutor = role === 'SELLER';
 

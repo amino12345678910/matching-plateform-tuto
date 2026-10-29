@@ -166,6 +166,14 @@ export async function getCloudSessionCookie(): Promise<SessionCookiePayload | nu
   }
 }
 
+export async function getSessionCookieNames() {
+  return {SESSION_COOKIE_NAME, ACCOUNT_BACKUP_COOKIE};
+}
+
+export async function encodeSessionCookieValue(payload: SessionCookiePayload): Promise<string> {
+  return encodeSession(payload);
+}
+
 export async function setCloudSessionCookie(payload: SessionCookiePayload) {
   try {
     const cookieStore = await cookies();
@@ -664,13 +672,16 @@ export async function cloudGoogleSignIn(input: {
   const store = readCloudStore();
   let cloudUser = store.users.find(u => u.email.toLowerCase() === cleanEmail);
 
-  const requestedRole: 'USER' | 'SELLER' | 'ADMIN' = isConfiguredAdminEmail(cleanEmail)
-    ? 'ADMIN'
-    : input.role === 'SELLER' || input.role === 'FREELANCER'
-    ? 'SELLER'
-    : cloudUser?.role === 'SELLER' || cloudUser?.role === 'FREELANCER'
-    ? 'SELLER'
-    : 'USER';
+  const requestedRole: 'USER' | 'SELLER' | 'ADMIN' =
+    input.role === 'SELLER' || input.role === 'FREELANCER'
+      ? 'SELLER'
+      : input.role === 'USER'
+      ? 'USER'
+      : isConfiguredAdminEmail(cleanEmail)
+      ? 'ADMIN'
+      : cloudUser?.role === 'SELLER' || cloudUser?.role === 'FREELANCER'
+      ? 'SELLER'
+      : 'USER';
 
   const actualGoogleImage = input.image || null;
   const avatarUrl =
