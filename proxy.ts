@@ -1,7 +1,8 @@
 import {createHmac, timingSafeEqual} from 'crypto';
 import {NextRequest, NextResponse} from 'next/server';
 
-const SESSION_COOKIE_NAME = '9arrini_user_session';
+const SESSION_COOKIE_NAME = '9arrini_user_session_v4';
+const ACCOUNT_BACKUP_COOKIE = '9arrini_account_backup_v4';
 
 function getSessionSecret(): string {
   return (
@@ -48,7 +49,9 @@ export async function proxy(request: NextRequest) {
 
   try {
     const {pathname} = request.nextUrl;
-    const rawCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+    const rawCookie =
+      request.cookies.get(SESSION_COOKIE_NAME)?.value ||
+      request.cookies.get(ACCOUNT_BACKUP_COOKIE)?.value;
     const session = parseSessionCookie(rawCookie);
 
     const email = session?.email;

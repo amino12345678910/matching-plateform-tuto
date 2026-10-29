@@ -197,6 +197,8 @@ export async function clearCloudSessionCookie() {
   try {
     const cookieStore = await cookies();
     cookieStore.delete(SESSION_COOKIE_NAME);
+    cookieStore.delete(ACCOUNT_BACKUP_COOKIE);
+    cookieStore.delete('9arrini_user_session');
   } catch {
     // ignore
   }
