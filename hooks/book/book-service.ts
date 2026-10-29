@@ -17,6 +17,7 @@ import {
   saveReviewCookie,
 } from '@/hooks/book/bookings-store';
 import {formatScheduleLabel, getServiceMeetInfo} from '@/lib/google-meet';
+import {createRealGoogleMeetAutomatically} from '@/lib/google-calendar-meet';
 import {
   FREE_TRIAL_DEFAULT_ACTIVE,
   splitCommission,
@@ -269,12 +270,24 @@ export const bookService = async ({
     cloudStudent.points = newBalance;
   }
 
+  let resolvedMeetUrl = meetUrl;
+  if (!resolvedMeetUrl || !resolvedMeetUrl.startsWith('https://meet.google.com/')) {
+    const autoGoogleMeet = await createRealGoogleMeetAutomatically({
+      title: serviceName,
+      scheduledDate,
+      scheduledTime,
+    });
+    if (autoGoogleMeet) {
+      resolvedMeetUrl = autoGoogleMeet;
+    }
+  }
+
   const resolvedMeetInfo = getServiceMeetInfo({
     slug: serviceSlug,
     title: serviceName,
     scheduledDate,
     scheduledTime,
-    meetLink: meetUrl,
+    meetLink: resolvedMeetUrl,
   });
 
   const resolvedTutorName =

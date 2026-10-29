@@ -5,6 +5,7 @@ import {
   getSessionCookieNames,
 } from '@/hooks/auth/cloud-auth';
 import {consumeOAuthState} from '@/lib/session';
+import {GOOGLE_TOKEN_COOKIE} from '@/lib/google-calendar-meet';
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code');
@@ -77,6 +78,16 @@ export async function GET(request: NextRequest) {
       };
       response.cookies.set(SESSION_COOKIE_NAME, encoded, cookieOpts);
       response.cookies.set(ACCOUNT_BACKUP_COOKIE, encoded, cookieOpts);
+
+      const tokenPayload = Buffer.from(
+        JSON.stringify({
+          accessToken: tokenData.access_token,
+          refreshToken: tokenData.refresh_token || undefined,
+          expiresAt: Date.now() + (Number(tokenData.expires_in) || 3500) * 1000,
+        }),
+        'utf-8'
+      ).toString('base64url');
+      response.cookies.set(GOOGLE_TOKEN_COOKIE, tokenPayload, cookieOpts);
     }
 
     return response;

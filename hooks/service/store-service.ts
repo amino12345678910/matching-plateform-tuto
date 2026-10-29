@@ -17,6 +17,7 @@ import {
   normalizeGoogleMeetInput,
   isRealGoogleMeetUrl,
 } from '@/lib/google-meet';
+import {createRealGoogleMeetAutomatically} from '@/lib/google-calendar-meet';
 
 const CATEGORY_DEFAULT_IMAGES: Record<string, string> = {
   mathematics: '/assets/seo.webp',
@@ -78,7 +79,14 @@ export const storeService = async (
     const customGoogleMeet = isRealGoogleMeetUrl(service.meetLink, [createdSlug, formattedTitle])
       ? normalizeGoogleMeetInput(service.meetLink)
       : null;
-    const meetLink = customGoogleMeet || `/meet/${generateMeetCode(createdSlug)}`;
+    const autoGoogleMeet =
+      customGoogleMeet ||
+      (await createRealGoogleMeetAutomatically({
+        title: formattedTitle,
+        scheduledDate,
+        scheduledTime,
+      }));
+    const meetLink = autoGoogleMeet || `/meet/${generateMeetCode(createdSlug)}`;
 
     const formattedDescription = appendMeetScheduleToDescription(
       service.description || '',
