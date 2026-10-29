@@ -75,6 +75,7 @@ export function ServiceDetailPage({
   const [userRole, setUserRole] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [hasBooked, setHasBooked] = useState<boolean>(Boolean(initialHasBooked));
+  const [isFreeTrial, setIsFreeTrial] = useState<boolean>(true);
 
   const reviewCount = service.reviews?.length || 0;
   const avgRating = useMemo(
@@ -128,6 +129,9 @@ export function ServiceDetailPage({
 
       const pointsRes = await getStudentPointsData();
       let resolvedUid: string | null = null;
+      if (typeof pointsRes.isFreeTrial === 'boolean') {
+        setIsFreeTrial(pointsRes.isFreeTrial);
+      }
       if (pointsRes.success && pointsRes.user) {
         setStudentPoints(pointsRes.user.points ?? 0);
         setUserRole(pointsRes.user.role ?? null);
@@ -189,9 +193,11 @@ export function ServiceDetailPage({
   );
 
   const hasEnoughPoints =
-    studentPoints === null || (currentPackage ? studentPoints >= currentPackage.price : true);
+    isFreeTrial ||
+    studentPoints === null ||
+    (currentPackage ? studentPoints >= currentPackage.price : true);
   const missingPoints =
-    studentPoints !== null && currentPackage
+    !isFreeTrial && studentPoints !== null && currentPackage
       ? Math.max(0, currentPackage.price - studentPoints)
       : 0;
 
@@ -828,15 +834,28 @@ export function ServiceDetailPage({
                         )}
                       </div>
 
+                      {/* Free Trial Banner */}
+                      {isFreeTrial && (
+                        <div className="rounded-xl border border-emerald-400/50 bg-emerald-50/90 dark:bg-emerald-950/40 p-3 space-y-1">
+                          <p className="text-xs font-extrabold text-emerald-900 dark:text-emerald-200">
+                            🎉 Semaine de lancement : Réservation 100 % Gratuite (0 DT)
+                          </p>
+                          <p className="text-[11px] text-emerald-800 dark:text-emerald-300 leading-snug">
+                            Aucun paiement requis cette semaine ! Après la séance sur Google Meet,
+                            notez le professeur pour valider le cours.
+                          </p>
+                        </div>
+                      )}
+
                       {/* Insufficient Points Quick Top-Up Box */}
-                      {studentPoints !== null && !hasEnoughPoints && currentPackage && (
+                      {!isFreeTrial && studentPoints !== null && !hasEnoughPoints && currentPackage && (
                         <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3.5 space-y-2.5">
                           <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
                             Il vous manque{' '}
                             <strong>
-                              {missingPoints} Points ({missingPoints} DT)
+                              {missingPoints} DT
                             </strong>{' '}
-                            pour réserver ce pack ({currentPackage.price} Pts requis).
+                            pour réserver ce pack ({currentPackage.price} DT requis).
                           </p>
                           <Button
                             type="button"
@@ -848,10 +867,7 @@ export function ServiceDetailPage({
                             <PlusCircle className="h-3.5 w-3.5 mr-1.5" />
                             {isRecharging
                               ? 'Recharge en cours...'
-                              : `Recharger +${Math.max(missingPoints, 25)} Points (${Math.max(
-                                  missingPoints,
-                                  25
-                                )} DT) maintenant`}
+                              : `Recharger +${Math.max(missingPoints, 25)} DT`}
                           </Button>
                         </div>
                       )}
@@ -866,7 +882,7 @@ export function ServiceDetailPage({
                               className="w-full h-12 text-base font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20"
                             >
                               <UserCheck className="mr-2 h-4 w-4" />
-                              Se connecter pour s&apos;inscrire
+                              Se connecter pour réserver (0 DT)
                             </Button>
                           ) : (
                             <Button
@@ -882,8 +898,9 @@ export function ServiceDetailPage({
                               ) : (
                                 <>
                                   <Coins className="mr-2 h-4 w-4" />
-                                  S&apos;inscrire & Payer ({currentPackage.price} Points /{' '}
-                                  {currentPackage.price} DT)
+                                  {isFreeTrial
+                                    ? 'Réserver gratuitement (0 DT — Semaine de lancement)'
+                                    : `Réserver & Payer (${currentPackage.price} DT)`}
                                   <ChevronRight className="ml-1.5 h-4 w-4" />
                                 </>
                               )}
@@ -893,7 +910,7 @@ export function ServiceDetailPage({
                           <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
                             <div className="flex items-center gap-1">
                               <Shield className="h-3 w-3 text-emerald-600" />
-                              <span>Débit Points instantané</span>
+                              <span>Évaluation après la séance</span>
                             </div>
                             <div className="h-3 w-px bg-border" />
                             <div className="flex items-center gap-1">

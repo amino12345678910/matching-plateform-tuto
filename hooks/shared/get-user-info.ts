@@ -10,6 +10,7 @@ export type UserWithUserId = Omit<User, 'id' | 'imageSource'> & {
   role: string | 'SELLER' | 'USER' | 'ADMIN';
   imageSource: string | 'NULL' | 'GOOGLE' | 'CLOUDINARY';
 };
+
 export type UserInfo = Pick<
   Partial<UserWithUserId>,
   | 'userId'
@@ -21,9 +22,20 @@ export type UserInfo = Pick<
   | 'emailVerified'
   | 'hasPassword'
   | 'imageSource'
->;
+> & {
+  points?: number;
+  phone?: string | null;
+  city?: string | null;
+  studentLevel?: string | null;
+  studentGrade?: string | null;
+  studentSection?: string | null;
+  institution?: string | null;
+  subjectsOfInterest?: string[];
+  acceptedTermsAt?: string | Date | null;
+};
+
 export async function getUserInfo(): Promise<UserInfo> {
-  // 1. Check fast HTTP session cookie first (works both locally and on Netlify in <1ms)
+  // 1. Check fast HTTP session cookie first (works both locally and on Vercel in <1ms)
   try {
     const cloudSession = await getCloudSessionCookie();
     if (cloudSession?.userId) {
@@ -40,7 +52,16 @@ export async function getUserInfo(): Promise<UserInfo> {
         emailVerified: cloudSession.emailVerified,
         hasPassword: cloudSession.hasPassword,
         imageSource: cloudSession.imageSource ?? 'NULL',
-      };
+        points: cloudSession.points ?? 0,
+        phone: cloudSession.phone ?? null,
+        city: cloudSession.city ?? null,
+        studentLevel: cloudSession.studentLevel ?? null,
+        studentGrade: cloudSession.studentGrade ?? null,
+        studentSection: cloudSession.studentSection ?? null,
+        institution: cloudSession.institution ?? null,
+        subjectsOfInterest: cloudSession.subjectsOfInterest || [],
+        acceptedTermsAt: cloudSession.acceptedTermsAt ?? null,
+      } as UserInfo;
     }
   } catch {
     // Fallback below
@@ -65,6 +86,7 @@ export async function getUserInfo(): Promise<UserInfo> {
         emailVerified,
         hasPassword: hasPassword ?? false,
         imageSource: imageSource ?? 'NULL',
+        points: 0,
       };
     }
   } catch {

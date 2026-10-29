@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import {toast} from 'sonner';
 import Link from 'next/link';
+import {getLevelLabel, getGradeLabel, getSectionLabel} from '@/lib/constants';
 
 interface AdminDashboardProps {
   initialData: Awaited<ReturnType<typeof getAdminDashboardData>>;
@@ -424,6 +425,17 @@ export function AdminDashboardClient({initialData}: AdminDashboardProps) {
                                 📞 {seller.phone}
                               </div>
                             )}
+                            {(seller as any).city && (
+                              <div className="text-xs text-muted-foreground">
+                                📍 {(seller as any).city}
+                              </div>
+                            )}
+                            {(seller as any).payoutAccount && (
+                              <div className="text-[11px] font-semibold text-amber-800 bg-amber-100/70 px-2 py-0.5 rounded mt-1 inline-block">
+                                💳 {(seller as any).payoutMethod || 'D17'} :{' '}
+                                {(seller as any).payoutAccount}
+                              </div>
+                            )}
                           </td>
 
                           <td className="p-3 align-top max-w-md">
@@ -565,11 +577,11 @@ export function AdminDashboardClient({initialData}: AdminDashboardProps) {
                     <thead>
                       <tr className="border-b bg-muted/50 text-left text-xs font-semibold text-muted-foreground">
                         <th className="p-3">Élève / Étudiant</th>
-                        <th className="p-3">Rôle</th>
-                        <th className="p-3">Solde Actuel (Pts / DT)</th>
+                        <th className="p-3">Catégorie &amp; Classe</th>
+                        <th className="p-3">Solde Actuel (DT)</th>
                         <th className="p-3">Séances Réservées</th>
                         <th className="p-3">Total Dépensé</th>
-                        <th className="p-3 text-right">Créditer / Ajuster Points (1 Pt = 1 DT)</th>
+                        <th className="p-3 text-right">Créditer / Ajuster Solde (DT)</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -578,11 +590,34 @@ export function AdminDashboardClient({initialData}: AdminDashboardProps) {
                           <td className="p-3">
                             <div className="font-bold">{student.name}</div>
                             <div className="text-xs text-muted-foreground">{student.email}</div>
+                            {(student as any).phone && (
+                              <div className="text-[11px] text-emerald-700">
+                                📞 {(student as any).phone}
+                              </div>
+                            )}
                           </td>
-                          <td className="p-3">
-                            <Badge variant="outline" className="text-xs">
-                              {student.role}
-                            </Badge>
+                          <td className="p-3 text-xs space-y-0.5">
+                            {(student as any).studentLevel ? (
+                              <>
+                                <Badge variant="secondary" className="text-[11px]">
+                                  {getLevelLabel((student as any).studentLevel)} •{' '}
+                                  {getGradeLabel((student as any).studentGrade)}
+                                </Badge>
+                                {(student as any).studentSection && (
+                                  <div className="text-[11px] text-emerald-700 font-semibold">
+                                    Section : {getSectionLabel((student as any).studentSection)}
+                                  </div>
+                                )}
+                                {((student as any).institution || (student as any).city) && (
+                                  <div className="text-[11px] text-muted-foreground">
+                                    📍 {(student as any).institution || ''}{' '}
+                                    {(student as any).city ? `(${(student as any).city})` : ''}
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground italic">Non renseigné</span>
+                            )}
                           </td>
                           <td className="p-3">
                             <span className="inline-flex items-center gap-1.5 font-extrabold text-base text-emerald-700 dark:text-emerald-400">
@@ -771,9 +806,26 @@ export function AdminDashboardClient({initialData}: AdminDashboardProps) {
                             </Badge>
                           </td>
                           <td className="p-3">
-                            <span className="font-bold text-emerald-700">
-                              {booking.price} Pts ({booking.price} DT)
-                            </span>
+                            {booking.price === 0 ? (
+                              <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px]">
+                                Essai Gratuit (0 DT)
+                              </Badge>
+                            ) : (
+                              <span className="font-bold text-emerald-700">
+                                {booking.price} DT
+                              </span>
+                            )}
+                            {(booking as any).studentConfirmed && (
+                              <div className="text-[11px] font-bold text-amber-600 mt-1">
+                                ⭐ Note élève : {(booking as any).studentRating || 5}/5 ★ (Paiement
+                                validé)
+                              </div>
+                            )}
+                            {(booking as any).disputeReason && (
+                              <div className="text-[11px] font-bold text-red-600 mt-1">
+                                ⚠️ Litige : {(booking as any).disputeReason}
+                              </div>
+                            )}
                           </td>
                           <td className="p-3">
                             <Badge

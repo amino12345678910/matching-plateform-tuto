@@ -3,6 +3,7 @@
 import {prisma} from '@/lib/prisma';
 import {getUserInfo} from '@/hooks/shared/get-user-info';
 import {readCloudStore, writeCloudStore} from '@/lib/cloud-store';
+import {getCloudSessionCookie, setCloudSessionCookie} from '@/hooks/auth/cloud-auth';
 import {
   getSellersRegistryCookie,
   saveSellerRegistryCookie,
@@ -11,7 +12,7 @@ import {
 import {revalidatePath} from 'next/cache';
 
 export async function getTutorVerificationData() {
-  const {userId, name, email} = await getUserInfo();
+  const {userId, name, email, image} = await getUserInfo();
   if (!userId) return null;
 
   try {
@@ -19,7 +20,7 @@ export async function getTutorVerificationData() {
       where: {userId},
       include: {
         user: {
-          select: {name: true, email: true, points: true},
+          select: {name: true, email: true, points: true, image: true},
         },
       },
     });
@@ -39,7 +40,6 @@ export async function getTutorVerificationData() {
     store.sellers.unshift(cookieSeller);
     writeCloudStore(store);
   } else if (cookieSeller && cloudSeller) {
-    // Prefer verified status if either is verified, or latest fields from cookie
     cloudSeller = {
       ...cloudSeller,
       ...cookieSeller,
@@ -67,18 +67,22 @@ export async function getTutorVerificationData() {
 
   return {
     ...cloudSeller,
-    profilePhoto: cloudSeller.profilePhoto || null,
+    profilePhoto: cloudSeller.profilePhoto || cloudUser?.image || image || null,
     imageSource: 'NULL' as const,
     specialty: cloudSeller.specialty || null,
     experience: cloudSeller.experience || null,
     credentials: cloudSeller.credentials || null,
     phone: cloudSeller.phone || null,
+    city: cloudSeller.city || cloudUser?.city || null,
+    payoutMethod: cloudSeller.payoutMethod || 'D17',
+    payoutAccount: cloudSeller.payoutAccount || null,
     createdAt: new Date(cloudSeller.createdAt),
     updatedAt: new Date(cloudSeller.createdAt),
     user: {
       name: cloudUser?.name || name || 'Professeur 9arrini',
       email: cloudUser?.email || email || '',
-      points: cloudUser?.points ?? 50,
+      points: cloudUser?.points ?? 0,
+      image: cloudSeller.profilePhoto || cloudUser?.image || image || null,
     },
   };
 }
@@ -88,6 +92,10 @@ export async function submitTutorVerification(data: {
   experience: string;
   credentials: string;
   phone: string;
+  city?: string;
+  payoutMethod?: string;
+  payoutAccount?: string;
+  profilePhoto?: string;
   bio: string;
 }) {
   const {userId, name} = await getUserInfo();
@@ -95,10 +103,17 @@ export async function submitTutorVerification(data: {
     return {success: false, error: 'Veuillez vous connecter.'};
   }
 
-  if (!data.specialty.trim() || !data.credentials.trim() || !data.bio.trim()) {
+  if (
+    !data.specialty.trim() ||
+    !data.credentials.trim() ||
+    !data.experience.trim() ||
+    !data.phone.trim() ||
+    !data.bio.trim()
+  ) {
     return {
       success: false,
-      error: 'Veuillez remplir votre spécialité, vos diplômes/références et votre biographie.',
+      error:
+        'Veuillez remplir tous les champs obligatoires (spécialité, diplômes, expérience, téléphone et biographie complète).',
     };
   }
 
@@ -110,6 +125,10 @@ export async function submitTutorVerification(data: {
         experience: data.experience.trim(),
         credentials: data.credentials.trim(),
         phone: data.phone.trim(),
+        city: data.city?.trim() || null,
+        payoutMethod: data.payoutMethod?.trim() || 'D17',
+        payoutAccount: data.payoutAccount?.trim() || null,
+        profilePhoto: data.profilePhoto?.trim() || undefined,
         bio: data.bio.trim(),
         verificationStatus: 'PENDING',
       },
@@ -119,6 +138,10 @@ export async function submitTutorVerification(data: {
         experience: data.experience.trim(),
         credentials: data.credentials.trim(),
         phone: data.phone.trim(),
+        city: data.city?.trim() || null,
+        payoutMethod: data.payoutMethod?.trim() || 'D17',
+        payoutAccount: data.payoutAccount?.trim() || null,
+        profilePhoto: data.profilePhoto?.trim() || undefined,
         bio: data.bio.trim(),
         isVerified: false,
         verificationStatus: 'PENDING',
@@ -131,6 +154,17 @@ export async function submitTutorVerification(data: {
   const now = new Date().toISOString();
   const store = readCloudStore();
   let cloudSeller = store.sellers.find(s => s.userId === userId);
+  const cloudUser = store.users.find(u => u.id === userId);
+
+  if (cloudUser) {
+    if (data.profilePhoto?.trim()) {
+      cloudUser.image = data.profilePhoto.trim();
+      cloudUser.imageSource = 'CLOUDINARY';
+    }
+    if (data.city?.trim()) cloudUser.city = data.city.trim();
+    if (data.phone?.trim()) cloudUser.phone = data.phone.trim();
+  }
+
   if (!cloudSeller) {
     cloudSeller = {
       id: `seller_${userId}`,
@@ -142,6 +176,11 @@ export async function submitTutorVerification(data: {
       experience: data.experience.trim(),
       credentials: data.credentials.trim(),
       phone: data.phone.trim(),
+      city: data.city?.trim() || undefined,
+      payoutMethod: data.payoutMethod?.trim() || 'D17',
+      payoutAccount: data.payoutAccount?.trim() || undefined,
+      profilePhoto: data.profilePhoto?.trim() || undefined,
+      acceptedTutorTermsAt: now,
       createdAt: now,
     };
     store.sellers.unshift(cloudSeller);
@@ -150,17 +189,32 @@ export async function submitTutorVerification(data: {
     cloudSeller.experience = data.experience.trim();
     cloudSeller.credentials = data.credentials.trim();
     cloudSeller.phone = data.phone.trim();
+    if (data.city?.trim()) cloudSeller.city = data.city.trim();
+    if (data.payoutMethod?.trim()) cloudSeller.payoutMethod = data.payoutMethod.trim();
+    if (data.payoutAccount?.trim()) cloudSeller.payoutAccount = data.payoutAccount.trim();
+    if (data.profilePhoto?.trim()) cloudSeller.profilePhoto = data.profilePhoto.trim();
     cloudSeller.bio = data.bio.trim();
+    cloudSeller.acceptedTutorTermsAt = now;
     if (!cloudSeller.isVerified) {
       cloudSeller.verificationStatus = 'PENDING';
     }
   }
   writeCloudStore(store);
   await saveSellerRegistryCookie(cloudSeller);
+
+  const session = await getCloudSessionCookie();
+  if (session && data.profilePhoto?.trim()) {
+    await setCloudSessionCookie({
+      ...session,
+      image: data.profilePhoto.trim(),
+      imageSource: 'CLOUDINARY',
+    });
+  }
+
   await saveClientNotificationCookie({
     id: `notif_apply_${Date.now()}`,
     userId,
-    title: `📋 Candidature Professeur envoyée (${data.specialty.trim()}). Votre dossier est en cours d'examen par l'administration 9arrini pour activer votre accès complet.`,
+    title: `📋 Profil Professeur complet enregistré (${data.specialty.trim()}). Votre dossier est prêt pour validation par l'administration 9arrini.`,
     type: 'AUTOMATED',
     link: '/dashboard/freelancer',
     read: false,
@@ -168,6 +222,7 @@ export async function submitTutorVerification(data: {
   });
 
   revalidatePath('/dashboard/freelancer');
+  revalidatePath('/dashboard/freelancer/account');
   revalidatePath('/dashboard/freelancer/create-service');
   revalidatePath('/dashboard/profile');
   revalidatePath('/admin');
@@ -175,6 +230,6 @@ export async function submitTutorVerification(data: {
   return {
     success: true,
     seller: cloudSeller,
-    message: `Merci ${name || ''} ! Votre candidature Professeur a été envoyée. Dès qu'elle sera vérifiée par l'administration 9arrini, votre accès complet sera débloqué.`,
+    message: `Merci ${name || ''} ! Votre profil complet Professeur a été enregistré et transmis à l'administration 9arrini.`,
   };
 }

@@ -18,7 +18,11 @@ async function requireAdminSession() {
   if (!user?.userId) {
     throw new Error('Accès refusé : veuillez vous connecter.');
   }
-  const configuredAdmins = (process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || '')
+  const configuredAdmins = (
+    process.env.ADMIN_EMAILS ||
+    process.env.ADMIN_EMAIL ||
+    'amin.aa.aeid@gmail.com'
+  )
     .split(',')
     .map(e => e.trim().toLowerCase())
     .filter(Boolean);
@@ -186,7 +190,7 @@ export async function getAdminDashboardData() {
         id: s.userId,
         name: 'Professeur 9arrini',
         email: `${s.userId}@9arrini.tn`,
-        points: 120,
+        points: 0,
         image: null,
         createdAt: s.createdAt,
       };

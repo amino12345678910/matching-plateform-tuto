@@ -14,6 +14,15 @@ export interface CloudUser {
   imageSource: 'NULL' | 'GOOGLE' | 'CLOUDINARY';
   hasPassword: boolean;
   emailVerified: boolean;
+  phone?: string | null;
+  city?: string | null;
+  studentLevel?: string | null;
+  studentGrade?: string | null;
+  studentSection?: string | null;
+  institution?: string | null;
+  subjectsOfInterest?: string[];
+  acceptedTermsAt?: string | null;
+  termsVersion?: string | null;
   createdAt: string;
 }
 
@@ -23,10 +32,17 @@ export interface CloudSeller {
   bio: string;
   isVerified: boolean;
   verificationStatus: 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+  rejectionReason?: string;
   specialty?: string;
   credentials?: string;
   experience?: string;
   phone?: string;
+  city?: string;
+  subjects?: string[];
+  levelsTaught?: string[];
+  payoutMethod?: string;
+  payoutAccount?: string;
+  acceptedTutorTermsAt?: string;
   profilePhoto?: string;
   createdAt: string;
 }
@@ -35,7 +51,7 @@ export interface CloudPointTransaction {
   id: string;
   userId: string;
   amount: number;
-  type: 'PURCHASE' | 'BOOKING_PAYMENT' | 'EARNING' | 'ADMIN_GRANT' | 'BONUS';
+  type: 'PURCHASE' | 'BOOKING_PAYMENT' | 'EARNING' | 'ADMIN_GRANT' | 'BONUS' | 'REFUND' | 'PAYOUT';
   description: string;
   createdAt: string;
 }
@@ -48,14 +64,27 @@ export interface CloudBooking {
   clientId: string;
   clientName: string;
   clientEmail: string;
+  clientLevel?: string;
+  clientGrade?: string;
   freelancerId: string;
   freelancerName: string;
   sellerId: string;
   servicePackageTier: 'BASIC' | 'STANDARD' | 'PREMIUM';
   totalPrice: number;
+  originalPrice?: number;
+  isFreeTrial?: boolean;
+  platformFee?: number;
+  tutorEarning?: number;
+  payoutStatus?: 'HELD' | 'RELEASED' | 'REFUNDED' | 'DISPUTED' | 'FREE_TRIAL';
+  studentConfirmed?: boolean;
+  studentRating?: number;
+  studentReview?: string;
+  completedAt?: string;
+  releasedAt?: string;
+  disputeReason?: string;
   delivery: number;
   revisions: number;
-  status: 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED';
+  status: 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED' | 'DISPUTED';
   scheduledDate?: string;
   scheduledTime?: string;
   meetUrl?: string;
@@ -109,11 +138,14 @@ export interface CloudStoreData {
   reviews: CloudReview[];
   notifications?: CloudNotification[];
   messages?: CloudChatMessage[];
+  freeTrialActive?: boolean;
+  freeTrialEndsAt?: string;
 }
 
-const STORE_FILE = path.join(os.tmpdir(), '9arrini-cloud-store-v3-real.json');
+const STORE_FILE = path.join(os.tmpdir(), '9arrini-cloud-store-v4-clean.json');
 
 function getInitialStore(): CloudStoreData {
+  const defaultEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   return {
     users: [],
     sellers: [],
@@ -123,6 +155,8 @@ function getInitialStore(): CloudStoreData {
     reviews: [],
     notifications: [],
     messages: [],
+    freeTrialActive: true,
+    freeTrialEndsAt: defaultEndsAt,
   };
 }
 

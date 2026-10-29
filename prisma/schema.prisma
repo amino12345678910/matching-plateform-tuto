@@ -14,25 +14,44 @@ enum imageSources {
   NULL
 }
 
+/// Users (students, tutors, admins). Role: USER (student) | SELLER (tutor) | ADMIN
 model User {
-  id            String         @id
+  id            String       @id
   name          String
-  email         String
-  emailVerified Boolean        @default(false)
+  email         String       @unique
+  emailVerified Boolean      @default(false)
   image         String?
-  imageSource   imageSources   @default(NULL)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  role          String?
-  hasPassword   Boolean        @default(true)
+  imageSource   imageSources @default(NULL)
+  role          String       @default("USER")
+  hasPassword   Boolean      @default(false)
   passwordHash  String?
-  points        Int            @default(0)
-  sessions      Session[]
-  accounts      Account[]
-  notifications Notification[]
-  seller        Seller?
-  reviews       Review[]
+  /// Wallet balance in Points (1 Point = 1 DT). Always starts at 0.
+  points        Float        @default(0)
+  isSuspended   Boolean      @default(false)
+
+  // Student profile (used to categorise students and match courses)
+  phone              String?
+  city               String?
+  studentLevel       String? /// PRIMAIRE | COLLEGE | LYCEE | UNIVERSITE | ADULTE
+  studentGrade       String? /// e.g. 7EME, 2EME_LYCEE, BAC, LICENCE_1
+  studentSection     String? /// Bac / lycée section: MATH, SCIENCES, TECHNIQUE, INFO, ECO, LETTRES, SPORT
+  institution        String?
+  subjectsOfInterest String[] @default([])
+
+  // Legal acceptance
+  acceptedTermsAt DateTime?
+  termsVersion    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  notifications     Notification[]
+  seller            Seller?
+  reviews           Review[]           @relation("ReviewClient")
+  receivedReviews   Review[]           @relation("ReviewFreelancer")
   pointTransactions PointTransaction[]
+  topupRequests     TopupRequest[]
+  payoutRequests    PayoutRequest[]
 
   clientConversations     Conversation[] @relation("ClientConversations")
   freelancerConversations Conversation[] @relation("FreelancerConversations")
@@ -41,73 +60,33 @@ model User {
   freelancerBookings Booking[] @relation("FreelancerBooking")
   services           Service[]
 
-  @@unique([email])
-  @@index([id])
-  @@index([hasPassword])
+  @@index([role])
+  @@index([studentLevel])
   @@map("user")
 }
 
-model Session {
-  id        String   @id
-  expiresAt DateTime
-  token     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  ipAddress String?
-  userAgent String?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([token])
-  @@index([userId])
-  @@map("session")
-}
-
-model Account {
-  id                    String    @id
-  accountId             String
-  providerId            String
-  userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accessToken           String?
-  refreshToken          String?
-  idToken               String?
-  accessTokenExpiresAt  DateTime?
-  refreshTokenExpiresAt DateTime?
-  scope                 String?
-  password              String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-
-  @@index([userId])
-  @@map("account")
-}
-
-model Verification {
-  id         String   @id
-  identifier String
-  value      String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@index([identifier])
-  @@map("verification")
-}
-
-/// Services table
-
+/// Tutor profile. verificationStatus: INCOMPLETE | PENDING | VERIFIED | REJECTED | SUSPENDED
 model Seller {
   id                 String       @id @default(uuid())
   bio                String?
   profilePhoto       String?
   imageSource        imageSources @default(NULL)
   isVerified         Boolean      @default(false)
-  verificationStatus String       @default("UNVERIFIED")
+  verificationStatus String       @default("INCOMPLETE")
+  rejectionReason    String?
   specialty          String?
   experience         String?
   credentials        String?
   phone              String?
+  city               String?
+  subjects           String[]     @default([])
+  levelsTaught       String[]     @default([])
+  payoutMethod       String? /// D17 | RIB | POSTE
+  payoutAccount      String?
+
+  acceptedTutorTermsAt DateTime?
+  submittedAt          DateTime?
+  verifiedAt           DateTime?
 
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -118,6 +97,7 @@ model Seller {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([verificationStatus])
   @@map("seller")
 }
 
@@ -125,14 +105,13 @@ model ServicePackage {
   id          String      @id @default(uuid())
   name        PackageTier
   price       Float
-  discount    Int         @default(0) // value in percentage
-  delivery    Int
-  revisions   Int
+  discount    Int         @default(0)
+  delivery    Int         @default(1)
+  revisions   Int         @default(1)
   description String
 
   serviceId String
-
-  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@unique([serviceId, name])
 }
@@ -153,26 +132,31 @@ model Category {
   slug     String    @unique
   services Service[]
 
-  @@index([slug])
   @@map("category")
 }
 
+/// One review per student per course, linked to the booking it confirms.
 model Review {
-  id      String @id @default(uuid())
-  rating  Int
-  comment String
+  id              String  @id @default(uuid())
+  rating          Int
+  comment         String
+  sessionHappened Boolean @default(true)
 
-  clientId  String
-  serviceId String
+  clientId     String
+  serviceId    String
+  freelancerId String?
+  bookingId    String? @unique
 
-  client  User    @relation(fields: [clientId], references: [id])
-  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  client     User     @relation("ReviewClient", fields: [clientId], references: [id], onDelete: Cascade)
+  freelancer User?    @relation("ReviewFreelancer", fields: [freelancerId], references: [id], onDelete: SetNull)
+  service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  booking    Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([clientId, serviceId])
-  @@index([clientId, serviceId])
+  @@index([freelancerId])
   @@map("review")
 }
 
@@ -191,6 +175,7 @@ model Faq {
   @@map("faq")
 }
 
+/// A course = one scheduled Google Meet session published by a verified tutor.
 model Service {
   id          String   @id @default(uuid())
   title       String
@@ -212,20 +197,23 @@ model Service {
   reviews  Review[]
   bookings Booking[]
 
-  meetLink      String?
-  scheduledDate String?
-  scheduledTime String?
+  meetLink        String?
+  scheduledDate   String? /// YYYY-MM-DD (Africa/Tunis)
+  scheduledTime   String? /// HH:mm (Africa/Tunis)
+  sessionAt       DateTime?
+  durationMinutes Int       @default(60)
+  maxStudents     Int       @default(1)
+  targetLevels    String[]  @default([])
 
-  status    ServiceStatus @default(DRAFT)
+  status    ServiceStatus @default(ACTIVE)
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
-  @@index([title])
-  @@index([description])
-  @@index([slug])
   @@index([sellerId])
+  @@index([freelancerId])
   @@index([categoryId])
   @@index([status])
+  @@index([sessionAt])
   @@map("service")
 }
 
@@ -242,14 +230,21 @@ enum ServiceStatus {
   REJECTED
 }
 
-// Booking system
 enum BookingStatus {
-  PENDING // client placed order
-  CONFIRMED // freelancer accepted
-  DELIVERED // freelancer submitted work
-  COMPLETED // client approved
-  CANCELLED // cancelled before delivery
-  DISPUTED
+  PENDING
+  CONFIRMED /// booked & paid (or free), session upcoming / awaiting student confirmation
+  DELIVERED
+  COMPLETED /// student confirmed (or auto-released)
+  CANCELLED /// cancelled & refunded
+  DISPUTED /// student reported a problem, admin must decide
+}
+
+enum PayoutStatus {
+  NONE /// free launch-week booking, nothing to pay
+  HELD /// paid by student, held by the platform (escrow)
+  RELEASED /// tutor credited (minus commission)
+  REFUNDED /// student refunded
+  DISPUTED /// frozen until admin decision
 }
 
 model Booking {
@@ -257,7 +252,8 @@ model Booking {
   serviceId          String
   clientId           String
   freelancerId       String
-  servicePackageTier PackageTier
+  sellerId           String
+  servicePackageTier PackageTier @default(BASIC)
   revisions          Int         @default(1)
   delivery           Int         @default(1)
 
@@ -266,29 +262,46 @@ model Booking {
   freelancer User    @relation("FreelancerBooking", fields: [freelancerId], references: [id])
   service    Service @relation(fields: [serviceId], references: [id])
 
-  hasSeen      DateTime?
-  revisedCount Int           @default(1) // number of revisions has happened
-  status       BookingStatus @default(PENDING)
-  totalPrice   Float
-  acceptedAt   DateTime?
-  scheduledDate String?
-  scheduledTime String?
-  meetUrl       String?
+  status       BookingStatus @default(CONFIRMED)
+  payoutStatus PayoutStatus  @default(HELD)
+  isFreeTrial  Boolean       @default(false)
+  totalPrice   Float         @default(0)
+  platformFee  Float         @default(0)
+  tutorEarning Float         @default(0)
+
+  scheduledDate   String?
+  scheduledTime   String?
+  sessionAt       DateTime?
+  durationMinutes Int       @default(60)
+  meetUrl         String?
+
+  hasSeen         DateTime?
+  revisedCount    Int       @default(1)
+  acceptedAt      DateTime?
+  completedAt     DateTime?
+  releasedAt      DateTime?
+  cancelledAt     DateTime?
+  cancelledBy     String?
+  cancelReason    String?
+  disputeReason   String?
+  disputeOpenedAt DateTime?
+  resolvedAt      DateTime?
+  resolutionNote  String?
 
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
-  sellerId      String
   conversations Conversation[]
+  review        Review?
 
-  @@index([serviceId, clientId])
+  @@unique([serviceId, clientId])
   @@index([freelancerId])
   @@index([clientId])
-  @@index([clientId, freelancerId])
-  @@index([createdAt])
+  @@index([status])
+  @@index([payoutStatus])
+  @@index([sessionAt])
   @@map("booking")
 }
 
-/// Messages
 model Message {
   id          String      @id @default(uuid())
   roomId      String
@@ -301,6 +314,7 @@ model Message {
 
   conversation Conversation @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
+  @@index([roomId, createdAt])
   @@index([roomId, senderId])
   @@map("message")
 }
@@ -312,16 +326,17 @@ enum MessageType {
 }
 
 model Conversation {
-  id           String @id // roomId (sorted userId--sellerUserId)
+  id           String  @id /// sorted "userA--userB"
   clientId     String
   bookingId    String?
   freelancerId String
 
-  client     User    @relation("ClientConversations", fields: [clientId], references: [id])
+  client     User     @relation("ClientConversations", fields: [clientId], references: [id], onDelete: Cascade)
   booking    Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  freelancer User    @relation("FreelancerConversations", fields: [freelancerId], references: [id])
+  freelancer User     @relation("FreelancerConversations", fields: [freelancerId], references: [id], onDelete: Cascade)
 
   createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
   messages  Message[]
 
   @@index([clientId])
@@ -329,7 +344,6 @@ model Conversation {
   @@map("conversation")
 }
 
-// Notifications
 enum NotificationType {
   ORDER
   MESSAGE
@@ -344,23 +358,85 @@ model Notification {
   title     String
   link      String?
   read      Boolean          @default(false)
+  /// Prevents duplicate automatic notifications (e.g. reminders)
+  dedupeKey String?          @unique
   createdAt DateTime         @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
+  @@index([userId, createdAt])
 }
 
+/// Wallet ledger. type: TOPUP | BOOKING_PAYMENT | EARNING | REFUND | PAYOUT | PAYOUT_REVERSAL | ADMIN_ADJUST
 model PointTransaction {
   id          String   @id @default(uuid())
   userId      String
-  amount      Int
-  type        String   // "TOPUP" | "BOOKING" | "ADMIN_GRANT" | "EARNING"
+  amount      Float
+  type        String
   description String
+  bookingId   String?
   createdAt   DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([bookingId])
   @@map("point_transaction")
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// Student wallet top-up by D17 / bank or postal transfer, validated by an admin.
+model TopupRequest {
+  id          String        @id @default(uuid())
+  userId      String
+  amount      Float
+  method      String /// D17 | VIREMENT | POSTE
+  reference   String
+  note        String?
+  status      RequestStatus @default(PENDING)
+  adminNote   String?
+  createdAt   DateTime      @default(now())
+  processedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([userId])
+  @@map("topup_request")
+}
+
+/// Tutor withdrawal of released earnings. Amount is reserved (deducted) at request time.
+model PayoutRequest {
+  id          String        @id @default(uuid())
+  userId      String
+  amount      Float
+  method      String
+  account     String
+  status      RequestStatus @default(PENDING)
+  adminNote   String?
+  createdAt   DateTime      @default(now())
+  processedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([userId])
+  @@map("payout_request")
+}
+
+/// Global platform settings (single row, id = "global").
+model AppSetting {
+  id             String    @id @default("global")
+  launchAt       DateTime?
+  freeTrialDays  Int       @default(7)
+  commissionRate Float     @default(0.15)
+  updatedAt      DateTime  @updatedAt
+
+  @@map("app_setting")
 }

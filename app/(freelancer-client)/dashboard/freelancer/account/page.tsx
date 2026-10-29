@@ -1,25 +1,33 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import {useEffect, useState} from 'react';
-import {Button} from '@/components/ui/button';
-import {Input} from '@/components/ui/input';
 import {Separator} from '@/components/ui/separator';
 import {Skeleton} from '@/components/ui/skeleton';
 import {Badge} from '@/components/ui/badge';
 import {getUserInfo} from '@/hooks/shared/get-user-info';
+import {getTutorVerificationData} from '@/hooks/freelancers/verification-actions';
+import {TutorVerificationBanner} from '@/components/freelancer/tutor-verification-banner';
 import {profilePhoto} from '@/components/profile-url';
+import {getLevelLabel, getGradeLabel, getSectionLabel} from '@/lib/constants';
+import {GraduationCap, ShieldCheck, MapPin, Phone, Scale} from 'lucide-react';
 
 export default function AccountPage() {
   const [user, setUser] = useState<any>(null);
+  const [seller, setSeller] = useState<any>(null);
   const [avatar, setAvatar] = useState<string>('');
-  const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const init = async () => {
       const u = await getUserInfo();
       setUser(u);
+
+      if (u?.role === 'SELLER') {
+        const s = await getTutorVerificationData();
+        setSeller(s);
+      }
 
       const img = await profilePhoto({
         imageSource: u?.imageSource as any,
@@ -48,94 +56,97 @@ export default function AccountPage() {
   const isFreelancer = user.role === 'SELLER';
 
   return (
-    <div className="max-w-3xl px-8 py-10 space-y-10">
-      <section className="flex items-center gap-6">
-        <div className="relative h-20 w-20">
+    <div className="max-w-4xl px-4 sm:px-8 py-8 space-y-8">
+      <section className="flex flex-col sm:flex-row sm:items-center gap-5 p-6 rounded-2xl border bg-card shadow-xs">
+        <div className="relative h-20 w-20 shrink-0">
           <Image
-            src={preview || avatar || '/avatar.png'}
-            alt="Profile photo"
+            src={seller?.profilePhoto || user.image || avatar || '/avatar.png'}
+            alt="Photo de profil"
             fill
-            className="rounded-full object-cover border"
+            className="rounded-full object-cover border-2 border-emerald-500"
           />
         </div>
 
-        <div className="flex-1">
-          <h1 className="text-2xl font-semibold">{user.name}</h1>
+        <div className="flex-1 space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold">{user.name}</h1>
+            <Badge className={isFreelancer ? 'bg-amber-600 text-white' : 'bg-emerald-600 text-white'}>
+              {isFreelancer ? 'Compte Professeur' : 'Compte Élève'}
+            </Badge>
+          </div>
           <p className="text-sm text-muted-foreground">{user.email}</p>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground pt-1">
+            {(user.city || seller?.city) && (
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5 text-emerald-600" />
+                {user.city || seller?.city}
+              </span>
+            )}
+            {(user.phone || seller?.phone) && (
+              <span className="inline-flex items-center gap-1">
+                <Phone className="h-3.5 w-3.5 text-emerald-600" />
+                {user.phone || seller?.phone}
+              </span>
+            )}
+          </div>
         </div>
-
-        <Badge variant="secondary">{isFreelancer ? 'Freelancer' : 'Client'}</Badge>
       </section>
 
-      {(!user.hasPassword || !user.image) && (
-        <section className="rounded-lg border bg-muted/30 p-4 text-sm">
-          <p className="font-medium mb-2">Complete your account</p>
-          <ul className="space-y-1 text-muted-foreground text-xs">
-            {!user.image && <li>• Upload a profile photo</li>}
-            {!user.hasPassword && <li>• Create a password for email login</li>}
-          </ul>
+      {isFreelancer ? (
+        <div className="-mx-4 lg:-mx-6">
+          <TutorVerificationBanner seller={seller} />
+        </div>
+      ) : (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/20 p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <GraduationCap className="h-5 w-5 text-emerald-600" />
+            <h2 className="text-base font-bold">Ma Catégorie &amp; Fiche Scolaire Élève</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            <div className="p-3 rounded-xl bg-white dark:bg-zinc-900 border">
+              <span className="text-xs text-muted-foreground block">Cycle / Niveau</span>
+              <span className="font-bold">{getLevelLabel(user.studentLevel)}</span>
+            </div>
+            <div className="p-3 rounded-xl bg-white dark:bg-zinc-900 border">
+              <span className="text-xs text-muted-foreground block">Classe</span>
+              <span className="font-bold">{getGradeLabel(user.studentGrade)}</span>
+            </div>
+            {user.studentSection && (
+              <div className="p-3 rounded-xl bg-white dark:bg-zinc-900 border">
+                <span className="text-xs text-muted-foreground block">Section</span>
+                <span className="font-bold">{getSectionLabel(user.studentSection)}</span>
+              </div>
+            )}
+            <div className="p-3 rounded-xl bg-white dark:bg-zinc-900 border">
+              <span className="text-xs text-muted-foreground block">Établissement / Ville</span>
+              <span className="font-bold">
+                {user.institution || user.city || 'Non renseigné'}
+              </span>
+            </div>
+          </div>
         </section>
       )}
 
       <Separator />
 
-      <section className="space-y-3">
-        <div>
-          <h3 className="text-sm font-medium">Profile photo</h3>
+      <section className="rounded-2xl border p-5 bg-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-sm font-bold">
+            <Scale className="h-4 w-4 text-emerald-600" />
+            Conditions Générales d&apos;Utilisation (CGU) &amp; Transparence
+          </div>
           <p className="text-xs text-muted-foreground">
-            Visible to {isFreelancer ? 'clients' : 'freelancers'} across the platform.
+            Rôle de mise en relation 9arrini, semaine de lancement gratuite, commission de 15 %
+            (85 % prof) et déblocage après évaluation élève.
           </p>
         </div>
-
-        <div className="flex items-center gap-4">
-          <img
-            src={preview || avatar}
-            alt="Avatar preview"
-            className="h-14 w-14 rounded-full object-cover border"
-          />
-
-          <Input
-            type="file"
-            accept="image/*"
-            onChange={e => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              setPreview(URL.createObjectURL(file));
-            }}
-          />
-        </div>
-      </section>
-
-      <Separator />
-
-      <section className="space-y-4">
-        <div>
-          <h3 className="text-sm font-medium">Sign-in & security</h3>
-          <p className="text-xs text-muted-foreground">Manage how you access your account.</p>
-        </div>
-
-        {!user.hasPassword ? (
-          <div className="rounded-md border bg-muted/40 p-4 space-y-3">
-            <p className="text-sm font-medium">Create password</p>
-            <p className="text-xs text-muted-foreground">
-              You signed up using Google. Adding a password lets you log in with email.
-            </p>
-
-            <Input type="password" placeholder="Create password" />
-            <Button size="sm">Set password</Button>
-          </div>
-        ) : (
-          <div className="rounded-md border p-4 space-y-3">
-            <p className="text-sm font-medium">Change password</p>
-
-            <Input type="password" placeholder="Current password" />
-            <Input type="password" placeholder="New password" />
-
-            <Button size="sm" variant="outline">
-              Update password
-            </Button>
-          </div>
-        )}
+        <Link
+          href="/legal"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold shrink-0"
+        >
+          <ShieldCheck className="h-4 w-4" />
+          Consulter les CGU
+        </Link>
       </section>
     </div>
   );

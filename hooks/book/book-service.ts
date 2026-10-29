@@ -14,8 +14,13 @@ import {
   saveClientBookingCookie,
   saveClientTransactionCookie,
   saveClientNotificationCookie,
+  saveReviewCookie,
 } from '@/hooks/book/bookings-store';
 import {formatScheduleLabel, getServiceMeetInfo} from '@/lib/google-meet';
+import {
+  FREE_TRIAL_DEFAULT_ACTIVE,
+  splitCommission,
+} from '@/lib/constants';
 
 export type BookServiceProps = {
   serviceName: string;
@@ -46,6 +51,7 @@ type BookServiceReturnType = {
   currentPoints?: number;
   newBalance?: number;
   bookingId?: string;
+  isFreeTrial?: boolean;
 };
 
 export const bookService = async ({
@@ -64,7 +70,7 @@ export const bookService = async ({
   meetUrl,
   tutorPhone,
 }: BookServiceProps): Promise<BookServiceReturnType> => {
-  // 1. Verify authenticated user on the server (never trust client-supplied clientId or role)
+  // 1. Verify authenticated user on the server
   const sessionUser = await getUserInfo();
   if (!sessionUser?.userId) {
     return {
@@ -81,11 +87,18 @@ export const bookService = async ({
     return {
       success: false,
       message: undefined,
-      error: 'Vous devez utiliser un compte Élève (Student) pour réserver un cours.',
+      error: 'Vous devez utiliser un compte Élève pour réserver un cours.',
     };
   }
 
-  // 2. Resolve authoritative package price on the server (never trust client-passed packagePrice)
+  if (freelancerId && freelancerId === clientId) {
+    return {
+      success: false,
+      error: 'Vous ne pouvez pas réserver votre propre cours.',
+    };
+  }
+
+  // 2. Resolve authoritative package price on the server
   let serverPackagePrice: number | null = null;
   try {
     const dbService = await dbContext.service.findFirst({
@@ -110,8 +123,9 @@ export const bookService = async ({
         s => s.id === serviceId || (serviceSlug && s.slug === serviceSlug)
       );
       const matchedPkg =
-        matchedService?.packages?.find((p: {name: string; price: number}) => p.name === packageName) ||
-        matchedService?.packages?.[0];
+        matchedService?.packages?.find(
+          (p: {name: string; price: number}) => p.name === packageName
+        ) || matchedService?.packages?.[0];
       if (matchedPkg && typeof matchedPkg.price === 'number') {
         serverPackagePrice = matchedPkg.price;
       }
@@ -120,34 +134,40 @@ export const bookService = async ({
     }
   }
 
-  const priceInPoints = Math.max(
-    1,
-    Math.ceil(Number(serverPackagePrice ?? packagePrice ?? 15))
-  );
+  const catalogPrice = Math.max(1, Math.ceil(Number(serverPackagePrice ?? packagePrice ?? 15)));
 
   const cloudSession = await getCloudSessionCookie();
   const store = readCloudStore();
   let cloudStudent = store.users.find(u => u.id === clientId);
 
-  let currentPoints = cloudSession?.points ?? cloudStudent?.points ?? 50;
+  const isFreeTrial = store.freeTrialActive ?? FREE_TRIAL_DEFAULT_ACTIVE;
+  const priceInPoints = isFreeTrial ? 0 : catalogPrice;
+  const {platformFee, tutorEarning} = isFreeTrial
+    ? {platformFee: 0, tutorEarning: 0}
+    : splitCommission(priceInPoints);
 
-  // Prevent paying twice for the same course
+  let currentPoints = cloudSession?.points ?? cloudStudent?.points ?? 0;
+
+  // Prevent duplicate active booking for the same course
   try {
     const existingCookieBookings = await getClientBookingsCookie(clientId);
     const alreadyInCookie = existingCookieBookings.some(
       b =>
         b.clientId === clientId &&
+        b.status !== 'CANCELLED' &&
         (b.serviceId === serviceId || (serviceSlug && b.serviceSlug === serviceSlug))
     );
     const alreadyInStore = (store.bookings || []).some(
       b =>
         b.clientId === clientId &&
+        b.status !== 'CANCELLED' &&
         (b.serviceId === serviceId || (serviceSlug && b.serviceSlug === serviceSlug))
     );
     if (alreadyInCookie || alreadyInStore) {
       return {
         success: true,
         newBalance: currentPoints,
+        isFreeTrial,
         message: 'Vous êtes déjà inscrit(e) à ce cours ! Votre lien Google Meet est actif.',
       };
     }
@@ -167,123 +187,59 @@ export const bookService = async ({
     // Cloud fallback
   }
 
-  if (currentPoints < priceInPoints) {
+  if (!isFreeTrial && currentPoints < priceInPoints) {
     return {
       success: false,
       insufficientPoints: true,
       requiredPoints: priceInPoints,
       currentPoints,
-      error: `Solde insuffisant : vous avez ${currentPoints} Pts (${currentPoints} DT), mais ce cours coûte ${priceInPoints} Pts (${priceInPoints} DT). Rechargez vos points !`,
+      error: `Solde insuffisant : vous avez ${currentPoints} DT et cette séance coûte ${priceInPoints} DT.`,
     };
   }
 
-  const newBalance = currentPoints - priceInPoints;
-  const meetInfo = getServiceMeetInfo({
-    slug: serviceSlug,
-    title: serviceName,
-    scheduledDate,
-    scheduledTime,
-    meetLink: meetUrl,
+  const bookingMessage = buildBookingMessage({
+    clientName,
+    serviceName,
+    packageName,
+    revisions,
+    delivery,
   });
-  const finalDate = scheduledDate || meetInfo.scheduledDate;
-  const finalTime = scheduledTime || meetInfo.scheduledTime;
-  const finalMeetUrl = meetUrl || meetInfo.meetUrl;
-  const scheduleLabel = formatScheduleLabel(finalDate, finalTime);
 
+  const now = new Date().toISOString();
+  const bookingId = `bk_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+  const newBalance = Math.max(0, currentPoints - priceInPoints);
+
+  // 1. Try syncing with Prisma if reachable
   try {
-    const cookiesdata = {
-      serviceId: serviceId,
-      packageName: packageName,
-    };
-    (await cookies()).set('X-booked-service', JSON.stringify(cookiesdata));
-
-    const getRoom = (a: string, b: string) => [a, b].sort().join('--');
-    const roomId = getRoom(clientId, freelancerId);
-
     await dbContext.$transaction(async tx => {
-      await tx.user.update({
-        where: {id: clientId},
-        data: {
-          points: {decrement: priceInPoints},
-          pointTransactions: {
-            create: {
-              amount: -priceInPoints,
-              type: 'BOOKING',
-              description: `Réservation cours : "${serviceName}" (Pack ${packageName} — ${priceInPoints} DT)`,
+      if (!isFreeTrial && priceInPoints > 0) {
+        await tx.user.update({
+          where: {id: clientId},
+          data: {
+            points: {decrement: priceInPoints},
+            pointTransactions: {
+              create: {
+                amount: -priceInPoints,
+                type: 'BOOKING_PAYMENT',
+                description: `Séquestre réservation "${serviceName}" (${packageName}) — libéré au professeur après votre évaluation`,
+              },
             },
           },
-        },
-      });
+        });
+      }
 
-      await tx.user.update({
-        where: {id: freelancerId},
+      await tx.booking.create({
         data: {
-          points: {increment: priceInPoints},
-          pointTransactions: {
-            create: {
-              amount: priceInPoints,
-              type: 'EARNING',
-              description: `Revenu cours réservé par ${clientName} : "${serviceName}" (${priceInPoints} DT)`,
-            },
-          },
-        },
-      });
-
-      const booking = await tx.booking.create({
-        data: {
-          servicePackageTier: packageName,
-          status: 'CONFIRMED',
-          revisions,
-          delivery,
-          totalPrice: priceInPoints,
-          clientId,
-          sellerId,
+          id: bookingId,
           serviceId,
+          sellerId,
+          clientId,
           freelancerId,
-          scheduledDate: finalDate,
-          scheduledTime: finalTime,
-          meetUrl: finalMeetUrl,
-        },
-      });
-
-      await tx.conversation.upsert({
-        where: {id: roomId},
-        update: {
-          bookingId: booking.id,
-          messages: {
-            create: {
-              senderId: clientId,
-              text: buildBookingMessage({
-                clientName,
-                delivery,
-                packageName,
-                revisions,
-                serviceName,
-              }),
-              contentType: 'AUTOMATED',
-              createdAt: new Date(),
-            },
-          },
-        },
-        create: {
-          id: roomId,
-          bookingId: booking.id,
-          clientId: clientId,
-          freelancerId,
-          messages: {
-            create: {
-              senderId: clientId,
-              text: buildBookingMessage({
-                clientName,
-                delivery,
-                packageName,
-                revisions,
-                serviceName,
-              }),
-              contentType: 'AUTOMATED',
-              createdAt: new Date(),
-            },
-          },
+          servicePackageTier: packageName,
+          totalPrice: priceInPoints,
+          delivery,
+          revisions,
+          status: 'CONFIRMED',
         },
       });
     });
@@ -291,91 +247,133 @@ export const bookService = async ({
     // Cloud fallback
   }
 
-  // Always update Cloud Store & Cookies so Vercel serverless persists booking, points, transactions & notifications
-  const now = new Date().toISOString();
-  if (!cloudStudent && cloudSession) {
+  // 2. Always persist in Cloud Store + Signed Session Cookie + Bookings Cookie
+  if (!cloudStudent) {
     cloudStudent = {
-      id: cloudSession.userId,
-      name: cloudSession.name,
-      email: cloudSession.email,
-      role: cloudSession.role,
+      id: clientId,
+      name: clientName,
+      email: cloudSession?.email || sessionUser.email || '',
+      role: 'USER',
       points: newBalance,
-      image: cloudSession.image ?? null,
-      imageSource: cloudSession.imageSource || 'NULL',
+      image: cloudSession?.image ?? null,
+      imageSource: cloudSession?.imageSource || 'NULL',
       hasPassword: true,
       emailVerified: true,
-      createdAt: cloudSession.createdAt || now,
+      studentLevel: sessionUser.studentLevel ?? null,
+      studentGrade: sessionUser.studentGrade ?? null,
+      city: sessionUser.city ?? null,
+      createdAt: cloudSession?.createdAt || now,
     };
     store.users.unshift(cloudStudent);
-  } else if (cloudStudent) {
+  } else {
     cloudStudent.points = newBalance;
   }
 
-  const cloudTutor = store.users.find(u => u.id === freelancerId);
-  if (cloudTutor) {
-    cloudTutor.points = (cloudTutor.points || 0) + priceInPoints;
-  }
+  const resolvedMeetInfo = getServiceMeetInfo({
+    slug: serviceSlug,
+    title: serviceName,
+    scheduledDate,
+    scheduledTime,
+    meetLink: meetUrl,
+  });
 
-  const displayTutorName = freelancerName || cloudTutor?.name || 'Professeur 9arrini';
-  const bookingId = `bk_${Date.now()}`;
-
-  const txRecord = {
-    id: `tx_book_${Date.now()}`,
-    userId: clientId,
-    amount: -priceInPoints,
-    type: 'BOOKING_PAYMENT' as const,
-    description: `Réservation cours : "${serviceName}" (Pack ${packageName} — ${priceInPoints} DT)`,
-    createdAt: now,
-  };
+  const resolvedTutorName =
+    freelancerName || store.users.find(u => u.id === freelancerId)?.name || 'Professeur 9arrini';
 
   const newBooking = {
     id: bookingId,
     serviceId,
     serviceTitle: serviceName,
-    serviceSlug,
+    serviceSlug: serviceSlug || serviceId,
     clientId,
     clientName,
-    clientEmail: cloudStudent?.email || cloudSession?.email || sessionUser.email || 'eleve@9arrini.tn',
+    clientEmail: cloudStudent.email || sessionUser.email || '',
+    clientLevel: sessionUser.studentLevel || undefined,
+    clientGrade: sessionUser.studentGrade || undefined,
     freelancerId,
-    freelancerName: displayTutorName,
+    freelancerName: resolvedTutorName,
     sellerId,
-    servicePackageTier: packageName,
+    servicePackageTier: packageName as 'BASIC' | 'STANDARD' | 'PREMIUM',
     totalPrice: priceInPoints,
+    originalPrice: catalogPrice,
+    isFreeTrial,
+    platformFee,
+    tutorEarning,
+    payoutStatus: (isFreeTrial ? 'FREE_TRIAL' : 'HELD') as
+      | 'HELD'
+      | 'RELEASED'
+      | 'REFUNDED'
+      | 'DISPUTED'
+      | 'FREE_TRIAL',
+    studentConfirmed: false,
     delivery,
     revisions,
     status: 'CONFIRMED' as const,
-    scheduledDate: finalDate,
-    scheduledTime: finalTime,
-    meetUrl: finalMeetUrl,
-    tutorPhone: tutorPhone || '',
+    scheduledDate: resolvedMeetInfo.scheduledDate,
+    scheduledTime: resolvedMeetInfo.scheduledTime,
+    meetUrl: resolvedMeetInfo.meetUrl,
+    tutorPhone: tutorPhone || undefined,
+    createdAt: now,
+  };
+
+  const scheduleStr = formatScheduleLabel(
+    resolvedMeetInfo.scheduledDate,
+    resolvedMeetInfo.scheduledTime
+  );
+
+  const clientConfirmNotif = {
+    id: `notif_book_${bookingId}`,
+    userId: clientId,
+    title: isFreeTrial
+      ? `🎉 Séance réservée gratuitement (Semaine de lancement) : "${serviceName}" avec ${resolvedTutorName} (${scheduleStr}). Après la séance, notez le professeur pour valider le cours !`
+      : `✅ Séance réservée : "${serviceName}" (${priceInPoints} DT en séquestre). Après la séance, notez le professeur pour débloquer son paiement !`,
+    type: 'ORDER' as const,
+    link: '/dashboard/client/bookings',
+    read: false,
+    createdAt: now,
+  };
+
+  const tutorNotif = {
+    id: `notif_tutor_${bookingId}`,
+    userId: freelancerId,
+    title: `🎓 Nouvelle inscription d'élève : ${clientName} a réservé "${serviceName}" (${packageName}) pour le ${scheduleStr}.`,
+    type: 'ORDER' as const,
+    link: '/dashboard/freelancer/orders',
+    read: false,
     createdAt: now,
   };
 
   await saveClientBookingCookie(newBooking);
-  await saveClientTransactionCookie(txRecord);
-  await saveClientNotificationCookie([
-    {
-      id: `notif_bk_${Date.now()}_1`,
+  if (!isFreeTrial && priceInPoints > 0) {
+    const studentTx = {
+      id: `tx_book_${bookingId}`,
       userId: clientId,
-      title: `✅ Séance réservée & payée : "${serviceName}" (-${priceInPoints} Points / ${priceInPoints} DT). Nouveau solde : ${newBalance} Pts.`,
-      type: 'ORDER',
-      link: '/dashboard/client/bookings',
-      read: false,
+      amount: -priceInPoints,
+      type: 'BOOKING_PAYMENT' as const,
+      description: `Séquestre cours "${serviceName}" (${packageName}) — libéré après votre avis`,
       createdAt: now,
-    },
-    {
-      id: `rem_${bookingId}`,
-      userId: clientId,
-      title: `⏰ Rappel de cours : "${serviceName}" avec ${displayTutorName} — Prévu le ${scheduleLabel}. Lien Google Meet : ${finalMeetUrl}`,
-      type: 'ORDER',
-      link: '/dashboard/client/bookings',
-      read: false,
-      createdAt: now,
-    },
-  ]);
+    };
+    await saveClientTransactionCookie(studentTx);
+    store.transactions.unshift(studentTx);
+  }
+  await saveClientNotificationCookie([clientConfirmNotif]);
 
-  store.transactions.unshift(txRecord);
   store.bookings.unshift(newBooking);
+  if (!Array.isArray(store.notifications)) store.notifications = [];
+  store.notifications.unshift(clientConfirmNotif, tutorNotif);
+
+  if (!Array.isArray(store.messages)) store.messages = [];
+  store.messages.push({
+    id: `msg_${bookingId}`,
+    roomId: [clientId, freelancerId].sort().join('--'),
+    senderId: clientId,
+    senderName: clientName,
+    recipientId: freelancerId,
+    recipientName: resolvedTutorName,
+    text: bookingMessage,
+    createdAt: now,
+  });
+
   writeCloudStore(store);
 
   if (cloudSession) {
@@ -385,18 +383,249 @@ export const bookService = async ({
     });
   }
 
+  try {
+    const cookieStore = await cookies();
+    cookieStore.set('booking_message', bookingMessage, {
+      path: '/',
+      httpOnly: false,
+      maxAge: 60,
+    });
+  } catch {
+    // ignore
+  }
+
+  revalidatePath(`/service/${serviceSlug}`);
   revalidatePath('/dashboard/client');
   revalidatePath('/dashboard/client/bookings');
   revalidatePath('/dashboard/client/points');
   revalidatePath('/dashboard/freelancer');
+  revalidatePath('/dashboard/freelancer/orders');
   revalidatePath('/notification');
-  revalidatePath(`/service/${serviceSlug}`);
+  revalidatePath('/admin');
 
   return {
     success: true,
     newBalance,
     bookingId,
-    message: `Mabrouk ! Séance réservée (${scheduleLabel}) avec ${priceInPoints} Points (${priceInPoints} DT). Retrouvez-la dans vos Cours Réservés et vos Notifications !`,
-    error: undefined,
+    isFreeTrial,
+    message: isFreeTrial
+      ? `Séance réservée gratuitement (Offre de lancement 1 semaine) ! Après la séance, pensez à évaluer votre professeur.`
+      : `Cours réservé ! ${priceInPoints} DT sont conservés en garantie et seront versés au professeur dès votre évaluation après la séance.`,
   };
 };
+
+/**
+ * Student confirms the session took place and rates the tutor (1-5 stars + comment).
+ * This releases the tutor's earnings (85%) from escrow (or marks the free-trial session as verified).
+ */
+export async function confirmAndRateSession(input: {
+  bookingId?: string;
+  serviceId: string;
+  serviceSlug?: string;
+  rating: number;
+  comment: string;
+  quality?: number;
+  communication?: number;
+  behavior?: number;
+  professionalism?: number;
+}) {
+  const sessionUser = await getUserInfo();
+  if (!sessionUser?.userId) {
+    return {success: false, error: 'Veuillez vous connecter pour évaluer la séance.'};
+  }
+
+  const cleanRating = Math.min(5, Math.max(1, Math.round(Number(input.rating) || 5)));
+  const cleanComment = (input.comment || '').trim();
+  if (cleanComment.length < 5) {
+    return {
+      success: false,
+      error: 'Veuillez écrire un court commentaire (minimum 5 caractères) sur le déroulement de la séance.',
+    };
+  }
+
+  const now = new Date().toISOString();
+  const store = readCloudStore();
+  const cookieBookings = await getClientBookingsCookie(sessionUser.userId);
+
+  // Locate the booking in Cloud Store or Cookie
+  let targetBooking = store.bookings.find(
+    b =>
+      (input.bookingId && b.id === input.bookingId) ||
+      (b.clientId === sessionUser.userId &&
+        (b.serviceId === input.serviceId ||
+          (input.serviceSlug && b.serviceSlug === input.serviceSlug)))
+  );
+
+  const cookieMatch = cookieBookings.find(
+    b =>
+      (input.bookingId && b.id === input.bookingId) ||
+      (b.clientId === sessionUser.userId &&
+        (b.serviceId === input.serviceId ||
+          (input.serviceSlug && b.serviceSlug === input.serviceSlug)))
+  );
+
+  if (!targetBooking && cookieMatch) {
+    targetBooking = {...cookieMatch};
+    store.bookings.unshift(targetBooking);
+  }
+
+  if (!targetBooking) {
+    return {
+      success: false,
+      error: 'Aucune réservation trouvée pour ce cours.',
+    };
+  }
+
+  if (targetBooking.studentConfirmed) {
+    return {
+      success: true,
+      message: 'Cette séance a déjà été confirmée et évaluée. Merci !',
+    };
+  }
+
+  const isFreeTrial = Boolean(targetBooking.isFreeTrial || targetBooking.totalPrice === 0);
+  const {tutorEarning, platformFee} = isFreeTrial
+    ? {tutorEarning: 0, platformFee: 0}
+    : splitCommission(targetBooking.totalPrice);
+
+  targetBooking.status = 'COMPLETED';
+  targetBooking.studentConfirmed = true;
+  targetBooking.studentRating = cleanRating;
+  targetBooking.studentReview = cleanComment;
+  targetBooking.completedAt = now;
+  targetBooking.releasedAt = now;
+  targetBooking.tutorEarning = tutorEarning;
+  targetBooking.platformFee = platformFee;
+  targetBooking.payoutStatus = isFreeTrial ? 'FREE_TRIAL' : 'RELEASED';
+
+  // Release escrow to tutor if paid session
+  if (!isFreeTrial && tutorEarning > 0 && targetBooking.freelancerId) {
+    let cloudTutor = store.users.find(u => u.id === targetBooking!.freelancerId);
+    if (cloudTutor) {
+      cloudTutor.points = (cloudTutor.points || 0) + tutorEarning;
+    }
+    store.transactions.unshift({
+      id: `tx_earn_${targetBooking.id}`,
+      userId: targetBooking.freelancerId,
+      amount: tutorEarning,
+      type: 'EARNING',
+      description: `Paiement débloqué après avis élève (${cleanRating}★) — "${targetBooking.serviceTitle}" (85% net prof, 15% commission 9arrini)`,
+      createdAt: now,
+    });
+  }
+
+  // Save review so it appears on the course page and tutor profile
+  const reviewObj = {
+    id: `rev_${Date.now().toString(36)}`,
+    clientId: sessionUser.userId,
+    clientName: sessionUser.name || 'Élève 9arrini',
+    clientAvatar: sessionUser.image || undefined,
+    serviceId: targetBooking.serviceId,
+    serviceSlug: targetBooking.serviceSlug || input.serviceSlug,
+    rating: cleanRating,
+    comment: cleanComment,
+    quality: input.quality || cleanRating,
+    communication: input.communication || cleanRating,
+    behavior: input.behavior || cleanRating,
+    professionalism: input.professionalism || cleanRating,
+    createdAt: now,
+  };
+
+  store.reviews = [
+    reviewObj,
+    ...(store.reviews || []).filter(
+      r => !(r.clientId === reviewObj.clientId && r.serviceId === reviewObj.serviceId)
+    ),
+  ];
+
+  if (!Array.isArray(store.notifications)) store.notifications = [];
+  store.notifications.unshift({
+    id: `notif_release_${targetBooking.id}`,
+    userId: targetBooking.freelancerId,
+    title: isFreeTrial
+      ? `⭐ Séance validée par ${sessionUser.name} (${cleanRating}/5 ★) pour "${targetBooking.serviceTitle}" !`
+      : `💰 Paiement débloqué (+${tutorEarning} DT net) ! ${sessionUser.name} a confirmé et noté la séance "${targetBooking.serviceTitle}" (${cleanRating}/5 ★).`,
+    type: 'ORDER',
+    link: '/dashboard/freelancer/orders',
+    read: false,
+    createdAt: now,
+  });
+
+  writeCloudStore(store);
+  await saveClientBookingCookie(targetBooking);
+  await saveReviewCookie(reviewObj);
+
+  revalidatePath(`/service/${targetBooking.serviceSlug || input.serviceSlug || input.serviceId}`);
+  revalidatePath('/dashboard/client/bookings');
+  revalidatePath('/dashboard/freelancer');
+  revalidatePath('/dashboard/freelancer/orders');
+  revalidatePath('/admin');
+
+  return {
+    success: true,
+    message: isFreeTrial
+      ? `Merci pour votre évaluation (${cleanRating}/5 ★) ! La séance a été marquée comme terminée.`
+      : `Merci pour votre avis (${cleanRating}/5 ★) ! Le paiement du professeur (${tutorEarning} DT) a été débloqué.`,
+  };
+}
+
+/**
+ * Student reports a problem with a session (e.g. tutor absent / issue) before payout is released.
+ */
+export async function reportBookingDispute(input: {bookingId: string; reason: string}) {
+  const sessionUser = await getUserInfo();
+  if (!sessionUser?.userId) {
+    return {success: false, error: 'Veuillez vous connecter.'};
+  }
+
+  const cleanReason = (input.reason || '').trim();
+  if (cleanReason.length < 10) {
+    return {
+      success: false,
+      error: 'Veuillez décrire le problème rencontré (minimum 10 caractères).',
+    };
+  }
+
+  const now = new Date().toISOString();
+  const store = readCloudStore();
+  const cookieBookings = await getClientBookingsCookie(sessionUser.userId);
+
+  let targetBooking = store.bookings.find(b => b.id === input.bookingId);
+  const cookieMatch = cookieBookings.find(b => b.id === input.bookingId);
+  if (!targetBooking && cookieMatch) {
+    targetBooking = {...cookieMatch};
+    store.bookings.unshift(targetBooking);
+  }
+
+  if (!targetBooking) {
+    return {success: false, error: 'Réservation introuvable.'};
+  }
+
+  targetBooking.status = 'DISPUTED';
+  targetBooking.payoutStatus = 'DISPUTED';
+  targetBooking.disputeReason = cleanReason;
+
+  if (!Array.isArray(store.notifications)) store.notifications = [];
+  store.notifications.unshift({
+    id: `notif_dispute_${targetBooking.id}`,
+    userId: targetBooking.freelancerId,
+    title: `⚠️ Signalement élève sur la séance "${targetBooking.serviceTitle}" : "${cleanReason}". Paiement suspendu en attente de vérification admin.`,
+    type: 'SYSTEM',
+    link: '/dashboard/freelancer/orders',
+    read: false,
+    createdAt: now,
+  });
+
+  writeCloudStore(store);
+  await saveClientBookingCookie(targetBooking);
+
+  revalidatePath('/dashboard/client/bookings');
+  revalidatePath('/dashboard/freelancer/orders');
+  revalidatePath('/admin');
+
+  return {
+    success: true,
+    message:
+      "Votre signalement a été transmis à l'administration 9arrini. Le paiement du professeur est bloqué jusqu'à vérification.",
+  };
+}

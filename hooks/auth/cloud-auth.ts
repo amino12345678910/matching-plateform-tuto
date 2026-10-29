@@ -11,8 +11,8 @@ import {
   getSellersRegistryCookie,
 } from '@/hooks/book/bookings-store';
 
-const SESSION_COOKIE_NAME = '9arrini_user_session';
-const ACCOUNT_BACKUP_COOKIE = '9arrini_account_backup';
+const SESSION_COOKIE_NAME = '9arrini_user_session_v4';
+const ACCOUNT_BACKUP_COOKIE = '9arrini_account_backup_v4';
 
 function getSessionSecret(): string {
   return (
@@ -25,7 +25,7 @@ function getSessionSecret(): string {
 
 function isConfiguredAdminEmail(email: string): boolean {
   const clean = email.trim().toLowerCase();
-  const configured = (process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || '')
+  const configured = (process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || 'amin.aa.aeid@gmail.com')
     .split(',')
     .map(e => e.trim().toLowerCase())
     .filter(Boolean);
@@ -41,8 +41,16 @@ export interface SessionCookiePayload {
   image?: string | null;
   imageSource: 'NULL' | 'GOOGLE' | 'CLOUDINARY';
   hasPassword: boolean;
-   passwordHash?: string;
+  passwordHash?: string;
   emailVerified: boolean;
+  phone?: string | null;
+  city?: string | null;
+  studentLevel?: string | null;
+  studentGrade?: string | null;
+  studentSection?: string | null;
+  institution?: string | null;
+  subjectsOfInterest?: string[];
+  acceptedTermsAt?: string | null;
   createdAt: string;
 }
 
@@ -106,11 +114,19 @@ export async function getCloudSessionCookie(): Promise<SessionCookiePayload | nu
           email: session.email,
           password: session.passwordHash,
           role: normalizedRole === 'ADMIN' ? 'ADMIN' : normalizedRole,
-          points: session.points ?? 50,
+          points: session.points ?? 0,
           image: session.image ?? null,
           imageSource: session.imageSource || 'NULL',
           hasPassword: session.hasPassword ?? true,
           emailVerified: true,
+          phone: session.phone ?? null,
+          city: session.city ?? null,
+          studentLevel: session.studentLevel ?? null,
+          studentGrade: session.studentGrade ?? null,
+          studentSection: session.studentSection ?? null,
+          institution: session.institution ?? null,
+          subjectsOfInterest: session.subjectsOfInterest || [],
+          acceptedTermsAt: session.acceptedTermsAt ?? null,
           createdAt: session.createdAt || new Date().toISOString(),
         });
         if (normalizedRole === 'SELLER') {
@@ -129,6 +145,13 @@ export async function getCloudSessionCookie(): Promise<SessionCookiePayload | nu
         writeCloudStore(store);
       } else if (typeof session.points === 'number') {
         existing.points = session.points;
+        if (session.studentLevel) existing.studentLevel = session.studentLevel;
+        if (session.studentGrade) existing.studentGrade = session.studentGrade;
+        if (session.studentSection) existing.studentSection = session.studentSection;
+        if (session.institution) existing.institution = session.institution;
+        if (session.city) existing.city = session.city;
+        if (session.phone) existing.phone = session.phone;
+        if (session.acceptedTermsAt) existing.acceptedTermsAt = session.acceptedTermsAt;
         writeCloudStore(store);
       } else if (typeof existing.points === 'number') {
         session.points = existing.points;
@@ -180,7 +203,18 @@ export async function cloudSignUp(input: {
   credentials?: string;
   experience?: string;
   phone?: string;
+  city?: string;
   bio?: string;
+  subjects?: string[];
+  levelsTaught?: string[];
+  payoutMethod?: string;
+  payoutAccount?: string;
+  studentLevel?: string;
+  studentGrade?: string;
+  studentSection?: string;
+  institution?: string;
+  subjectsOfInterest?: string[];
+  acceptedTerms?: boolean;
 }): Promise<{
   success: boolean;
   error?: string;
@@ -199,6 +233,13 @@ export async function cloudSignUp(input: {
     return {success: false, error: 'Veuillez renseigner votre email et mot de passe.'};
   }
 
+  if (input.acceptedTerms === false) {
+    return {
+      success: false,
+      error: "Veuillez accepter les Conditions Générales d'Utilisation pour continuer.",
+    };
+  }
+
   const pwError = validatePasswordStrength(input.password);
   if (pwError) {
     return {success: false, error: pwError};
@@ -213,7 +254,7 @@ export async function cloudSignUp(input: {
 
   const now = new Date().toISOString();
   let userId = `usr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
-  let points = 50; // 50 Points (50 DT) welcome balance
+  let points = 0; // All accounts start at 0 DT / 0 Points
 
   // 1. Try syncing with Prisma if reachable
   try {
@@ -231,25 +272,25 @@ export async function cloudSignUp(input: {
         email: cleanEmail,
         emailVerified: true,
         role: normalizedRole,
-        points: 50,
+        points: 0,
         hasPassword: true,
         passwordHash,
         imageSource: 'NULL',
+        phone: input.phone?.trim() || null,
+        city: input.city?.trim() || null,
+        studentLevel: input.studentLevel?.trim() || null,
+        studentGrade: input.studentGrade?.trim() || null,
+        studentSection: input.studentSection?.trim() || null,
+        institution: input.institution?.trim() || null,
+        subjectsOfInterest: input.subjectsOfInterest || [],
+        acceptedTermsAt: new Date(),
+        termsVersion: '2026-10-29',
         createdAt: new Date(),
         updatedAt: new Date(),
       },
     });
     userId = created.id;
     points = created.points;
-
-    await prisma.pointTransaction.create({
-      data: {
-        userId: created.id,
-        amount: 50,
-        type: 'BONUS',
-        description: 'Solde de bienvenue 9arrini (50 Points = 50 DT)',
-      },
-    });
 
     if (normalizedRole === 'SELLER') {
       await prisma.seller.upsert({
@@ -258,6 +299,16 @@ export async function cloudSignUp(input: {
         create: {
           userId: created.id,
           bio: input.bio?.trim() || `Professeur ${cleanName} sur 9arrini`,
+          specialty: input.specialty?.trim() || null,
+          credentials: input.credentials?.trim() || null,
+          experience: input.experience?.trim() || null,
+          phone: input.phone?.trim() || null,
+          city: input.city?.trim() || null,
+          subjects: input.subjects || [],
+          levelsTaught: input.levelsTaught || [],
+          payoutMethod: input.payoutMethod?.trim() || null,
+          payoutAccount: input.payoutAccount?.trim() || null,
+          acceptedTutorTermsAt: new Date(),
           isVerified: false,
           verificationStatus: hasTutorApplication ? 'PENDING' : 'UNVERIFIED',
         },
@@ -284,22 +335,23 @@ export async function cloudSignUp(input: {
       email: cleanEmail,
       password: passwordHash,
       role: normalizedRole,
-      points,
+      points: 0,
       image: null,
       imageSource: 'NULL',
       hasPassword: true,
       emailVerified: true,
+      phone: input.phone?.trim() || null,
+      city: input.city?.trim() || null,
+      studentLevel: input.studentLevel?.trim() || null,
+      studentGrade: input.studentGrade?.trim() || null,
+      studentSection: input.studentSection?.trim() || null,
+      institution: input.institution?.trim() || null,
+      subjectsOfInterest: input.subjectsOfInterest || [],
+      acceptedTermsAt: now,
+      termsVersion: '2026-10-29',
       createdAt: now,
     };
     store.users.unshift(cloudUser);
-    store.transactions.unshift({
-      id: `tx_${Date.now()}`,
-      userId: cloudUser.id,
-      amount: 50,
-      type: 'BONUS',
-      description: 'Solde de bienvenue 9arrini (50 Points = 50 DT)',
-      createdAt: now,
-    });
 
     if (normalizedRole === 'SELLER') {
       let existingSeller = store.sellers.find(s => s.userId === userId);
@@ -312,6 +364,12 @@ export async function cloudSignUp(input: {
           credentials: input.credentials?.trim() || undefined,
           experience: input.experience?.trim() || undefined,
           phone: input.phone?.trim() || undefined,
+          city: input.city?.trim() || undefined,
+          subjects: input.subjects || [],
+          levelsTaught: input.levelsTaught || [],
+          payoutMethod: input.payoutMethod?.trim() || undefined,
+          payoutAccount: input.payoutAccount?.trim() || undefined,
+          acceptedTutorTermsAt: now,
           isVerified: false,
           verificationStatus: hasTutorApplication ? 'PENDING' : 'UNVERIFIED',
           createdAt: now,
@@ -322,7 +380,13 @@ export async function cloudSignUp(input: {
         if (input.credentials?.trim()) existingSeller.credentials = input.credentials.trim();
         if (input.experience?.trim()) existingSeller.experience = input.experience.trim();
         if (input.phone?.trim()) existingSeller.phone = input.phone.trim();
+        if (input.city?.trim()) existingSeller.city = input.city.trim();
         if (input.bio?.trim()) existingSeller.bio = input.bio.trim();
+        if (input.subjects?.length) existingSeller.subjects = input.subjects;
+        if (input.levelsTaught?.length) existingSeller.levelsTaught = input.levelsTaught;
+        if (input.payoutMethod?.trim()) existingSeller.payoutMethod = input.payoutMethod.trim();
+        if (input.payoutAccount?.trim()) existingSeller.payoutAccount = input.payoutAccount.trim();
+        existingSeller.acceptedTutorTermsAt = now;
         if (hasTutorApplication && !existingSeller.isVerified) {
           existingSeller.verificationStatus = 'PENDING';
         }
@@ -333,9 +397,9 @@ export async function cloudSignUp(input: {
         userId,
         title: hasTutorApplication
           ? `📋 Candidature Professeur reçue ! Votre dossier est en cours de vérification par l'équipe 9arrini avant l'activation de l'accès complet Professeur.`
-          : `👋 Bienvenue dans l'Espace Professeur ! Complétez votre dossier de candidature pour que l'équipe 9arrini vérifie votre compte et débloque l'accès complet.`,
+          : `👋 Bienvenue dans l'Espace Professeur ! Complétez votre profil complet (photo, bio, diplômes, numéro D17/RIB) pour que l'équipe 9arrini vérifie votre compte.`,
         type: 'AUTOMATED',
-        link: '/dashboard/freelancer',
+        link: '/dashboard/freelancer/account',
         read: false,
         createdAt: now,
       });
@@ -351,12 +415,20 @@ export async function cloudSignUp(input: {
     name: cleanName,
     email: cleanEmail,
     role: normalizedRole,
-    points,
+    points: 0,
     image: null,
     imageSource: 'NULL',
     hasPassword: true,
     passwordHash,
     emailVerified: true,
+    phone: input.phone?.trim() || null,
+    city: input.city?.trim() || null,
+    studentLevel: input.studentLevel?.trim() || null,
+    studentGrade: input.studentGrade?.trim() || null,
+    studentSection: input.studentSection?.trim() || null,
+    institution: input.institution?.trim() || null,
+    subjectsOfInterest: input.subjectsOfInterest || [],
+    acceptedTermsAt: now,
     createdAt: now,
   };
 
@@ -419,12 +491,20 @@ export async function cloudSignIn(input: {
         name: dbUser.name,
         email: dbUser.email,
         role: normalizedRole,
-        points: dbUser.points ?? 50,
+        points: dbUser.points ?? 0,
         image: dbUser.image,
         imageSource: (dbUser.imageSource as 'NULL' | 'GOOGLE' | 'CLOUDINARY') || 'NULL',
         hasPassword: true,
         passwordHash: dbUser.passwordHash ?? undefined,
         emailVerified: true,
+        phone: dbUser.phone ?? null,
+        city: dbUser.city ?? null,
+        studentLevel: dbUser.studentLevel ?? null,
+        studentGrade: dbUser.studentGrade ?? null,
+        studentSection: dbUser.studentSection ?? null,
+        institution: dbUser.institution ?? null,
+        subjectsOfInterest: dbUser.subjectsOfInterest || [],
+        acceptedTermsAt: dbUser.acceptedTermsAt ? dbUser.acceptedTermsAt.toISOString() : null,
         createdAt: dbUser.createdAt.toISOString(),
       };
       await setCloudSessionCookie(sessionPayload);
@@ -489,11 +569,19 @@ export async function cloudSignIn(input: {
       email: cleanEmail,
       password: backupAccount.passwordHash || (await hashPassword(input.password)),
       role: backupAccount.role,
-      points: backupAccount.points ?? 50,
+      points: backupAccount.points ?? 0,
       image: backupAccount.image ?? null,
       imageSource: backupAccount.imageSource || 'NULL',
       hasPassword: true,
       emailVerified: true,
+      phone: backupAccount.phone ?? null,
+      city: backupAccount.city ?? null,
+      studentLevel: backupAccount.studentLevel ?? null,
+      studentGrade: backupAccount.studentGrade ?? null,
+      studentSection: backupAccount.studentSection ?? null,
+      institution: backupAccount.institution ?? null,
+      subjectsOfInterest: backupAccount.subjectsOfInterest || [],
+      acceptedTermsAt: backupAccount.acceptedTermsAt ?? null,
       createdAt: backupAccount.createdAt || now,
     };
     store.users.unshift(cloudUser);
@@ -517,12 +605,20 @@ export async function cloudSignIn(input: {
     name: cloudUser.name,
     email: cloudUser.email,
     role: normalizedRole,
-    points: cloudUser.points ?? 50,
+    points: cloudUser.points ?? 0,
     image: cloudUser.image ?? null,
     imageSource: cloudUser.imageSource || 'NULL',
     hasPassword: true,
     passwordHash: cloudUser.password,
     emailVerified: true,
+    phone: cloudUser.phone ?? null,
+    city: cloudUser.city ?? null,
+    studentLevel: cloudUser.studentLevel ?? null,
+    studentGrade: cloudUser.studentGrade ?? null,
+    studentSection: cloudUser.studentSection ?? null,
+    institution: cloudUser.institution ?? null,
+    subjectsOfInterest: cloudUser.subjectsOfInterest || [],
+    acceptedTermsAt: cloudUser.acceptedTermsAt ?? null,
     createdAt: cloudUser.createdAt || now,
   };
 
@@ -589,22 +685,15 @@ export async function cloudGoogleSignIn(input: {
       name: derivedName,
       email: cleanEmail,
       role: requestedRole,
-      points: 50,
+      points: 0,
       image: actualGoogleImage || avatarUrl,
       imageSource: 'GOOGLE',
       hasPassword: false,
       emailVerified: true,
+      acceptedTermsAt: now,
       createdAt: now,
     };
     store.users.unshift(cloudUser);
-    store.transactions.unshift({
-      id: `tx_google_${Date.now()}`,
-      userId: cloudUser.id,
-      amount: 50,
-      type: 'BONUS',
-      description: 'Solde de bienvenue Google 9arrini (50 Points = 50 DT)',
-      createdAt: now,
-    });
   } else {
     if (input.name && input.name.trim()) {
       cloudUser.name = input.name.trim();
@@ -645,11 +734,19 @@ export async function cloudGoogleSignIn(input: {
     name: cloudUser.name,
     email: cloudUser.email,
     role: requestedRole,
-    points: cloudUser.points ?? 50,
+    points: cloudUser.points ?? 0,
     image: actualGoogleImage || cloudUser.image || avatarUrl,
     imageSource: 'GOOGLE',
     hasPassword: cloudUser.hasPassword ?? false,
     emailVerified: true,
+    phone: cloudUser.phone ?? null,
+    city: cloudUser.city ?? null,
+    studentLevel: cloudUser.studentLevel ?? null,
+    studentGrade: cloudUser.studentGrade ?? null,
+    studentSection: cloudUser.studentSection ?? null,
+    institution: cloudUser.institution ?? null,
+    subjectsOfInterest: cloudUser.subjectsOfInterest || [],
+    acceptedTermsAt: cloudUser.acceptedTermsAt ?? now,
     createdAt: cloudUser.createdAt || now,
   };
 

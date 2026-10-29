@@ -1,14 +1,21 @@
 'use client';
 
-import {useState} from 'react';
-import {buyStudentPoints} from '@/hooks/points/points-actions';
+import Link from 'next/link';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
-import {Input} from '@/components/ui/input';
 import {Badge} from '@/components/ui/badge';
-import {Coins, PlusCircle, ArrowUpRight, ArrowDownLeft, Sparkles, CheckCircle2} from 'lucide-react';
-import {toast} from 'sonner';
+import {
+  Coins,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Sparkles,
+  ShieldCheck,
+  Star,
+  Lock,
+  Compass,
+} from 'lucide-react';
 import moment from 'moment';
+import {LEGAL_OPERATOR} from '@/lib/constants';
 
 export type PointTx = {
   id: string;
@@ -17,37 +24,6 @@ export type PointTx = {
   description: string;
   createdAt: Date | string;
 };
-
-const POINT_PACKS = [
-  {
-    points: 25,
-    dt: 25,
-    title: 'Pack Séance Unique',
-    subtitle: 'Idéal pour 1 séance de cours 1-on-1',
-    popular: false,
-  },
-  {
-    points: 70,
-    dt: 70,
-    title: 'Pack Révision (3 Séances)',
-    subtitle: 'Pour bien préparer un devoir ou chapitre',
-    popular: true,
-  },
-  {
-    points: 130,
-    dt: 130,
-    title: 'Pack Bac & Examen',
-    subtitle: 'Suivi complet + séries d’exercices corrigés',
-    popular: false,
-  },
-  {
-    points: 250,
-    dt: 250,
-    title: 'Pack Trimestre Excellence',
-    subtitle: 'Accompagnement intensif multi-matières',
-    popular: false,
-  },
-];
 
 export function StudentPointsWallet({
   initialPoints,
@@ -58,186 +34,124 @@ export function StudentPointsWallet({
   initialTransactions: PointTx[];
   compact?: boolean;
 }) {
-  const [points, setPoints] = useState(initialPoints);
-  const [transactions, setTransactions] = useState<PointTx[]>(initialTransactions);
-  const [customAmount, setCustomAmount] = useState('');
-  const [loadingPack, setLoadingPack] = useState<number | null>(null);
-
-  const handleBuyPack = async (amount: number, label: string) => {
-    setLoadingPack(amount);
-    try {
-      const res = await buyStudentPoints(amount, label);
-      if (res.success && typeof res.points === 'number') {
-        setPoints(res.points);
-        setTransactions(prev => [
-          {
-            id: Math.random().toString(),
-            amount,
-            type: 'TOPUP',
-            description: label,
-            createdAt: new Date().toISOString(),
-          },
-          ...prev,
-        ]);
-        toast.success(res.message || `+${amount} Points ajoutés !`);
-      } else {
-        toast.error(res.error || 'Erreur lors de la recharge');
-      }
-    } catch {
-      toast.error('Erreur lors de la recharge');
-    } finally {
-      setLoadingPack(null);
-    }
-  };
-
-  const handleCustomTopup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const val = parseInt(customAmount, 10);
-    if (!val || val <= 0) {
-      toast.error('Veuillez entrer un nombre de points valide (ex: 50)');
-      return;
-    }
-    await handleBuyPack(val, `Recharge personnalisée (+${val} Points = ${val} DT)`);
-    setCustomAmount('');
-  };
+  const points = initialPoints || 0;
+  const transactions = initialTransactions || [];
 
   return (
     <div className="space-y-6">
-      {/* Main Balance Banner */}
+      {/* Main Balance & 1-Week Free Launch Trial Banner */}
       <Card className="border-emerald-200 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-900 text-white shadow-lg overflow-hidden relative">
         <CardContent className="p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 text-xs font-semibold">
-              <Coins className="h-3.5 w-3.5 text-amber-400" />
-              Portefeuille 9arrini Points • 1 Point = 1 Dinar (DT)
+          <div className="space-y-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 text-xs font-semibold">
+                <Coins className="h-3.5 w-3.5 text-amber-400" />
+                Portefeuille 9arrini • Solde Réel
+              </div>
+              <Badge className="bg-amber-400 text-zinc-950 font-extrabold text-xs px-2.5 py-0.5">
+                <Sparkles className="h-3 w-3 mr-1" />
+                SEMAINE DE LANCEMENT GRATUITE ACTIVE
+              </Badge>
             </div>
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight flex items-baseline gap-3">
-              <span>{points} Points</span>
-              <span className="text-lg sm:text-xl font-normal text-emerald-300">
-                (= {points} DT)
+              <span>{points} DT</span>
+              <span className="text-base sm:text-lg font-normal text-emerald-300">
+                (Aucun paiement requis cette semaine)
               </span>
             </h2>
-            <p className="text-sm text-emerald-100/80 max-w-xl">
-              Utilisez vos Points 9arrini pour réserver instantanément vos séances de cours avec nos
-              professeurs. 1 Point vaut exactement 1 Dinar Tunisien (1 DT).
+            <p className="text-sm text-emerald-100/90 max-w-2xl leading-relaxed">
+              Profitez de <strong>1 semaine d&apos;essai 100 % gratuit</strong> sur toute la
+              plateforme ! Vous pouvez réserver vos séances de cours directement à{' '}
+              <strong>0 DT</strong> sans recharger votre compte. Le paiement en ligne via{' '}
+              <strong>Flouci &amp; D17</strong> sera ouvert à la fin de la semaine de lancement.
             </p>
           </div>
 
-          <form
-            onSubmit={handleCustomTopup}
-            className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-white/10 backdrop-blur-md p-3 rounded-xl border border-white/15 w-full md:w-auto"
-          >
-            <div className="relative">
-              <Input
-                type="number"
-                min={5}
-                max={5000}
-                placeholder="Montant (ex: 50)"
-                value={customAmount}
-                onChange={e => setCustomAmount(e.target.value)}
-                className="bg-white text-gray-900 border-0 pr-12 h-10 w-full sm:w-44 font-medium"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-700">
-                Pts/DT
-              </span>
-            </div>
-            <Button
-              type="submit"
-              disabled={loadingPack !== null}
-              className="bg-amber-400 hover:bg-amber-500 text-gray-950 font-bold h-10 cursor-pointer"
+          <div className="flex flex-col gap-2 w-full md:w-auto shrink-0">
+            <Link href="/explore">
+              <Button className="w-full bg-amber-400 hover:bg-amber-500 text-zinc-950 font-bold h-11 px-5 cursor-pointer">
+                <Compass className="h-4 w-4 mr-2" />
+                Réserver un cours (0 DT)
+              </Button>
+            </Link>
+            <Link
+              href="/legal#tarifs"
+              className="text-center text-xs text-emerald-200 hover:text-white underline underline-offset-4"
             >
-              <PlusCircle className="h-4 w-4 mr-1.5" />
-              Recharger
-            </Button>
-          </form>
+              Voir les conditions &amp; garantie élève
+            </Link>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Instant Points Packs */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-emerald-600" />
-              Acheter / Obtenir des Packs de Points (1 Pt = 1 DT)
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              Activation immédiate sur votre compte élève (sans carte bancaire requise en mode
-              académique)
-            </p>
-          </div>
-        </div>
+      {/* How Payments & Escrow Work After the Free Trial */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="border-emerald-200/80 bg-emerald-50/30 dark:bg-emerald-950/10">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-xs uppercase">
+              <Sparkles className="h-4 w-4" />
+              1. Semaine Gratuite (En cours)
+            </div>
+            <CardTitle className="text-base font-bold">0 DT — Aucun paiement requis</CardTitle>
+          </CardHeader>
+          <CardContent className="text-xs text-muted-foreground leading-relaxed">
+            Réservez vos séances gratuitement pendant 7 jours pour tester la plateforme et nos
+            professeurs vérifiés, sans carte bancaire ni recharge.
+          </CardContent>
+        </Card>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {POINT_PACKS.map(pack => (
-            <Card
-              key={pack.points}
-              className={`relative flex flex-col justify-between transition-all hover:shadow-md ${
-                pack.popular ? 'border-2 border-emerald-500 bg-emerald-50/30' : ''
-              }`}
-            >
-              {pack.popular && (
-                <Badge className="absolute -top-2.5 right-3 bg-emerald-600 text-white text-[10px]">
-                  Le plus choisi
-                </Badge>
-              )}
-              <CardHeader className="pb-2">
-                <CardDescription className="font-semibold text-emerald-700">
-                  {pack.title}
-                </CardDescription>
-                <CardTitle className="text-2xl font-black flex items-baseline gap-1.5">
-                  +{pack.points} Pts
-                  <span className="text-sm font-medium text-muted-foreground">
-                    ({pack.dt} DT)
-                  </span>
-                </CardTitle>
-                <p className="text-xs text-muted-foreground pt-1">{pack.subtitle}</p>
-              </CardHeader>
-              <CardContent className="pt-2">
-                <Button
-                  onClick={() =>
-                    handleBuyPack(
-                      pack.points,
-                      `${pack.title} (+${pack.points} Points = ${pack.dt} DT)`
-                    )
-                  }
-                  disabled={loadingPack !== null}
-                  variant={pack.popular ? 'default' : 'outline'}
-                  className={`w-full cursor-pointer ${
-                    pack.popular ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''
-                  }`}
-                >
-                  {loadingPack === pack.points ? (
-                    'Activation...'
-                  ) : (
-                    <>
-                      <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                      Obtenir {pack.points} Pts ({pack.dt} DT)
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Card className="border-zinc-200 dark:border-zinc-800">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2 text-amber-600 font-bold text-xs uppercase">
+              <Star className="h-4 w-4 fill-amber-400" />
+              2. Évaluation après Séance
+            </div>
+            <CardTitle className="text-base font-bold">
+              Vous notez le prof après le cours
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-xs text-muted-foreground leading-relaxed">
+            Après chaque séance Google Meet, vous confirmez et notez le professeur (1 à 5 étoiles).
+            Le paiement du professeur n&apos;est débloqué qu&apos;après votre validation.
+          </CardContent>
+        </Card>
+
+        <Card className="border-zinc-200 dark:border-zinc-800">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-xs uppercase">
+              <ShieldCheck className="h-4 w-4" />
+              3. Paiement Flouci / D17 (Bientôt)
+            </div>
+            <CardTitle className="text-base font-bold">
+              Transparence 85 % Prof / 15 % 9arrini
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-xs text-muted-foreground leading-relaxed">
+            Après la semaine gratuite, les paiements se feront via <strong>Flouci</strong> ou{' '}
+            <strong>D17 ({LEGAL_OPERATOR.d17})</strong> avec garantie séquestre (85 % reversés au
+            professeur, 15 % commission plateforme).
+          </CardContent>
+        </Card>
       </div>
 
       {/* Transaction History */}
       {!compact && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base font-bold">
-              Historique des Points & Réservations de Cours
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <Lock className="h-4 w-4 text-emerald-600" />
+              Historique des Transactions &amp; Séances
             </CardTitle>
             <CardDescription>
-              Suivez toutes vos recharges de points et vos réservations de séances (1 Pt = 1 DT)
+              Tous les comptes démarrent à 0 DT (aucune donnée fictive). Vos futures opérations
+              apparaîtront ici.
             </CardDescription>
           </CardHeader>
           <CardContent>
             {transactions.length === 0 ? (
               <p className="text-sm text-muted-foreground py-6 text-center">
-                Aucune transaction pour le moment. Choisissez un pack ci-dessus pour recharger votre
-                compte !
+                Aucune transaction payante pour le moment — vous bénéficiez actuellement de la
+                semaine de lancement 100 % gratuite (0 DT).
               </p>
             ) : (
               <div className="divide-y">
@@ -272,7 +186,7 @@ export function StudentPointsWallet({
                         tx.amount > 0 ? 'text-emerald-600' : 'text-gray-900'
                       }`}
                     >
-                      {tx.amount > 0 ? `+${tx.amount}` : tx.amount} Pts ({Math.abs(tx.amount)} DT)
+                      {tx.amount > 0 ? `+${tx.amount}` : tx.amount} DT
                     </div>
                   </div>
                 ))}
