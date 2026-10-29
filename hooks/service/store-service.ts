@@ -14,6 +14,8 @@ import {
   generateMeetCode,
   getDefaultSessionDate,
   formatScheduleLabel,
+  normalizeGoogleMeetInput,
+  isRealGoogleMeetUrl,
 } from '@/lib/google-meet';
 
 const CATEGORY_DEFAULT_IMAGES: Record<string, string> = {
@@ -73,10 +75,10 @@ export const storeService = async (
 
     const scheduledDate = service.scheduledDate || getDefaultSessionDate(2);
     const scheduledTime = service.scheduledTime || '18:00';
-    const meetLink =
-      service.meetLink && service.meetLink.startsWith('https://meet.google.com/')
-        ? service.meetLink
-        : `https://meet.google.com/${generateMeetCode(createdSlug)}`;
+    const customGoogleMeet = isRealGoogleMeetUrl(service.meetLink, [createdSlug, formattedTitle])
+      ? normalizeGoogleMeetInput(service.meetLink)
+      : null;
+    const meetLink = customGoogleMeet || `/meet/${generateMeetCode(createdSlug)}`;
 
     const formattedDescription = appendMeetScheduleToDescription(
       service.description || '',

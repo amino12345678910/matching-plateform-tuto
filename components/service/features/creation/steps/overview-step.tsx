@@ -69,38 +69,41 @@ export function OverviewStep({
   const descriptionLength = watchedDescription.replace(/<[^>]*>/g, '').trim().length;
   const [selectedLevel, setSelectedLevel] = useState('Bac & Lycée');
 
-  // Initialize automatic Google Meet link and date on first mount
+  // Initialize default date/time on first mount (never fabricate a fake meet.google.com code)
   useEffect(() => {
-    if (setValue && !watchedMeetLink) {
-      const code = generateMeetCode(watchedTitle || `9arrini-${Date.now()}`);
-      setValue('meetLink', `https://meet.google.com/${code}`, {shouldDirty: true});
-    }
     if (setValue && !watch?.('scheduledDate')) {
       setValue('scheduledDate', getDefaultSessionDate(2), {shouldDirty: true});
     }
     if (setValue && !watch?.('scheduledTime')) {
       setValue('scheduledTime', '18:00', {shouldDirty: true});
     }
-  }, [setValue, watchedMeetLink, watchedTitle, watch]);
+  }, [setValue, watch]);
 
-  const regenerateMeet = () => {
-    const newCode = generateMeetCode();
-    const url = `https://meet.google.com/${newCode}`;
-    if (setValue) {
-      setValue('meetLink', url, {shouldDirty: true});
+  const autoRoomCode = generateMeetCode(watchedTitle || 'cours-9arrini');
+  const activeMeetDisplay = watchedMeetLink?.trim()
+    ? watchedMeetLink.trim()
+    : `https://www.9arrini.me/meet/${autoRoomCode}`;
+
+  const pasteMeetFromClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text && setValue) {
+        setValue('meetLink', text.trim(), {shouldDirty: true});
+        toast.success('Vrai lien Google Meet collé avec succès !');
+      }
+    } catch {
+      toast.error('Collez votre lien Google Meet directement dans le champ ci-dessous.');
     }
-    toast.success('Nouveau lien Google Meet généré !');
   };
 
   const copyMeetLink = () => {
-    if (!watchedMeetLink) return;
-    navigator.clipboard.writeText(watchedMeetLink);
-    toast.success('Lien Google Meet copié dans le presse-papiers !');
+    navigator.clipboard.writeText(activeMeetDisplay);
+    toast.success('Lien de la séance copié dans le presse-papiers !');
   };
 
   const calendarUrl = buildGoogleCalendarMeetUrl({
     title: watchedTitle || 'Séance de cours particulier 9arrini',
-    meetUrl: watchedMeetLink || 'https://meet.google.com/new',
+    meetUrl: activeMeetDisplay,
     dateStr: watchedDate,
     timeStr: watchedTime,
     durationMinutes: 60,
@@ -192,55 +195,86 @@ export function OverviewStep({
             </div>
           </div>
 
-          {/* Generated Google Meet Link Bar */}
-          <div className="rounded-xl bg-white border border-emerald-200 p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div className="space-y-0.5 min-w-0">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>
-                  Planifié pour :{' '}
-                  <strong className="text-slate-900">
-                    {formatScheduleLabel(watchedDate, watchedTime)}
-                  </strong>
-                </span>
+          {/* Real Google Meet Link or Live Classroom Input */}
+          <div className="rounded-xl bg-white border border-emerald-200 p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="space-y-0.5">
+                <Label className="text-xs font-bold text-slate-900">
+                  Lien Google Meet officiel (ou Salle Vidéo 9arrini en direct)
+                </Label>
+                <p className="text-[11px] text-slate-600">
+                  Cliquez sur <strong>1. Créer un vrai salon Google Meet</strong> puis collez l&apos;URL
+                  ici, ou laissez vide pour utiliser la salle vidéo 9arrini en direct (
+                  <span className="font-mono text-emerald-700">/meet/{autoRoomCode}</span>).
+                </p>
               </div>
-              <p className="text-sm font-mono font-bold text-emerald-700 truncate">
-                {watchedMeetLink || 'https://meet.google.com/...'}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={copyMeetLink}
-                className="h-8 text-xs border-emerald-200 hover:bg-emerald-50 cursor-pointer"
-              >
-                <Copy className="h-3.5 w-3.5 mr-1" />
-                Copier
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={regenerateMeet}
-                className="h-8 text-xs border-emerald-200 hover:bg-emerald-50 cursor-pointer"
-              >
-                <RefreshCw className="h-3.5 w-3.5 mr-1" />
-                Nouveau lien
-              </Button>
               <Button
                 type="button"
                 size="sm"
                 asChild
-                className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold shrink-0"
               >
-                <a href={calendarUrl} target="_blank" rel="noopener noreferrer">
+                <a href="https://meet.google.com/new" target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                  Google Agenda
+                  1. Créer un vrai Google Meet (meet.google.com/new)
                 </a>
               </Button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <Input
+                value={watchedMeetLink}
+                onChange={e =>
+                  setValue && setValue('meetLink', e.target.value, {shouldDirty: true})
+                }
+                placeholder="Collez votre vrai lien https://meet.google.com/xxx-xxxx-xxx (ou laissez vide)"
+                className="bg-slate-50 border-emerald-200 font-mono text-xs"
+              />
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={pasteMeetFromClipboard}
+                  className="h-9 text-xs border-emerald-200 hover:bg-emerald-50 cursor-pointer"
+                >
+                  Coller
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={copyMeetLink}
+                  className="h-9 text-xs border-emerald-200 hover:bg-emerald-50 cursor-pointer"
+                >
+                  <Copy className="h-3.5 w-3.5 mr-1" />
+                  Copier
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  asChild
+                  className="h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  <a href={calendarUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                    Agenda
+                  </a>
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-slate-100">
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                Planifié pour :{' '}
+                <strong className="text-slate-900">
+                  {formatScheduleLabel(watchedDate, watchedTime)}
+                </strong>
+              </span>
+              <span className="font-mono text-[11px] font-semibold text-emerald-700 truncate max-w-[260px]">
+                Actif : {activeMeetDisplay}
+              </span>
             </div>
           </div>
         </div>

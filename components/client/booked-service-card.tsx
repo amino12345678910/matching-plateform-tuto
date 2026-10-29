@@ -56,7 +56,7 @@ export function BookedServiceCardComponent({service}: {service: BookedServiceTyp
 
   const cleanPhone = (rawService.tutorPhone || '').replace(/[^0-9]/g, '');
   const whatsappMessage = encodeURIComponent(
-    `Bonjour Professeur ${service.counterparty.name}, j'ai réservé votre cours "${service.title}" sur 9arrini.me prévu le ${meetInfo.formattedDateLabel} (Lien Google Meet : ${meetInfo.meetUrl}).`
+    `Bonjour Professeur ${service.counterparty.name}, j'ai réservé votre cours "${service.title}" sur 9arrini.me prévu le ${meetInfo.formattedDateLabel} (Lien de la séance vidéo : ${meetInfo.externalShareUrl}).`
   );
   const whatsappUrl = cleanPhone
     ? `https://wa.me/${cleanPhone}?text=${whatsappMessage}`
@@ -215,8 +215,8 @@ export function BookedServiceCardComponent({service}: {service: BookedServiceTyp
               <button
                 type="button"
                 onClick={() => {
-                  navigator.clipboard.writeText(meetInfo.meetUrl);
-                  toast.success('Lien Google Meet copié !');
+                  navigator.clipboard.writeText(meetInfo.externalShareUrl);
+                  toast.success('Lien de la séance vidéo copié !');
                 }}
                 className="inline-flex items-center gap-1 text-[11px] text-emerald-700 hover:underline cursor-pointer"
               >
@@ -232,7 +232,7 @@ export function BookedServiceCardComponent({service}: {service: BookedServiceTyp
                 className="flex-1 inline-flex items-center justify-center gap-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 px-2 text-[11px] font-semibold"
               >
                 <Video className="h-3 w-3" />
-                Rejoindre Meet
+                {meetInfo.isCustomGoogleMeet ? 'Rejoindre Google Meet' : 'Rejoindre la Salle Vidéo'}
               </a>
               <a
                 href={meetInfo.googleCalendarUrl}
