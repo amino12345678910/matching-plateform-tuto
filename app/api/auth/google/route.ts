@@ -15,6 +15,8 @@ export async function GET(request: NextRequest) {
   const rawRole = request.nextUrl.searchParams.get('role') || 'USER';
   const role: 'USER' | 'SELLER' =
     rawRole === 'SELLER' || rawRole === 'FREELANCER' ? 'SELLER' : 'USER';
+  const withMeetScope =
+    role === 'SELLER' || request.nextUrl.searchParams.get('meet') === '1';
 
   if (!clientId) {
     return NextResponse.redirect(
@@ -30,13 +32,17 @@ export async function GET(request: NextRequest) {
 
   const stateNonce = await createOAuthState(role);
 
+  const scopes = withMeetScope
+    ? 'openid email profile https://www.googleapis.com/auth/calendar.events'
+    : 'openid email profile';
+
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'openid email profile',
-    prompt: 'select_account',
-    access_type: 'online',
+    scope: scopes,
+    prompt: withMeetScope ? 'consent select_account' : 'select_account',
+    access_type: withMeetScope ? 'offline' : 'online',
     state: stateNonce,
   });
 

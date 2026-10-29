@@ -70,12 +70,7 @@ export function OverviewStep({
   const [selectedLevel, setSelectedLevel] = useState('Bac & Lycée');
   const [autoGenerating, setAutoGenerating] = useState(false);
 
-  const autoRoomCode = generateMeetCode(watchedTitle || 'cours-9arrini');
-  const activeMeetDisplay = watchedMeetLink?.trim()
-    ? watchedMeetLink.trim().startsWith('/')
-      ? `https://www.9arrini.me${watchedMeetLink.trim()}`
-      : watchedMeetLink.trim()
-    : `https://www.9arrini.me/meet/${autoRoomCode}`;
+  const activeMeetDisplay = watchedMeetLink?.trim() || 'https://meet.google.com/new';
 
   const autoGenerateRealMeeting = async (showToast = false) => {
     setAutoGenerating(true);
@@ -95,14 +90,14 @@ export function OverviewStep({
         if (showToast) {
           toast.success(
             data.provider === 'GOOGLE_MEET_API'
-              ? 'Vrai salon Google Meet généré automatiquement !'
-              : 'Salle de visioconférence en direct générée automatiquement !'
+              ? `Vrai salon Google Meet généré (${data.meetUrl}) !`
+              : 'Lien Google Meet officiel (meet.google.com/new) prêt !'
           );
         }
       }
     } catch {
       if (setValue) {
-        setValue('meetLink', `/meet/${autoRoomCode}`, {shouldDirty: true});
+        setValue('meetLink', 'https://meet.google.com/new', {shouldDirty: true});
       }
     } finally {
       setAutoGenerating(false);

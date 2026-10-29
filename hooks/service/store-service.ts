@@ -86,7 +86,7 @@ export const storeService = async (
         scheduledDate,
         scheduledTime,
       }));
-    const meetLink = autoGoogleMeet || `/meet/${generateMeetCode(createdSlug)}`;
+    const meetLink = autoGoogleMeet || 'https://meet.google.com/new';
 
     const formattedDescription = appendMeetScheduleToDescription(
       service.description || '',

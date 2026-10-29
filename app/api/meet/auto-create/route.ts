@@ -1,6 +1,5 @@
 import {NextRequest, NextResponse} from 'next/server';
 import {createRealGoogleMeetAutomatically} from '@/lib/google-calendar-meet';
-import {generateMeetCode} from '@/lib/google-meet';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,7 +8,7 @@ export async function POST(request: NextRequest) {
     const scheduledDate = body?.scheduledDate;
     const scheduledTime = body?.scheduledTime;
 
-    // 1. Try creating a real Google Meet room automatically via Google API
+    // Create a real Google Meet room automatically via Google Calendar / Google Meet REST API
     const realGoogleMeetUrl = await createRealGoogleMeetAutomatically({
       title,
       scheduledDate,
@@ -24,21 +23,16 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 2. Automatic 9arrini Live Video Classroom (0 copy-paste required)
-    const roomCode = generateMeetCode(`${title}-${Date.now().toString(36).slice(-4)}`);
     return NextResponse.json({
       success: true,
-      provider: '9ARRINI_LIVE_ROOM',
-      meetUrl: `/meet/${roomCode}`,
-      externalUrl: `https://www.9arrini.me/meet/${roomCode}`,
+      provider: 'GOOGLE_MEET_NEW',
+      meetUrl: 'https://meet.google.com/new',
     });
   } catch {
-    const roomCode = generateMeetCode(`session-${Date.now()}`);
     return NextResponse.json({
       success: true,
-      provider: '9ARRINI_LIVE_ROOM',
-      meetUrl: `/meet/${roomCode}`,
-      externalUrl: `https://www.9arrini.me/meet/${roomCode}`,
+      provider: 'GOOGLE_MEET_NEW',
+      meetUrl: 'https://meet.google.com/new',
     });
   }
 }

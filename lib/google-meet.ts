@@ -1,16 +1,11 @@
 /**
- * Real Video Meeting & Google Meet Schedule Helper for 9arrini Sessions.
+ * Official Google Meet Link & Schedule Helper for 9arrini Sessions.
  *
- * IMPORTANT:
- * Google Meet does NOT allow arbitrary/random `meet.google.com/xxx-xxxx-xxx` codes unless
- * the meeting was actually created on Google's servers (via `https://meet.google.com/new`
- * or Google Calendar). Therefore:
- * 1. We NEVER fabricate fake `https://meet.google.com/xxx-xxxx-xxx` links.
- * 2. If a tutor pastes a real Google Meet link (created via `https://meet.google.com/new`),
- *    we preserve and use that exact `https://meet.google.com/xxx-xxxx-xxx` URL.
- * 3. Otherwise, we generate a real, deterministic 9arrini Live Classroom URL (`/meet/<room>`)
- *    that hosts a real WebRTC video call AND lets the tutor attach a real `meet.google.com/new`
- *    link in one click at any time.
+ * - Never generates fake random `meet.google.com/xxx-xxxx-xxx` codes (which Google rejects).
+ * - Uses real `https://meet.google.com/xxx-xxxx-xxx` links created via the Google Calendar /
+ *   Google Meet API (`createRealGoogleMeetAutomatically`) or provided by the tutor,
+ *   and falls back to `https://meet.google.com/new` (Google's official instant meeting creator)
+ *   whenever a specific room code has not been created yet.
  */
 
 export interface ScheduledMeetInfo {
@@ -28,8 +23,8 @@ export interface ScheduledMeetInfo {
 const LETTERS = 'abcdefghijkmnopqrstuvwxyz';
 
 /**
- * Computes the old deterministic fake code only so we can detect and strip
- * previously auto-generated fake `meet.google.com/xxx-xxxx-xxx` links.
+ * Computes the old deterministic fake code only so we can detect and ignore
+ * previously fabricated `meet.google.com/xxx-xxxx-xxx` links.
  */
 function computeLegacyFakeCode(seed: string): string {
   let hash = 2166136261;
@@ -49,30 +44,13 @@ function computeLegacyFakeCode(seed: string): string {
   return `${chars.slice(0, 3).join('')}-${chars.slice(3, 7).join('')}-${chars.slice(7, 10).join('')}`;
 }
 
-/**
- * Generates a real, deterministic 9arrini live classroom slug from a course slug/title.
- */
-export function generateMeetCode(seed?: string): string {
-  const raw = (seed || 'seance-cours')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 32);
-
-  let hash = 5381;
-  const s = seed || '9arrini-default';
-  for (let i = 0; i < s.length; i++) {
-    hash = (hash * 33) ^ s.charCodeAt(i);
-  }
-  const suffix = (Math.abs(hash) % 9000 + 1000).toString();
-  return `9arrini-${raw || 'cours'}-${suffix}`;
+export function generateMeetCode(_seed?: string): string {
+  return 'new';
 }
 
 /**
- * Checks whether a candidate URL is a real tutor-provided Google Meet link
- * (and NOT one of the legacy deterministic fake codes).
+ * Checks whether a candidate URL is a real Google Meet link (`https://meet.google.com/xxx-xxxx-xxx`)
+ * and NOT one of the legacy deterministic fake codes.
  */
 export function isRealGoogleMeetUrl(
   url?: string | null,
@@ -80,14 +58,13 @@ export function isRealGoogleMeetUrl(
 ): boolean {
   if (!url) return false;
   const clean = url.trim();
-  const match = clean.match(/^https:\/\/meet\.google\.com\/([a-z]{3}-[a-z]{4}-[a-z]{3})(?:[/?#].*)?$/i);
+  const match = clean.match(
+    /^https:\/\/meet\.google\.com\/([a-z]{3}-[a-z]{4}-[a-z]{3})(?:[/?#].*)?$/i
+  );
   if (!match) return false;
 
   const code = match[1].toLowerCase();
-  const seedsToCheck = [
-    ...possibleSeeds.filter((s): s is string => Boolean(s)),
-    '9arrini',
-  ];
+  const seedsToCheck = [...possibleSeeds.filter((s): s is string => Boolean(s)), '9arrini'];
 
   for (const seed of seedsToCheck) {
     if (computeLegacyFakeCode(seed) === code) {
@@ -100,6 +77,9 @@ export function isRealGoogleMeetUrl(
 export function normalizeGoogleMeetInput(raw?: string | null): string | null {
   if (!raw) return null;
   const trimmed = raw.trim();
+  if (trimmed === 'https://meet.google.com/new') {
+    return 'https://meet.google.com/new';
+  }
   const fullMatch = trimmed.match(/https:\/\/meet\.google\.com\/([a-z]{3}-[a-z]{4}-[a-z]{3})/i);
   if (fullMatch) {
     return `https://meet.google.com/${fullMatch[1].toLowerCase()}`;
@@ -159,14 +139,10 @@ export function buildGoogleCalendarMeetUrl(params: {
       .replace(/[-:]/g, '')
       .replace(/\.\d{3}/, '');
 
-  const fullUrl = params.meetUrl.startsWith('/')
-    ? `https://www.9arrini.me${params.meetUrl}`
-    : params.meetUrl;
-
   const details = [
     `Séance de cours particulier sur 9arrini.me`,
     params.tutorName ? `Professeur : ${params.tutorName}` : '',
-    `Lien direct de la séance vidéo : ${fullUrl}`,
+    `Lien Google Meet : ${params.meetUrl}`,
   ]
     .filter(Boolean)
     .join('\n');
@@ -176,7 +152,7 @@ export function buildGoogleCalendarMeetUrl(params: {
     text: `🎓 9arrini : ${params.title}`,
     dates: `${fmt(start)}/${fmt(end)}`,
     details,
-    location: fullUrl,
+    location: params.meetUrl,
   });
 
   return `https://calendar.google.com/calendar/render?${query.toString()}`;
@@ -203,10 +179,6 @@ export function getServiceMeetInfo(service: {
     if (!extractedMeet && meetMatch) {
       extractedMeet = meetMatch[0];
     }
-    const roomMatch = service.description.match(/\/meet\/(9arrini-[a-z0-9-]+)/i);
-    if (!extractedMeet && roomMatch) {
-      extractedMeet = `/meet/${roomMatch[1]}`;
-    }
     const dateMatch = service.description.match(/data-session-date="([^"]+)"/);
     if (!extractedDate && dateMatch) {
       extractedDate = dateMatch[1];
@@ -222,20 +194,14 @@ export function getServiceMeetInfo(service: {
 
   let meetCode: string;
   let meetUrl: string;
-  let externalShareUrl: string;
 
   if (hasRealGoogleMeet && extractedMeet) {
     const normalized = normalizeGoogleMeetInput(extractedMeet)!;
     meetCode = normalized.replace('https://meet.google.com/', '');
     meetUrl = normalized;
-    externalShareUrl = normalized;
   } else {
-    const roomMatch = extractedMeet?.match(/\/meet\/([a-z0-9-]+)/i);
-    meetCode = roomMatch
-      ? roomMatch[1]
-      : generateMeetCode(service.slug || service.id || service.title || '9arrini');
-    meetUrl = `/meet/${meetCode}`;
-    externalShareUrl = `https://www.9arrini.me/meet/${meetCode}`;
+    meetCode = 'meet.google.com/new';
+    meetUrl = 'https://meet.google.com/new';
   }
 
   const scheduledDate = extractedDate || getDefaultSessionDate(2);
@@ -245,7 +211,7 @@ export function getServiceMeetInfo(service: {
   return {
     meetCode,
     meetUrl,
-    externalShareUrl,
+    externalShareUrl: meetUrl,
     isCustomGoogleMeet: hasRealGoogleMeet,
     scheduledDate,
     scheduledTime,
@@ -253,7 +219,7 @@ export function getServiceMeetInfo(service: {
     formattedDateLabel: formatScheduleLabel(scheduledDate, scheduledTime),
     googleCalendarUrl: buildGoogleCalendarMeetUrl({
       title: service.title || 'Séance de cours 9arrini',
-      meetUrl: externalShareUrl,
+      meetUrl,
       dateStr: scheduledDate,
       timeStr: scheduledTime,
       durationMinutes,

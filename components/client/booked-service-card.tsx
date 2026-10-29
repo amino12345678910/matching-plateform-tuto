@@ -232,7 +232,7 @@ export function BookedServiceCardComponent({service}: {service: BookedServiceTyp
                 className="flex-1 inline-flex items-center justify-center gap-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 px-2 text-[11px] font-semibold"
               >
                 <Video className="h-3 w-3" />
-                {meetInfo.isCustomGoogleMeet ? 'Rejoindre Google Meet' : 'Rejoindre la Salle Vidéo'}
+                Rejoindre Google Meet
               </a>
               <a
                 href={meetInfo.googleCalendarUrl}

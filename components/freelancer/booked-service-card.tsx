@@ -119,17 +119,7 @@ export function FreelancerBookedServiceCard({service}: {service: BookedServiceTy
                 className="flex-1 inline-flex items-center justify-center gap-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white py-1 px-2 text-[11px] font-semibold"
               >
                 <Video className="h-3 w-3" />
-                {meetInfo.isCustomGoogleMeet ? 'Lancer Google Meet' : 'Ouvrir la Salle Vidéo'}
-              </a>
-              <a
-                href="https://meet.google.com/new"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-1 rounded border border-blue-300 bg-blue-50 hover:bg-blue-100 text-blue-800 py-1 px-2 text-[11px] font-semibold"
-                title="Créer un vrai salon Google Meet sur meet.google.com/new"
-              >
-                <ExternalLink className="h-3 w-3" />
-                Meet Officiel
+                Lancer Google Meet
               </a>
               <a
                 href={meetInfo.googleCalendarUrl}

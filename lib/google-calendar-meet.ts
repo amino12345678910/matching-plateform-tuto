@@ -158,7 +158,7 @@ export async function createRealGoogleMeetAutomatically(params: {
     // Fallback below
   }
 
-  // 2. Try Google Meet REST API v2 (spaces.create)
+  // 2. Try Google Meet REST API v2 (spaces.create with OPEN access)
   try {
     const meetRes = await fetch('https://meet.googleapis.com/v2/spaces', {
       method: 'POST',
@@ -166,7 +166,11 @@ export async function createRealGoogleMeetAutomatically(params: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({}),
+      body: JSON.stringify({
+        config: {
+          accessType: 'OPEN',
+        },
+      }),
     });
     if (meetRes.ok) {
       const meetData = await meetRes.json();
